@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.openai.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brah</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./renderer.js"></script>
+  </head>
+  <body>
+    <main id="app-shell" class="app-shell" data-mode="idle">
+      <button id="connect-openai" type="button" class="oauth-button">Connect OpenAI</button>
+      <button id="permissions-toggle" type="button" class="permissions-button">Perms</button>
+      <section id="permissions-panel" class="permissions-panel" hidden aria-label="OS permissions">
+        <div class="permissions-heading">
+          <strong>OS permissions</strong>
+          <button id="permissions-refresh" type="button">Refresh</button>
+          <button id="diagnostics-open" type="button">Log</button>
+        </div>
+        <div id="permissions-list" class="permissions-list"></div>
+      </section>
+      <button id="call-toggle" type="button" class="fab-orb" disabled aria-pressed="false">
+        <span class="orb-shadow" aria-hidden="true"></span>
+        <span class="siri-orb" aria-hidden="true">
+          <span class="orb-surface"></span>
+          <span class="orb-core"></span>
+          <span class="orb-glow"></span>
+        </span>
+        <span id="call-label" class="call-label">Call</span>
+      </button>
+      <p id="status" class="status">Checking OpenAI…</p>
+      <audio id="remote-audio" autoplay aria-label="Realtime assistant audio">
+        <track kind="captions" label="Realtime captions are not displayed yet" />
+      </audio>
+    </main>
+  </body>
+</html>

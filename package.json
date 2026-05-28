@@ -1,0 +1,57 @@
+{
+  "name": "brah",
+  "version": "0.1.0",
+  "description": "A fresh Electron desktop app.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "biome check .",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "update:deps": "ncu -u && npm install",
+    "test": "npm run check && node --test",
+    "build:mac": "electron-builder --mac dir",
+    "open:mac": "npm run build:mac && open dist/mac-arm64/Brah.app"
+  },
+  "keywords": [
+    "electron"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "build": {
+    "appId": "com.unstablemind.brah",
+    "productName": "Brah",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dir"
+      ],
+      "identity": "INDIANA RUSTAN DI (396M7LY29W)",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "timestamp": null,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Brah needs microphone access for realtime voice input.",
+        "NSScreenCaptureDescription": "Brah needs screen recording access for screenshots and screen analysis."
+      }
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
+    "npm-check-updates": "^22.2.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3",
+    "playwright": "^1.60.0"
+  }
+}

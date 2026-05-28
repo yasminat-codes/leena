@@ -1,0 +1,147 @@
+const toolPermissionMetadata = Object.freeze({
+  add_task: {
+    level: "low",
+    label: "Add task",
+    description: "Add a task to your local Tasks list.",
+  },
+  list_tasks: {
+    level: "read",
+    label: "Read tasks",
+    description: "Read your local Tasks list.",
+  },
+  delete_task: {
+    level: "destructive",
+    label: "Delete task",
+    description: "Delete a task from your local Tasks list.",
+  },
+  update_task_status: {
+    level: "write",
+    label: "Update task",
+    description: "Change a task status in your local Tasks list.",
+  },
+  add_calendar_item: {
+    level: "write",
+    label: "Add calendar item",
+    description: "Add an item to your local Calendar list.",
+  },
+  list_calendar_items: {
+    level: "read",
+    label: "Read calendar",
+    description: "Read your local Calendar list.",
+  },
+  delete_calendar_item: {
+    level: "destructive",
+    label: "Delete calendar item",
+    description: "Delete an item from your local Calendar list.",
+  },
+  web_search: {
+    level: "network",
+    label: "Search web",
+    description: "Send a search query to DuckDuckGo.",
+  },
+  web_fetch: {
+    level: "network",
+    label: "Read web page",
+    description: "Fetch and read a public web page.",
+  },
+  list_screenshot_sources: {
+    level: "screen",
+    label: "List screen sources",
+    description: "List visible screens and windows available for capture.",
+  },
+  take_screenshot: {
+    level: "screen",
+    label: "Take screenshot",
+    description: "Capture and save a screenshot locally.",
+  },
+  analyze_screen: {
+    level: "sensitive",
+    label: "Analyze screen",
+    description: "Capture a screenshot and send it to OpenAI for vision/OCR analysis.",
+  },
+  computer_use_task: {
+    level: "sensitive",
+    label: "Use computer",
+    description: "Open an automated browser and let OpenAI operate it with screenshots.",
+  },
+});
+
+export function getToolPermissionRequest(name, args = {}) {
+  const metadata = toolPermissionMetadata[name] ?? {
+    level: "unknown",
+    label: name,
+    description: "Run a realtime tool.",
+  };
+  return {
+    toolName: name,
+    label: metadata.label,
+    level: metadata.level,
+    description: metadata.description,
+    summary: summarizeToolRequest(name, args),
+  };
+}
+
+export function createPermissionDeniedResult(request) {
+  return {
+    status: "permission_denied",
+    message: `Ken did not approve ${request.label}. Ask before trying this tool again.`,
+    tool: request.toolName,
+  };
+}
+
+export function formatPermissionPrompt(request) {
+  const parts = [
+    `${request.label}?`,
+    request.description,
+    request.summary ? `Details: ${request.summary}` : "",
+    `Risk: ${request.level}`,
+  ].filter(Boolean);
+  return parts.join("\n\n");
+}
+
+function summarizeToolRequest(name, args) {
+  switch (name) {
+    case "add_task":
+      return summarizeFields(args, ["name", "priority"]);
+    case "delete_task":
+    case "update_task_status":
+      return summarizeFields(args, ["query", "status"]);
+    case "add_calendar_item":
+      return summarizeFields(args, ["title", "date", "time"]);
+    case "delete_calendar_item":
+      return summarizeFields(args, ["query"]);
+    case "web_search":
+      return summarizeFields(args, ["query"]);
+    case "web_fetch":
+      return summarizeFields(args, ["url"]);
+    case "take_screenshot":
+    case "analyze_screen":
+      return summarizeFields(args, ["target", "source_id", "reason", "question"]);
+    case "computer_use_task":
+      return summarizeFields(args, ["task", "url", "autonomy", "maxSteps"]);
+    default:
+      return "";
+  }
+}
+
+function summarizeFields(args, fields) {
+  if (!isRecord(args)) {
+    return "";
+  }
+  return fields
+    .map((field) => formatField(field, args[field]))
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatField(field, value) {
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return `${field}: ${text.slice(0, 140)}`;
+}
+
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

@@ -1,3 +1,7 @@
+import dns from "node:dns/promises";
+import net from "node:net";
+import { isBlockedHostname, isBlockedIp } from "./net-guard.js";
+
 const defaultFetchMaxLength = 8000;
 const maxFetchMaxLength = 20_000;
 const defaultSearchMaxResults = 5;
@@ -25,6 +29,14 @@ async function webFetch(args) {
     return invalidArguments(url.message);
   }
   const maxLength = clampInteger(args.maxLength, defaultFetchMaxLength, 500, maxFetchMaxLength);
+
+  try {
+    await assertPublicHost(url.value);
+  } catch (error) {
+    return invalidArguments(
+      error instanceof Error ? error.message : "Resolved address is not allowed.",
+    );
+  }
 
   try {
     const response = await fetchWithTimeout(url.value.toString());
@@ -86,17 +98,32 @@ async function webSearch(args) {
   }
 }
 
-async function fetchWithTimeout(url) {
+async function fetchWithTimeout(url, { maxRedirects = 4 } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
   try {
-    return await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": userAgent,
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
-      },
-    });
+    let current = new URL(url);
+    for (let hop = 0; hop <= maxRedirects; hop++) {
+      await assertPublicHost(current); // re-check each hop (also blocks literal-IP Location)
+      const response = await fetch(current.toString(), {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: {
+          "User-Agent": userAgent,
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
+        },
+      });
+      if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
+        current = new URL(response.headers.get("location"), current);
+        if (current.protocol !== "http:" && current.protocol !== "https:") {
+          throw new Error("Redirect to non-http(s) URL blocked.");
+        }
+        continue;
+      }
+      return response;
+    }
+    throw new Error("Too many redirects.");
   } finally {
     clearTimeout(timeout);
   }
@@ -195,9 +222,35 @@ function parsePublicHttpUrl(rawUrl) {
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return { ok: false, message: "Only http:// and https:// URLs are allowed." };
     }
+    const host = url.hostname.replace(/^\[|\]$/g, "");
+    if (net.isIP(host) ? isBlockedIp(host) : isBlockedHostname(host)) {
+      return {
+        ok: false,
+        message: "Requests to local, loopback, or private addresses are not allowed.",
+      };
+    }
     return { ok: true, value: url };
   } catch {
     return { ok: false, message: "url must be a valid URL." };
+  }
+}
+
+// Test seam: override in tests to avoid real network/DNS.
+let resolveHostAddresses = async (hostname) => {
+  const records = await dns.lookup(hostname, { all: true });
+  return records.map((r) => r.address);
+};
+
+export function __setHostResolverForTests(fn) {
+  resolveHostAddresses = fn;
+}
+
+async function assertPublicHost(url) {
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (net.isIP(host)) return; // already validated as a literal in parsePublicHttpUrl
+  const addresses = await resolveHostAddresses(host);
+  if (addresses.length === 0 || addresses.some(isBlockedIp)) {
+    throw new Error("Resolved address is not allowed.");
   }
 }
 

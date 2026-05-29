@@ -133,9 +133,24 @@ function createMainWindow() {
   mainWindow.on("resize", enforceModeBounds);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    try {
+      const { protocol } = new URL(url);
+      if (protocol === "https:" || protocol === "http:" || protocol === "mailto:") {
+        shell.openExternal(url);
+      }
+    } catch {
+      /* ignore malformed URL */
+    }
     return { action: "deny" };
   });
+
+  // Keep the renderer pinned to the packaged index.html so the privileged
+  // window.brah bridge can never be inherited by a remote origin.
+  const blockOffOrigin = (event, url) => {
+    if (!url.startsWith("file://")) event.preventDefault();
+  };
+  mainWindow.webContents.on("will-navigate", blockOffOrigin);
+  mainWindow.webContents.on("will-redirect", blockOffOrigin);
 }
 
 function handleWindowMove() {
@@ -472,11 +487,14 @@ ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
     broadcastDataChanged(categoryForTool(name));
     return result;
   } catch (error) {
-    await writeDiagnosticLog("tool.execute.error", {
-      tool: name,
-      elapsedMs: Date.now() - startedAt,
-      error: formatDiagnosticError(error),
-    });
+    await writeDiagnosticLog(
+      "tool.execute.error",
+      sanitizeDiagnosticValue({
+        tool: name,
+        elapsedMs: Date.now() - startedAt,
+        error: formatDiagnosticError(error),
+      }),
+    );
     return {
       status: "error",
       message: error instanceof Error ? error.message : "Tool execution failed.",
@@ -718,7 +736,7 @@ function safeConsole(level, ...args) {
 
 function createToolLogger(tool) {
   return async (event, details = {}) => {
-    await writeDiagnosticLog(event, { tool, ...details });
+    await writeDiagnosticLog(event, sanitizeDiagnosticValue({ tool, ...details }));
   };
 }
 
@@ -741,17 +759,36 @@ function summarizeToolResult(result) {
   return Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== undefined));
 }
 
+const SECRET_KEY =
+  /(token|secret|authorization|bearer|password|passwd|api[-_]?key|apikey|client_secret|refresh|access_token|cookie|credential|private[-_]?key)/i;
+const SECRET_VALUE =
+  /\b(sk-[A-Za-z0-9_-]{16,}|ek_[A-Za-z0-9]+|eyJ[A-Za-z0-9._-]{20,}|Bearer\s+[A-Za-z0-9._-]+)\b/g;
+
+function scrubString(str) {
+  let out = str.replace(SECRET_VALUE, "[redacted]");
+  // Strip query/fragment from any http(s) URL value (codes/tokens live there).
+  try {
+    const u = new URL(out);
+    if (u.protocol === "http:" || u.protocol === "https:") {
+      if (u.search || u.hash) out = `${u.origin}${u.pathname}?[redacted]`;
+    }
+  } catch {
+    /* not a URL */
+  }
+  return out.slice(0, 500);
+}
+
 function sanitizeDiagnosticValue(value) {
   if (Array.isArray(value)) {
     return value.map(sanitizeDiagnosticValue);
   }
   if (!value || typeof value !== "object") {
-    return typeof value === "string" ? value.slice(0, 500) : value;
+    return typeof value === "string" ? scrubString(value) : value;
   }
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => [
       key,
-      key.toLowerCase().includes("token") ? "[redacted]" : sanitizeDiagnosticValue(item),
+      SECRET_KEY.test(key) ? "[redacted]" : sanitizeDiagnosticValue(item),
     ]),
   );
 }
@@ -1158,7 +1195,7 @@ function buildRealtimeSessionConfig(options) {
 async function parseJsonResponse(response, label) {
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(`${label} failed (${response.status}): ${text}`);
+    throw new Error(`${label} failed (${response.status}): ${String(text).slice(0, 200)}`);
   }
 
   try {
@@ -1198,11 +1235,17 @@ async function loadOpenAICredentials() {
 }
 
 async function saveOpenAICredentials(credentials) {
+  if (!safeStorage.isEncryptionAvailable()) {
+    await writeDiagnosticLog("openai.credentials.encryption_unavailable", {
+      backend: safeStorage.getSelectedStorageBackend?.() ?? "unknown",
+    });
+    throw new Error(
+      "Secure credential storage is unavailable; refusing to store OpenAI tokens in cleartext.",
+    );
+  }
   await fs.mkdir(path.dirname(credentialsPath()), { recursive: true });
   const json = JSON.stringify(credentials);
-  const data = safeStorage.isEncryptionAvailable()
-    ? safeStorage.encryptString(json).toString("base64")
-    : Buffer.from(json, "utf8").toString("base64");
+  const data = safeStorage.encryptString(json).toString("base64");
   await fs.writeFile(credentialsPath(), JSON.stringify({ data }, null, 2), { mode: 0o600 });
 }
 

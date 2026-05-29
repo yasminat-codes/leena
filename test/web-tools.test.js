@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { executeWebTool } from "../src/realtime/tools/web-tools.js";
+import test, { beforeEach } from "node:test";
+import { __setHostResolverForTests, executeWebTool } from "../src/realtime/tools/web-tools.js";
+
+beforeEach(() => {
+  // Avoid real DNS in tests: resolve every hostname to a public address.
+  __setHostResolverForTests(async () => ["93.184.216.34"]);
+});
 
 function mockFetch(handler) {
   const originalFetch = globalThis.fetch;
@@ -115,6 +120,42 @@ test("web_search parses and deduplicates DuckDuckGo HTML results", async () => {
         snippet: "Second summary.",
       },
     ]);
+  } finally {
+    restoreFetch();
+  }
+});
+
+test("web_fetch blocks private, loopback, and link-local hosts before network access", async () => {
+  const blockedUrls = [
+    "http://127.0.0.1:1455/",
+    "http://169.254.169.254/latest/meta-data/",
+    "http://10.0.0.5/",
+    "http://192.168.1.1/",
+    "http://localhost/",
+    "http://[::1]/",
+    "http://2130706433/", // decimal 127.0.0.1
+  ];
+  for (const url of blockedUrls) {
+    const restoreFetch = mockFetch(() => {
+      throw new Error(`fetch should not be called for ${url}`);
+    });
+    try {
+      const result = await executeWebTool("web_fetch", { url });
+      assert.equal(result.status, "invalid_arguments", `expected ${url} to be rejected`);
+    } finally {
+      restoreFetch();
+    }
+  }
+});
+
+test("web_fetch blocks hosts that resolve to private addresses (DNS rebinding)", async () => {
+  __setHostResolverForTests(async () => ["10.1.2.3"]);
+  const restoreFetch = mockFetch(() => {
+    throw new Error("fetch should not be called");
+  });
+  try {
+    const result = await executeWebTool("web_fetch", { url: "https://rebind.example.com/" });
+    assert.equal(result.status, "invalid_arguments");
   } finally {
     restoreFetch();
   }

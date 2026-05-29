@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -149,6 +149,40 @@ test("paths that resolve through a symlink outside the root are rejected", async
     } finally {
       await rm(outside, { force: true, recursive: true });
     }
+  });
+});
+
+test("protected secret paths are denied for read, write, and edit", async () => {
+  await withWorkspace(async (root, options) => {
+    const secrets = [".ssh/id_rsa", ".aws/credentials", ".zshrc", "Brah/openai-credentials.json"];
+    for (const secret of secrets) {
+      await mkdir(path.dirname(path.join(root, secret)), { recursive: true });
+      await writeFile(path.join(root, secret), "secret", "utf8");
+
+      const read = await executeFileSystemTool("read_file", { path: secret }, options);
+      assert.equal(read.status, "invalid_arguments", `read ${secret}`);
+
+      const write = await executeFileSystemTool(
+        "write_file",
+        { path: secret, content: "x" },
+        options,
+      );
+      assert.equal(write.status, "invalid_arguments", `write ${secret}`);
+
+      const edit = await executeFileSystemTool(
+        "edit_file",
+        { path: secret, oldText: "secret", newText: "x" },
+        options,
+      );
+      assert.equal(edit.status, "invalid_arguments", `edit ${secret}`);
+    }
+
+    const ok = await executeFileSystemTool(
+      "write_file",
+      { path: "notes/todo.md", content: "fine" },
+      options,
+    );
+    assert.equal(ok.status, "created");
   });
 });
 

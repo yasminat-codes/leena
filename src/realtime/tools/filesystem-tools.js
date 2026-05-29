@@ -162,7 +162,45 @@ async function resolveSandboxPath(rawPath, options) {
   if (realRelative.startsWith("..") || path.isAbsolute(realRelative)) {
     return { ok: false, message: "path resolves through a symlink outside the workspace root." };
   }
+  if (isDeniedRelative(realRelative) || isDeniedRelative(relative)) {
+    return { ok: false, message: "path points to a protected location and is not accessible." };
+  }
   return { ok: true, value: absolute, relative };
+}
+
+const DENIED_SEGMENTS = new Set([
+  ".ssh",
+  ".aws",
+  ".gnupg",
+  ".gpg",
+  ".docker",
+  ".kube",
+  ".config",
+  ".password-store",
+  "Brah", // ~/Library/Application Support/Brah (app creds + db)
+]);
+const DENIED_BASENAMES = new Set([
+  ".netrc",
+  ".npmrc",
+  ".git-credentials",
+  ".bash_history",
+  ".zsh_history",
+  ".zshrc",
+  ".zprofile",
+  ".zshenv",
+  ".bashrc",
+  ".bash_profile",
+  ".profile",
+  ".env",
+]);
+
+function isDeniedRelative(rel) {
+  const parts = rel.split(path.sep).filter(Boolean);
+  if (parts.some((p) => DENIED_SEGMENTS.has(p))) return true;
+  const base = parts.at(-1);
+  if (base && DENIED_BASENAMES.has(base)) return true;
+  if (base?.endsWith(".pem")) return true;
+  return false;
 }
 
 // Resolves the real path of `target`, following symlinks. When `target` does not

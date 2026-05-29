@@ -1,3 +1,6 @@
+import net from "node:net";
+import { isBlockedHostname, isBlockedIp } from "./net-guard.js";
+
 const defaultViewport = Object.freeze({ width: 1280, height: 720 });
 const safeChromiumArgs = Object.freeze([
   "--disable-extensions",
@@ -56,6 +59,10 @@ async function navigatePage(page, rawUrl) {
   const url = new URL(rawUrl);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Computer use browser URL must be http or https.");
+  }
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (net.isIP(host) ? isBlockedIp(host) : isBlockedHostname(host)) {
+    throw new Error("Navigation to local, loopback, or private addresses is not allowed.");
   }
   await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
 }

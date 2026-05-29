@@ -1,9 +1,31 @@
+# Dependencies
 node_modules/
+
+# Build / packaging output
 dist/
 out/
 release/
-.DS_Store
+build/Release/
+*.app
+
+# Logs & debug
 *.log
+npm-debug.log*
+yarn-error.log*
+
+# Environment / secrets
 .env
 .env.*
+!.env.example
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Agent / tooling
 .gg/

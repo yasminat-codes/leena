@@ -36,7 +36,6 @@
       "target": [
         "dir"
       ],
-      "identity": "INDIANA RUSTAN DI (396M7LY29W)",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "timestamp": null,

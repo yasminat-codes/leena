@@ -32,6 +32,12 @@
   --radius-md: 11px;
   --radius-sm: 8px;
 
+  /* Button depth (the raised "3D" look shared with the active tab) */
+  --btn-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+  --btn-sheen-hover: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.045));
+  --btn-raise: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 2px 6px rgba(0, 0, 0, 0.3);
+  --btn-raise-hover: 0 1px 0 rgba(255, 255, 255, 0.11) inset, 0 4px 12px rgba(0, 0, 0, 0.4);
+
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur: 180ms;
@@ -67,18 +73,21 @@ button {
 
 /* Scrollbars */
 .panel-body,
-.permissions-list {
+.permissions-list,
+.agent-form {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 .panel-body::-webkit-scrollbar,
-.permissions-list::-webkit-scrollbar {
+.permissions-list::-webkit-scrollbar,
+.agent-form::-webkit-scrollbar {
   width: 7px;
 }
 
 .panel-body::-webkit-scrollbar-thumb,
-.permissions-list::-webkit-scrollbar-thumb {
+.permissions-list::-webkit-scrollbar-thumb,
+.agent-form::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
@@ -86,7 +95,8 @@ button {
 }
 
 .panel-body::-webkit-scrollbar-thumb:hover,
-.permissions-list::-webkit-scrollbar-thumb:hover {
+.permissions-list::-webkit-scrollbar-thumb:hover,
+.agent-form::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.24);
 }
 
@@ -179,16 +189,19 @@ button {
   padding: 0;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
-  background: var(--raised);
+  background: var(--btn-sheen), var(--raised);
+  box-shadow: var(--btn-raise);
   cursor: pointer;
   transition:
     border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
     background var(--dur) var(--ease-out);
 }
 
 .menu-button:hover {
   border-color: var(--hairline-strong);
-  background: var(--raised-hover);
+  background: var(--btn-sheen-hover), var(--raised-hover);
+  box-shadow: var(--btn-raise-hover);
 }
 
 .menu-button[aria-expanded="true"] {
@@ -240,7 +253,7 @@ button {
   gap: 6px;
   padding: 4px 10px 4px 9px;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text-2);
   background: var(--raised);
   font-size: 0.58rem;
@@ -419,10 +432,8 @@ button {
 
 .panel-tab.is-active {
   color: var(--text);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.045));
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.08) inset,
-    0 2px 8px rgba(0, 0, 0, 0.35);
+  background: var(--btn-sheen-hover);
+  box-shadow: var(--btn-raise);
 }
 
 /* ---------- Body ---------- */
@@ -454,6 +465,12 @@ button {
   animation-delay: calc(var(--stagger, 0) * 26ms);
 }
 
+/* Silent in-place refreshes (e.g. after delete/complete) must not reanimate. */
+.panel-body.no-animate > *,
+.panel-body.no-animate .screenshot-grid > * {
+  animation: none;
+}
+
 .panel-section-header {
   margin: 15px 6px 5px;
   color: var(--text-3);
@@ -474,7 +491,8 @@ button {
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  padding: 10px 11px;
+  margin-bottom: 4px;
+  padding: 8px 11px;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   transition:
@@ -499,6 +517,20 @@ button {
 }
 
 .panel-row:hover::before {
+  opacity: 1;
+}
+
+.is-selectable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-row.is-selected {
+  border-color: var(--accent);
+  background: rgba(129, 140, 248, 0.16);
+}
+
+.panel-row.is-selected::before {
   opacity: 1;
 }
 
@@ -596,7 +628,7 @@ button {
   flex-shrink: 0;
   padding: 3px 9px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   font-size: 0.55rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -667,10 +699,28 @@ button {
 }
 
 .screenshot-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin: 0;
+}
+
+.screenshot-card.is-selected::after {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  content: "\2713";
 }
 
 .screenshot-thumb {
@@ -679,9 +729,10 @@ button {
   object-fit: cover;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
-  cursor: zoom-in;
+  cursor: pointer;
   transition:
     border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
     transform var(--dur) var(--ease-out);
 }
 
@@ -690,13 +741,9 @@ button {
   transform: translateY(-1px);
 }
 
-.screenshot-card.is-expanded {
-  grid-column: 1 / -1;
-}
-
-.screenshot-card.is-expanded .screenshot-thumb {
-  height: auto;
-  cursor: zoom-out;
+.screenshot-card.is-selected .screenshot-thumb {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .screenshot-caption {
@@ -708,20 +755,25 @@ button {
   align-self: flex-start;
   padding: 3px 9px;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text-2);
-  background: var(--raised);
+  background: var(--btn-sheen), var(--raised);
+  box-shadow: var(--btn-raise);
   cursor: pointer;
   font-size: 0.58rem;
   font-weight: 600;
   transition:
     color var(--dur) var(--ease-out),
-    border-color var(--dur) var(--ease-out);
+    border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    background var(--dur) var(--ease-out);
 }
 
 .screenshot-reveal:hover {
   color: var(--text);
   border-color: var(--hairline-strong);
+  background: var(--btn-sheen-hover), var(--raised-hover);
+  box-shadow: var(--btn-raise-hover);
 }
 
 /* ---------- Empty state ---------- */
@@ -784,6 +836,114 @@ button {
   letter-spacing: 0.04em;
 }
 
+/* ---------- Selection action bar ---------- */
+.panel-body.has-selection {
+  padding-bottom: 78px;
+}
+
+.panel-selection-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 22px 16px 16px;
+  background: linear-gradient(180deg, transparent, rgba(9, 10, 15, 0.94) 48%);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+.panel-selection-bar.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.panel-selection-bar > * {
+  pointer-events: auto;
+}
+
+.panel-selection-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  color: var(--text-3);
+  font-size: 0.62rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.panel-selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selection-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  font-family: "Space Grotesk", Geist, sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition:
+    background var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
+}
+
+.selection-action:active {
+  transform: scale(0.96);
+}
+
+.selection-action-icon {
+  display: block;
+  flex: none;
+}
+
+.selection-done {
+  background: linear-gradient(180deg, #7c8cff, #5b6cf0);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 16px rgba(91, 108, 240, 0.35);
+}
+
+.selection-done:hover {
+  background: linear-gradient(180deg, #8b99ff, #6a7af5);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 8px 20px rgba(91, 108, 240, 0.45);
+}
+
+.selection-delete {
+  background: linear-gradient(180deg, #fb7185, #ef4358);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 16px rgba(239, 67, 88, 0.4);
+}
+
+.selection-delete:hover {
+  background: linear-gradient(180deg, #fc8194, #f1576a);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 8px 20px rgba(239, 67, 88, 0.5);
+}
+
 .mic-picker {
   display: flex;
   align-items: center;
@@ -799,11 +959,17 @@ button {
 
 .mic-select {
   max-width: 190px;
-  padding: 3px 6px;
+  padding: 3px 20px 3px 6px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   color: var(--text-2);
-  background: var(--raised);
+  background-color: var(--raised);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 11px;
   cursor: pointer;
   font: inherit;
   font-size: 0.6rem;
@@ -811,13 +977,13 @@ button {
   transition:
     color var(--dur) var(--ease-out),
     border-color var(--dur) var(--ease-out),
-    background var(--dur) var(--ease-out);
+    background-color var(--dur) var(--ease-out);
 }
 
 .mic-select:hover {
   color: var(--text);
   border-color: var(--hairline-strong);
-  background: var(--raised-hover);
+  background-color: var(--raised-hover);
 }
 
 .mic-select:focus-visible {
@@ -895,6 +1061,13 @@ button {
 
 .agent-select {
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239aa0ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 14px;
 }
 
 .agent-input:focus,
@@ -913,22 +1086,25 @@ button {
   flex: none;
   padding: 5px 14px;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text-2);
-  background: var(--raised);
+  background: var(--btn-sheen), var(--raised);
+  box-shadow: var(--btn-raise);
   cursor: pointer;
   font-size: 0.62rem;
   font-weight: 600;
   transition:
     color var(--dur) var(--ease-out),
     border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
     background var(--dur) var(--ease-out);
 }
 
 .agent-save:hover {
   color: var(--text);
   border-color: var(--hairline-strong);
-  background: var(--raised-hover);
+  background: var(--btn-sheen-hover), var(--raised-hover);
+  box-shadow: var(--btn-raise-hover);
 }
 
 .view-header {
@@ -948,11 +1124,13 @@ button {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   color: var(--text-2);
-  background: var(--raised);
+  background: var(--btn-sheen), var(--raised);
+  box-shadow: var(--btn-raise);
   cursor: pointer;
   transition:
     color var(--dur) var(--ease-out),
     border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
     background var(--dur) var(--ease-out);
 }
 
@@ -963,7 +1141,8 @@ button {
 .view-back:hover {
   color: var(--text);
   border-color: var(--hairline-strong);
-  background: var(--raised-hover);
+  background: var(--btn-sheen-hover), var(--raised-hover);
+  box-shadow: var(--btn-raise-hover);
 }
 
 .view-title {
@@ -984,15 +1163,17 @@ button {
 .permission-actions button {
   padding: 5px 11px;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text-2);
-  background: var(--raised);
+  background: var(--btn-sheen), var(--raised);
+  box-shadow: var(--btn-raise);
   cursor: pointer;
   font-size: 0.62rem;
   font-weight: 600;
   transition:
     color var(--dur) var(--ease-out),
     border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
     background var(--dur) var(--ease-out);
 }
 
@@ -1000,7 +1181,8 @@ button {
 .permission-actions button:hover {
   color: var(--text);
   border-color: var(--hairline-strong);
-  background: var(--raised-hover);
+  background: var(--btn-sheen-hover), var(--raised-hover);
+  box-shadow: var(--btn-raise-hover);
 }
 
 .permission-item {
@@ -1356,7 +1538,7 @@ button {
   margin-top: 4px;
   padding: 0 14px;
   border: 1px solid var(--danger-line);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--danger);
   background:
     radial-gradient(80% 120% at 50% 0%, rgba(255, 255, 255, 0.11), transparent 58%),
@@ -1448,7 +1630,7 @@ button {
 .cu-target {
   padding: 2px 8px;
   border: 1px solid var(--accent-line);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--accent-bright);
   background: var(--accent-soft);
   font-size: 0.54rem;
@@ -1520,7 +1702,7 @@ button {
   margin: 0;
   padding: 0 12px;
   border: 1px solid var(--danger-line);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--danger);
   background:
     radial-gradient(80% 120% at 50% 0%, rgba(255, 255, 255, 0.11), transparent 58%),

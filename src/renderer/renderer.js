@@ -34,6 +34,7 @@ const agentPanelElement = document.querySelector("#agent-panel");
 const agentBackButton = document.querySelector("#agent-back");
 const agentFormElement = document.querySelector("#agent-form");
 const agentNameInput = document.querySelector("#agent-name");
+const agentAboutInput = document.querySelector("#agent-about");
 const agentGoalsInput = document.querySelector("#agent-goals");
 const agentVoiceSelect = document.querySelector("#agent-voice");
 const agentPersonaSelect = document.querySelector("#agent-persona");
@@ -58,6 +59,18 @@ let isOpenAIConnected = false;
 let peerConnection = null;
 let dataChannel = null;
 let localStream = null;
+// Ephemeral realtime secrets are short-lived; we prefetch one as soon as OpenAI
+// connects (and re-prime after each call) so call-start never blocks on the
+// client_secret round-trip. The cache holds the last resolved secret, while
+// `secretPrefetchPromise` tracks an in-flight request so concurrent callers
+// share it instead of minting duplicates.
+let prefetchedSecret = null;
+let secretPrefetchPromise = null;
+// Timestamp of the last background prefetch failure; used to back off automatic
+// re-prime attempts so a failing endpoint isn't hammered by repeated triggers.
+let lastSecretPrefetchFailureAt = 0;
+const SECRET_EXPIRY_MARGIN_MS = 10_000;
+const SECRET_PREFETCH_COOLDOWN_MS = 5_000;
 let audioLevelMonitor = null;
 let pendingHangup = false;
 let hangupFallbackTimer = null;
@@ -183,6 +196,7 @@ function setOpenAIConnected(connected) {
   headerCallButton.disabled = !connected;
   appShellElement.classList.toggle("is-authorized", connected);
   if (!connected) {
+    invalidatePrefetchedSecret();
     setMode("idle");
     setStatus("Connect OpenAI");
   }
@@ -265,6 +279,7 @@ async function refreshOpenAIStatus() {
   setOpenAIConnected(status.connected);
   if (status.connected) {
     setStatus("Ready");
+    prefetchRealtimeSecret();
   }
 }
 
@@ -299,6 +314,7 @@ function populateAgentOptions() {
 
 function renderAgentProfile() {
   agentNameInput.value = agentProfile.name;
+  agentAboutInput.value = agentProfile.about;
   agentGoalsInput.value = agentProfile.goals.join("\n");
   agentVoiceSelect.value = agentProfile.voice;
   agentPersonaSelect.value = agentProfile.persona;
@@ -307,6 +323,7 @@ function renderAgentProfile() {
 async function saveAgentProfile() {
   const profile = {
     name: agentNameInput.value,
+    about: agentAboutInput.value,
     goals: agentGoalsInput.value.split("\n"),
     voice: agentVoiceSelect.value,
     persona: agentPersonaSelect.value,
@@ -316,6 +333,10 @@ async function saveAgentProfile() {
     agentProfile = normalizeAgentProfile(await window.brah.setAgentProfile(profile));
     renderAgentProfile();
     agentStatusElement.textContent = "Saved";
+    // Voice/instructions are baked into the minted secret, so drop the stale
+    // prefetch and prime a fresh one reflecting the updated profile.
+    invalidatePrefetchedSecret();
+    prefetchRealtimeSecret();
   } catch (error) {
     agentStatusElement.textContent = `Save failed: ${error.message}`;
   }
@@ -401,6 +422,7 @@ async function connectOpenAI() {
     setOpenAIConnected(true);
     setMode("idle");
     setStatus("Ready");
+    prefetchRealtimeSecret();
   } catch (error) {
     setOpenAIConnected(false);
     setStatus(`Connect failed: ${error.message}`);
@@ -418,6 +440,99 @@ async function toggleCall() {
   }
 
   await startCall();
+}
+
+function secretIsFresh(secret) {
+  if (!secret?.value) {
+    return false;
+  }
+  // A secret with no expiry hint is assumed usable; otherwise require it to
+  // outlive the margin so we never hand `startCall` an about-to-expire token.
+  if (typeof secret.expiresAt !== "number") {
+    return true;
+  }
+  return secret.expiresAt - SECRET_EXPIRY_MARGIN_MS > Date.now();
+}
+
+// Best-effort: mint an ephemeral secret ahead of the next call so its network
+// round-trip overlaps idle time rather than the call-start critical path.
+function prefetchRealtimeSecret() {
+  if (!isOpenAIConnected || secretPrefetchPromise || secretIsFresh(prefetchedSecret)) {
+    return;
+  }
+  // Back off automatic re-primes after a recent failure; a user-initiated call
+  // still fetches on demand via `consumeRealtimeSecret` (which surfaces errors).
+  if (
+    lastSecretPrefetchFailureAt &&
+    Date.now() - lastSecretPrefetchFailureAt < SECRET_PREFETCH_COOLDOWN_MS
+  ) {
+    return;
+  }
+  const startedAt = performance.now();
+  secretPrefetchPromise = window.brah
+    .createRealtimeSecret()
+    .then((secret) => {
+      prefetchedSecret = secret;
+      lastSecretPrefetchFailureAt = 0;
+      void writeRendererDiagnostic("call.secret.prefetched", {
+        elapsedMs: Math.round(performance.now() - startedAt),
+        hasValue: Boolean(secret?.value),
+      });
+      return secret;
+    })
+    .catch((error) => {
+      // A prefetch failure is non-fatal: `consumeRealtimeSecret` falls back to an
+      // on-demand fetch, surfacing any real error there.
+      prefetchedSecret = null;
+      lastSecretPrefetchFailureAt = Date.now();
+      void writeRendererDiagnostic("call.secret.prefetch_failed", formatRendererError(error));
+      return null;
+    })
+    .finally(() => {
+      secretPrefetchPromise = null;
+    });
+}
+
+// Return a fresh secret for a call, preferring the prefetched one, then any
+// in-flight prefetch, and falling back to an on-demand fetch. Ephemeral secrets
+// are single-use per call, so the cache is cleared once a secret is taken.
+async function consumeRealtimeSecret() {
+  const startedAt = performance.now();
+  if (secretIsFresh(prefetchedSecret)) {
+    const secret = prefetchedSecret;
+    prefetchedSecret = null;
+    void writeRendererDiagnostic("call.secret.consumed", {
+      source: "cache_hit",
+      elapsedMs: Math.round(performance.now() - startedAt),
+    });
+    return secret;
+  }
+  if (secretPrefetchPromise) {
+    const secret = await secretPrefetchPromise;
+    if (secretIsFresh(secret)) {
+      prefetchedSecret = null;
+      void writeRendererDiagnostic("call.secret.consumed", {
+        source: "awaited_prefetch",
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+      return secret;
+    }
+  }
+  const secret = await window.brah.createRealtimeSecret();
+  void writeRendererDiagnostic("call.secret.consumed", {
+    source: "on_demand",
+    elapsedMs: Math.round(performance.now() - startedAt),
+  });
+  return secret;
+}
+
+// Drop any cached secret when it can no longer be valid (sign-out) or when the
+// agent profile that shaped it changed (voice/instructions are baked in).
+function invalidatePrefetchedSecret() {
+  prefetchedSecret = null;
+  // Clear the failure cooldown too, so an explicit invalidation (sign-out,
+  // profile change) can re-prime immediately rather than waiting it out.
+  lastSecretPrefetchFailureAt = 0;
 }
 
 async function startCall() {
@@ -441,9 +556,16 @@ async function startCall() {
   });
 
   try {
-    const secret = await window.brah.createRealtimeSecret();
+    // The secret fetch (network) and mic acquisition (permission/device) are
+    // independent, so run them concurrently to overlap their round-trips. The
+    // secret is usually already prefetched, making this effectively just the
+    // getUserMedia wait.
+    const [secret, stream] = await Promise.all([
+      consumeRealtimeSecret(),
+      acquireMicrophoneStream(),
+    ]);
+    localStream = stream;
     await writeRendererDiagnostic("call.secret.created", { hasValue: Boolean(secret?.value) });
-    localStream = await acquireMicrophoneStream();
     await writeRendererDiagnostic("call.microphone.stream", describeMediaStream(localStream));
     startAudioLevelMonitor(localStream);
     void populateMicDevices();
@@ -570,6 +692,8 @@ async function stopCall() {
   await panelController.open();
   setMode("idle");
   setStatus(isOpenAIConnected ? "Ready" : "Connect OpenAI");
+  // Re-prime a secret so the next call starts without the client_secret wait.
+  prefetchRealtimeSecret();
 }
 
 async function handleRealtimeEvent(event) {

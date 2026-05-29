@@ -39,9 +39,12 @@ import {
   saveMicrophoneDeviceId,
 } from "./realtime/tools/microphone-store.js";
 import {
+  deleteCalendarItem,
+  deleteTask,
   listCalendarItems,
   listTasks,
   migrateLegacyPlannerStore,
+  updateTaskStatus,
 } from "./realtime/tools/planner-store.js";
 import { loadWindowPosition, saveWindowPosition } from "./realtime/tools/window-state-store.js";
 
@@ -80,9 +83,12 @@ const realtimeDefaults = Object.freeze({
 });
 
 const windowModes = Object.freeze({
-  orb: { width: 172, height: 188, placement: "bottom-right" },
-  call: { width: 226, height: 52, placement: "bottom-center" },
-  panel: { width: 440, height: 600, placement: "bottom-right" },
+  // `alwaysOnTop` is only set for the transient call overlay so it stays visible
+  // while the user works in other apps. The main UI (orb/panel) behaves like a
+  // normal window and can be sent behind other windows.
+  orb: { width: 172, height: 188, placement: "bottom-right", alwaysOnTop: false },
+  call: { width: 226, height: 52, placement: "bottom-center", alwaysOnTop: true },
+  panel: { width: 440, height: 600, placement: "bottom-right", alwaysOnTop: false },
 });
 
 let mainWindow;
@@ -110,7 +116,7 @@ function createMainWindow() {
     frame: false,
     transparent: true,
     resizable: false,
-    alwaysOnTop: true,
+    alwaysOnTop: windowModes.panel.alwaysOnTop,
     skipTaskbar: true,
     backgroundColor: "#00000000",
     webPreferences: {
@@ -240,6 +246,9 @@ async function setMainWindowMode(mode) {
   // computer-use pill to ~84px tall); locking max prevents any such resize.
   mainWindow.setMinimumSize(targetBounds.width, targetBounds.height);
   mainWindow.setMaximumSize(targetBounds.width, targetBounds.height);
+  // Only the transient call overlay floats above other apps; the main UI is a
+  // normal window so it can be sent behind other windows.
+  mainWindow.setAlwaysOnTop(Boolean(target.alwaysOnTop));
   applyWindowBounds(targetBounds);
   if (sizeChanged) {
     await fadeMainWindowTo(1, 130);
@@ -389,9 +398,13 @@ ipcMain.handle("audio:set-microphone", (_event, deviceId) => saveMicrophoneDevic
 
 ipcMain.handle("planner:list-tasks", () => listTasks());
 ipcMain.handle("planner:list-calendar", () => listCalendarItems());
+ipcMain.handle("planner:delete-tasks", (_event, ids) => deletePlannerTasks(ids));
+ipcMain.handle("planner:complete-tasks", (_event, ids) => completePlannerTasks(ids));
+ipcMain.handle("planner:delete-calendar-items", (_event, ids) => deletePlannerCalendarItems(ids));
 ipcMain.handle("activity:list", (_event, kind) => listActivity(kind));
 ipcMain.handle("screenshots:list", () => listScreenshots());
 ipcMain.handle("screenshots:reveal", (_event, name) => revealScreenshot(name));
+ipcMain.handle("screenshots:delete", (_event, names) => deleteScreenshots(names));
 ipcMain.handle("window:set-mode", (_event, mode) => setMainWindowMode(mode));
 ipcMain.handle("window:set-focusable", (_event, focusable) => {
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -628,6 +641,72 @@ async function recordToolActivity(name, args, result) {
   } catch (error) {
     console.warn("Failed to record activity", error);
   }
+}
+
+function toIdList(value) {
+  if (Array.isArray(value)) {
+    return value.map((id) => String(id)).filter((id) => id.trim());
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value];
+  }
+  return [];
+}
+
+// These handlers intentionally do not broadcastDataChanged: the panel that
+// invoked them refreshes itself in place (without reanimating), so a broadcast
+// would trigger a redundant animated reload.
+function deletePlannerTasks(ids) {
+  let deleted = 0;
+  for (const id of toIdList(ids)) {
+    if (deleteTask(id).status === "deleted") {
+      deleted += 1;
+    }
+  }
+  return { status: "ok", deleted };
+}
+
+function completePlannerTasks(ids) {
+  let updated = 0;
+  for (const id of toIdList(ids)) {
+    if (updateTaskStatus(id, "completed").status === "updated") {
+      updated += 1;
+    }
+  }
+  return { status: "ok", updated };
+}
+
+function deletePlannerCalendarItems(ids) {
+  let deleted = 0;
+  for (const id of toIdList(ids)) {
+    if (deleteCalendarItem(id).status === "deleted") {
+      deleted += 1;
+    }
+  }
+  return { status: "ok", deleted };
+}
+
+async function deleteScreenshots(names) {
+  const screenshotsDir = path.join(app.getPath("userData"), "screenshots");
+  let deleted = 0;
+  for (const name of toIdList(names)) {
+    if (name.includes("/") || name.includes("\\") || name.includes("..")) {
+      continue;
+    }
+    const filePath = path.join(screenshotsDir, name);
+    if (path.dirname(filePath) !== screenshotsDir) {
+      continue;
+    }
+    try {
+      await fs.unlink(filePath);
+      deleted += 1;
+    } catch (error) {
+      if (error?.code !== "ENOENT") {
+        safeConsole("warn", "Failed to delete screenshot", error);
+      }
+    }
+  }
+  return { status: "ok", deleted };
 }
 
 async function listScreenshots() {

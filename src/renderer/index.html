@@ -124,18 +124,29 @@
               />
             </label>
             <label class="agent-field">
+              <span class="agent-label">What should I know about you?</span>
+              <textarea
+                id="agent-about"
+                class="agent-textarea"
+                rows="5"
+                maxlength="1000"
+                placeholder="- I'm a product designer at a startup&#10;- I have a dog named Benji&#10;- I'm learning Spanish"
+              ></textarea>
+              <span class="agent-hint">A few notes about your life, work, and what matters to you.</span>
+            </label>
+            <label class="agent-field">
               <span class="agent-label">Your goals</span>
               <textarea
                 id="agent-goals"
                 class="agent-textarea"
                 rows="5"
-                placeholder="One goal per line"
+                placeholder="- Get a sixpack in 3 months&#10;- Read 12 books this year&#10;- Launch my side project"
               ></textarea>
+              <span class="agent-hint">One goal per line, kept short.</span>
             </label>
             <label class="agent-field">
               <span class="agent-label">Voice</span>
               <select id="agent-voice" class="agent-select"></select>
-              <span class="agent-hint">Applies on your next call.</span>
             </label>
             <label class="agent-field">
               <span class="agent-label">Persona</span>

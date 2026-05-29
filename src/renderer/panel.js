@@ -25,6 +25,14 @@ export function createPanelController({ brah, onModeChange } = {}) {
   let isOpen = false;
   let activeTabId = tabs[0].id;
   let dataChangedListener = null;
+  let selectionBar = null;
+  let selectionCountElement = null;
+  let selectionDoneButton = null;
+  let animateNextRender = true;
+  const selectedIds = new Set();
+
+  // Tabs whose items support multi-select + delete.
+  const selectableTabs = Object.freeze(new Set(["tasks", "calendar", "screenshots"]));
 
   function renderTabs() {
     tabsElement.replaceChildren(
@@ -47,9 +55,15 @@ export function createPanelController({ brah, onModeChange } = {}) {
     void loadActiveTab();
   }
 
-  async function loadActiveTab() {
+  async function loadActiveTab({ animate = true } = {}) {
     const tab = tabs.find((item) => item.id === activeTabId) ?? tabs[0];
-    setLoading();
+    clearSelection();
+    animateNextRender = animate;
+    // Skip the loading flash on silent in-place refreshes (e.g. after
+    // deleting/completing selected items) so the list updates without a blink.
+    if (animate) {
+      setLoading();
+    }
     try {
       if (tab.id === "tasks") {
         renderTasks(await bridge.getPlannerTasks());
@@ -68,6 +82,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   }
 
   function mountBody(...nodes) {
+    bodyElement.classList.toggle("no-animate", !animateNextRender);
     bodyElement.replaceChildren(...nodes);
     applyStagger(bodyElement.children);
   }
@@ -83,6 +98,139 @@ export function createPanelController({ brah, onModeChange } = {}) {
   function setLoading() {
     mountBody(buildEmptyState("Loading…", ""));
     setFooter("");
+  }
+
+  // Wires a rendered row/card so clicking it toggles selection + highlight.
+  function makeSelectable(element, id) {
+    if (!id) {
+      return element;
+    }
+    element.classList.add("is-selectable");
+    element.dataset.selectId = id;
+    if (selectedIds.has(id)) {
+      element.classList.add("is-selected");
+    }
+    element.addEventListener("click", () => toggleSelection(id, element));
+    return element;
+  }
+
+  function toggleSelection(id, element) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+      element.classList.remove("is-selected");
+    } else {
+      selectedIds.add(id);
+      element.classList.add("is-selected");
+    }
+    updateSelectionBar();
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    updateSelectionBar();
+  }
+
+  function ensureSelectionBar() {
+    if (selectionBar) {
+      return selectionBar;
+    }
+    selectionBar = document.createElement("div");
+    selectionBar.className = "panel-selection-bar";
+    selectionBar.hidden = true;
+
+    selectionCountElement = document.createElement("span");
+    selectionCountElement.className = "panel-selection-count";
+
+    selectionDoneButton = document.createElement("button");
+    selectionDoneButton.type = "button";
+    selectionDoneButton.className = "selection-action selection-done";
+    selectionDoneButton.append(buildSelectionIcon("check"), buildSelectionLabel("Done"));
+    selectionDoneButton.addEventListener("click", () => void completeSelection());
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "selection-action selection-delete";
+    deleteButton.append(buildSelectionIcon("trash"), buildSelectionLabel("Delete"));
+    deleteButton.addEventListener("click", () => void deleteSelection());
+
+    const actions = document.createElement("div");
+    actions.className = "panel-selection-actions";
+    actions.append(selectionDoneButton, deleteButton);
+
+    selectionBar.append(selectionCountElement, actions);
+    panelElement.append(selectionBar);
+    return selectionBar;
+  }
+
+  function updateSelectionBar() {
+    const bar = ensureSelectionBar();
+    const count = selectedIds.size;
+    const hasSelection = count > 0 && selectableTabs.has(activeTabId);
+    bodyElement.classList.toggle("has-selection", hasSelection);
+    if (!hasSelection) {
+      bar.classList.remove("is-visible");
+      bar.hidden = true;
+      return;
+    }
+    selectionCountElement.textContent = `${count} selected`;
+    selectionDoneButton.hidden = activeTabId !== "tasks";
+    bar.hidden = false;
+    requestAnimationFrame(() => bar.classList.add("is-visible"));
+  }
+
+  async function deleteSelection() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) {
+      return;
+    }
+    if (activeTabId === "tasks") {
+      await bridge.deletePlannerTasks(ids);
+    } else if (activeTabId === "calendar") {
+      await bridge.deleteCalendarItems(ids);
+    } else if (activeTabId === "screenshots") {
+      await bridge.deleteScreenshots(ids);
+    }
+    await loadActiveTab({ animate: false });
+  }
+
+  async function completeSelection() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || activeTabId !== "tasks") {
+      return;
+    }
+    await bridge.completePlannerTasks(ids);
+    await loadActiveTab({ animate: false });
+  }
+
+  function buildSelectionLabel(text) {
+    const label = document.createElement("span");
+    label.textContent = text;
+    return label;
+  }
+
+  function buildSelectionIcon(kind) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "selection-action-icon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "13");
+    svg.setAttribute("height", "13");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    if (kind === "trash") {
+      path.setAttribute(
+        "d",
+        "M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12",
+      );
+    } else {
+      path.setAttribute("d", "M5 12.5 10 17l9-10");
+    }
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.append(path);
+    return svg;
   }
 
   function renderError(error) {
@@ -143,7 +291,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
     priority.className = `priority-pill priority-${task.priority}`;
     priority.textContent = task.priority;
     row.append(priority);
-    return row;
+    return makeSelectable(row, task.id);
   }
 
   function renderCalendar(calendarItems) {
@@ -194,7 +342,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
       content.append(description);
     }
     row.append(content);
-    return row;
+    return makeSelectable(row, item.id);
   }
 
   function renderScreenshots(screenshots) {
@@ -213,9 +361,6 @@ export function createPanelController({ brah, onModeChange } = {}) {
       image.className = "screenshot-thumb";
       image.src = shot.dataUrl;
       image.alt = shot.name;
-      image.addEventListener("click", () => {
-        figure.classList.toggle("is-expanded");
-      });
       const caption = document.createElement("figcaption");
       caption.className = "screenshot-caption";
       caption.textContent = formatTime(shot.createdAt);
@@ -223,11 +368,12 @@ export function createPanelController({ brah, onModeChange } = {}) {
       reveal.type = "button";
       reveal.className = "screenshot-reveal";
       reveal.textContent = "Reveal";
-      reveal.addEventListener("click", () => {
+      reveal.addEventListener("click", (event) => {
+        event.stopPropagation();
         void bridge.revealScreenshot(shot.name);
       });
       figure.append(image, caption, reveal);
-      grid.append(figure);
+      grid.append(makeSelectable(figure, shot.name));
     }
     applyStagger(grid.children);
     mountBody(grid);
@@ -415,6 +561,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
       return;
     }
     isOpen = false;
+    clearSelection();
     panelElement.classList.remove("is-open");
     onModeChange?.("orb");
     // immediate hides the panel synchronously (no fade) so a caller resizing the

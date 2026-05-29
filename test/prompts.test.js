@@ -22,7 +22,7 @@ test("normalizeAgentProfile falls back to default persona for unknown values", (
 
 test("normalizeAgentProfile passes through valid voice and persona", () => {
   assert.equal(normalizeAgentProfile({ voice: "cedar" }).voice, "cedar");
-  assert.equal(normalizeAgentProfile({ persona: "hype" }).persona, "hype");
+  assert.equal(normalizeAgentProfile({ persona: "coach" }).persona, "coach");
 });
 
 test("cedar is in the realtime voice allowlist", () => {

@@ -52,25 +52,25 @@ export const AGENT_PERSONAS = Object.freeze({
     label: "Default",
     prompt: "",
   },
-  hype: {
-    label: "Hype",
+  therapist: {
+    label: "Therapist",
     prompt:
-      "Tone: high-energy hype companion. Be upbeat, encouraging, and punchy. Celebrate wins, keep momentum high, and use lively, enthusiastic phrasing without getting wordy.",
+      "Tone: warm, reflective listener. Lead with empathy and validate how Ken feels before anything else. Reflect back what you hear, ask one gentle open question, and keep it low-pressure. Don't rush to fix or advise unless Ken asks for it.",
   },
-  calm: {
-    label: "Calm",
+  explainer: {
+    label: "Explainer",
     prompt:
-      "Tone: calm and grounding. Speak in a slow, soothing, reassuring way. Keep things low-pressure, gentle, and unhurried while staying helpful.",
+      "Tone: patient explainer who makes complex things easy. Start from the simple core, build up step by step, and use plain language and quick analogies instead of jargon. Give the short version first, then check if Ken wants to go deeper.",
   },
-  professional: {
-    label: "Professional",
+  coach: {
+    label: "Coach",
     prompt:
-      "Tone: crisp and professional. Be precise, composed, and efficient. Skip slang, stay focused on outcomes, and keep replies polished but still concise.",
+      "Tone: focused coach who builds momentum. Be encouraging but action-oriented: name the next concrete step, hold Ken accountable, and keep him moving. Motivate through clarity and follow-through, not empty cheerleading.",
   },
   honest: {
-    label: "Brutally honest",
+    label: "Straight shooter",
     prompt:
-      "Tone: brutally honest. Give direct, no-sugarcoating feedback. Call out problems plainly and skip flattery, but stay constructive rather than mean.",
+      "Tone: straight shooter. Give direct, no-sugarcoating feedback and get to the truth fast. Call out problems plainly and skip flattery, but stay constructive rather than mean.",
   },
 });
 
@@ -79,6 +79,7 @@ export const DEFAULT_PERSONA = "default";
 export const DEFAULT_AGENT_PROFILE = Object.freeze({
   goals: [],
   name: "Ken",
+  about: "",
   voice: DEFAULT_VOICE,
   persona: DEFAULT_PERSONA,
 });
@@ -113,6 +114,9 @@ export function buildAgentProfileInstructions(profile) {
     lines.push(
       `The user's name is ${normalized.name}. Refer to them by name naturally, not every turn.`,
     );
+  }
+  if (normalized.about) {
+    lines.push(`What the user wants you to know about them:\n${normalized.about}`);
   }
   if (normalized.goals.length > 0) {
     lines.push("The user's current goals are:");
@@ -150,6 +154,7 @@ export function normalizeAgentProfile(profile) {
   return {
     goals: normalizeGoals(Array.isArray(profile?.goals) ? profile.goals : []),
     name: typeof profile?.name === "string" ? profile.name.trim() : "",
+    about: typeof profile?.about === "string" ? profile.about.trim().slice(0, 1000) : "",
     voice: normalizeVoice(profile?.voice),
     persona: normalizePersona(profile?.persona),
   };

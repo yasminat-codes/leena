@@ -25,30 +25,34 @@ test("missing agent profile falls back to defaults", async () => {
   });
 });
 
-test("agent profile normalizes and persists name and goals", async () => {
+test("agent profile normalizes and persists name, about, and goals", async () => {
   await withProfileDb((filePath) => {
     const saved = saveAgentProfile(
       {
         name: "  Sam  ",
+        about: "  I run a bakery and have a dog named Benji.  ",
         goals: ["  Ship the app  ", "", "Ship the app", "Learn guitar"],
       },
       filePath,
     );
     assert.equal(saved.name, "Sam");
+    assert.equal(saved.about, "I run a bakery and have a dog named Benji.");
     assert.deepEqual(saved.goals, ["Ship the app", "Learn guitar"]);
 
     closeDatabase(filePath);
     const reloaded = loadAgentProfile(filePath);
     assert.equal(reloaded.name, "Sam");
+    assert.equal(reloaded.about, "I run a bakery and have a dog named Benji.");
     assert.deepEqual(reloaded.goals, ["Ship the app", "Learn guitar"]);
   });
 });
 
 test("saving an empty profile clears name and goals", async () => {
   await withProfileDb((filePath) => {
-    saveAgentProfile({ name: "Sam", goals: ["A"] }, filePath);
-    const cleared = saveAgentProfile({ name: "", goals: [] }, filePath);
+    saveAgentProfile({ name: "Sam", about: "x", goals: ["A"] }, filePath);
+    const cleared = saveAgentProfile({ name: "", about: "", goals: [] }, filePath);
     assert.equal(cleared.name, "");
+    assert.equal(cleared.about, "");
     assert.deepEqual(cleared.goals, []);
   });
 });

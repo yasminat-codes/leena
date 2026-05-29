@@ -7,28 +7,13 @@ import {
   parseToolArguments,
 } from "../src/renderer/realtime-tool-handler.js";
 
-test("extracts tool calls from argument-done events", () => {
-  assert.deepEqual(
-    getRealtimeToolCall({
-      type: "response.function_call_arguments.done",
-      call_id: "call-1",
-      name: "web_fetch",
-      arguments: '{"url":"https://example.com"}',
-    }),
-    {
-      callId: "call-1",
-      name: "web_fetch",
-      arguments: { url: "https://example.com" },
-    },
-  );
-});
-
 test("extracts tool calls from output item done events", () => {
   assert.deepEqual(
     getRealtimeToolCall({
       type: "response.output_item.done",
       item: {
         type: "function_call",
+        status: "completed",
         call_id: "call-2",
         name: "add_task",
         arguments:
@@ -44,6 +29,34 @@ test("extracts tool calls from output item done events", () => {
         priority: "high",
       },
     },
+  );
+});
+
+test("ignores incomplete function calls cancelled by a barge-in", () => {
+  assert.equal(
+    getRealtimeToolCall({
+      type: "response.output_item.done",
+      item: {
+        type: "function_call",
+        status: "incomplete",
+        call_id: "call-cancelled",
+        name: "write_file",
+        arguments: '{"path":"notes.md","content":"half-strea',
+      },
+    }),
+    null,
+  );
+});
+
+test("ignores streaming argument-done events in favor of the finalized item", () => {
+  assert.equal(
+    getRealtimeToolCall({
+      type: "response.function_call_arguments.done",
+      call_id: "call-1",
+      name: "web_fetch",
+      arguments: '{"url":"https://example.com"}',
+    }),
+    null,
   );
 });
 
@@ -69,10 +82,14 @@ test("tool handler executes calls once per call id and sends Realtime output eve
   });
 
   const event = {
-    type: "response.function_call_arguments.done",
-    call_id: "call-1",
-    name: "web_search",
-    arguments: '{"query":"openai realtime"}',
+    type: "response.output_item.done",
+    item: {
+      type: "function_call",
+      status: "completed",
+      call_id: "call-1",
+      name: "web_search",
+      arguments: '{"query":"openai realtime"}',
+    },
   };
 
   assert.equal(await handler.handleEvent(event), true);
@@ -109,10 +126,14 @@ test("tool handler signals activity start/end around execution", async () => {
   });
 
   await handler.handleEvent({
-    type: "response.function_call_arguments.done",
-    call_id: "call-cu",
-    name: "computer_use_task",
-    arguments: "{}",
+    type: "response.output_item.done",
+    item: {
+      type: "function_call",
+      status: "completed",
+      call_id: "call-cu",
+      name: "computer_use_task",
+      arguments: "{}",
+    },
   });
 
   assert.deepEqual(activity, ["start:computer_use_task", "exec", "end:computer_use_task"]);
@@ -141,10 +162,14 @@ test("tool handler sends screenshot image as explicit response input", async () 
 
   assert.equal(
     await handler.handleEvent({
-      type: "response.function_call_arguments.done",
-      call_id: "call-screen",
-      name: "analyze_screen",
-      arguments: "{}",
+      type: "response.output_item.done",
+      item: {
+        type: "function_call",
+        status: "completed",
+        call_id: "call-screen",
+        name: "analyze_screen",
+        arguments: "{}",
+      },
     }),
     true,
   );
@@ -179,10 +204,14 @@ test("end_call acknowledges without a new response and signals the host to hang 
 
   assert.equal(
     await handler.handleEvent({
-      type: "response.function_call_arguments.done",
-      call_id: "call-end",
-      name: "end_call",
-      arguments: '{"reason":"Ken said bye"}',
+      type: "response.output_item.done",
+      item: {
+        type: "function_call",
+        status: "completed",
+        call_id: "call-end",
+        name: "end_call",
+        arguments: '{"reason":"Ken said bye"}',
+      },
     }),
     true,
   );
@@ -210,10 +239,14 @@ test("tool handler wraps execution failures into function outputs", async () => 
 
   assert.equal(
     await handler.handleEvent({
-      type: "response.function_call_arguments.done",
-      call_id: "call-fail",
-      name: "web_fetch",
-      arguments: "{}",
+      type: "response.output_item.done",
+      item: {
+        type: "function_call",
+        status: "completed",
+        call_id: "call-fail",
+        name: "web_fetch",
+        arguments: "{}",
+      },
     }),
     true,
   );

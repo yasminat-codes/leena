@@ -185,6 +185,91 @@ export const realtimeToolDefinitions = Object.freeze([
   },
   {
     type: "function",
+    name: "read_file",
+    description:
+      "Read a UTF-8 text file from Ken's workspace. Use a path relative to the workspace root before editing or answering questions about file contents.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "Workspace-relative file path, such as 'notes/todo.md'.",
+          minLength: 1,
+          maxLength: 1024,
+        },
+        maxBytes: {
+          type: "integer",
+          description: "Maximum bytes to read, default 60000 and cap 200000.",
+          minimum: 1,
+          maximum: 200000,
+        },
+      },
+      required: ["path"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "write_file",
+    description:
+      "Create or overwrite a UTF-8 text file in Ken's workspace with the full new contents. Parent folders are created automatically. Confirm before overwriting important files.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "Workspace-relative file path to write.",
+          minLength: 1,
+          maxLength: 1024,
+        },
+        content: {
+          type: "string",
+          description: "Full file contents to write.",
+          maxLength: 1000000,
+        },
+      },
+      required: ["path", "content"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "edit_file",
+    description:
+      "Replace an exact text snippet inside an existing workspace file. oldText must match exactly and uniquely unless replaceAll is true. Read the file first to copy the snippet.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "Workspace-relative file path to edit.",
+          minLength: 1,
+          maxLength: 1024,
+        },
+        oldText: {
+          type: "string",
+          description:
+            "Exact existing text to replace, including surrounding context to stay unique.",
+          minLength: 1,
+          maxLength: 100000,
+        },
+        newText: {
+          type: "string",
+          description: "Replacement text.",
+          maxLength: 100000,
+        },
+        replaceAll: {
+          type: "boolean",
+          description:
+            "Replace every occurrence instead of requiring a unique match. Defaults to false.",
+        },
+      },
+      required: ["path", "oldText", "newText"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
     name: "list_screenshot_sources",
     description:
       "List sanitized screen/window capture targets using stable session-local source ids. Use before taking a source screenshot.",

@@ -1,12 +1,13 @@
 export function getRealtimeToolCall(event) {
-  if (event.type === "response.function_call_arguments.done") {
-    return normalizeToolCall({
-      callId: event.call_id,
-      name: event.name,
-      rawArguments: event.arguments,
-    });
-  }
   if (event.type === "response.output_item.done" && event.item?.type === "function_call") {
+    // A barge-in (turn_detected) cancels the response mid-stream and the
+    // function call comes back `incomplete` with truncated/empty arguments.
+    // Executing it would run a tool with garbage args, so skip it. The
+    // authoritative finalized item (with status) is on output_item.done, so we
+    // dispatch from here rather than response.function_call_arguments.done.
+    if (event.item.status === "incomplete") {
+      return null;
+    }
     return normalizeToolCall({
       callId: event.item.call_id,
       name: event.item.name,

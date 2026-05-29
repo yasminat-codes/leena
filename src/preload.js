@@ -5,6 +5,10 @@ contextBridge.exposeInMainWorld("brah", {
   loginOpenAI: () => ipcRenderer.invoke("openai:login"),
   logoutOpenAI: () => ipcRenderer.invoke("openai:logout"),
   createRealtimeSecret: (options) => ipcRenderer.invoke("openai:create-realtime-secret", options),
+  getAgentProfile: () => ipcRenderer.invoke("agent:get-profile"),
+  setAgentProfile: (profile) => ipcRenderer.invoke("agent:set-profile", profile),
+  getMicrophoneDevice: () => ipcRenderer.invoke("audio:get-microphone"),
+  setMicrophoneDevice: (deviceId) => ipcRenderer.invoke("audio:set-microphone", deviceId),
   getOsPermissions: () => ipcRenderer.invoke("permissions:get-status"),
   requestOsPermission: (id) => ipcRenderer.invoke("permissions:request", id),
   openOsPermissionSettings: (id) => ipcRenderer.invoke("permissions:open-settings", id),
@@ -23,6 +27,7 @@ contextBridge.exposeInMainWorld("brah", {
   setWindowMode: (mode) => ipcRenderer.invoke("window:set-mode", mode),
   setWindowFocusable: (focusable) => ipcRenderer.invoke("window:set-focusable", focusable),
   minimizeWindow: () => ipcRenderer.invoke("window:minimize"),
+  quitApp: () => ipcRenderer.invoke("app:quit"),
   onDataChanged: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("data:changed", listener);

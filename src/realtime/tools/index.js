@@ -1,4 +1,5 @@
 import { executeComputerUseTool } from "./computer-use-tools.js";
+import { executeFileSystemTool } from "./filesystem-tools.js";
 import { executePlannerTool } from "./planner-tools.js";
 import { executeScreenshotTool } from "./screenshot-tools.js";
 import { executeSessionTool } from "./session-tools.js";
@@ -16,6 +17,11 @@ export async function executeRealtimeTool(name, args = {}, options = {}) {
   const webResult = await executeWebTool(name, args);
   if (webResult) {
     return webResult;
+  }
+
+  const fileSystemResult = await executeFileSystemTool(name, args, options.fileSystem);
+  if (fileSystemResult) {
+    return fileSystemResult;
   }
 
   const screenshotResult = await executeScreenshotTool(name, args, options.screenshot);

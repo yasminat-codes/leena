@@ -76,6 +76,7 @@ async function withToolHarness(callback) {
         openAI: { accessToken: "test-token", accountId: "acc-test" },
         computerTargetFactory: async () => createComputerHarness(),
       },
+      fileSystem: { rootPath: directory },
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -287,6 +288,28 @@ test("every registered Realtime tool executes a functional path", async () => {
       diagnosticEvents.some((entry) => entry.event === "screenshot.capture.written"),
       "expected screenshot diagnostics to record file writes",
     );
+
+    result = await executeRealtimeTool(
+      "write_file",
+      { path: "notes/todo.md", content: "first draft" },
+      options,
+    );
+    observedNames.push("write_file");
+    assert.equal(result.status, "created");
+
+    result = await executeRealtimeTool("read_file", { path: "notes/todo.md" }, options);
+    observedNames.push("read_file");
+    assert.equal(result.status, "read");
+    assert.equal(result.content, "first draft");
+
+    result = await executeRealtimeTool(
+      "edit_file",
+      { path: "notes/todo.md", oldText: "first", newText: "second" },
+      options,
+    );
+    observedNames.push("edit_file");
+    assert.equal(result.status, "edited");
+    assert.equal(result.replacements, 1);
 
     result = await executeRealtimeTool(
       "computer_use_task",

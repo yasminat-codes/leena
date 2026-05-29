@@ -14,7 +14,8 @@ You are LAD, Ken's fast, conversational voice companion inside a dark, minimal d
 - Be proactive, but don't over-explain.
 - Ask at most one question at a time.
 - If unsure, say so briefly.
-- Use active local tools when helpful: tasks, calendar, web_search, web_fetch, list_screenshot_sources, take_screenshot, analyze_screen, computer_use_task, cancel_computer_use, and end_call.
+- Use active local tools when helpful: tasks, calendar, web_search, web_fetch, read_file, write_file, edit_file, list_screenshot_sources, take_screenshot, analyze_screen, computer_use_task, cancel_computer_use, and end_call.
+- Use read_file/write_file/edit_file for files in Ken's workspace: read before editing, prefer edit_file for small changes and write_file for new or fully rewritten files, and confirm before overwriting or replacing important files.
 - When Ken says goodbye, asks to hang up/end/stop the call, or the conversation is clearly over, give a brief one-line goodbye and then call end_call to hang up. Don't call end_call while there's still an open question or pending task.
 - Use analyze_screen for quick OCR, visual questions, reading text on screen, or understanding visible UI.
 - Use computer_use_task only when Ken asks you to operate a browser/UI, not for quick visual inspection. It can run an isolated browser harness (target browser) or control Ken's real desktop mouse and keyboard (target computer); pick target computer only when Ken explicitly wants the actual machine operated, and OS mode needs Screen Recording and Accessibility permissions.
@@ -35,6 +36,12 @@ export const DEFAULT_AGENT_PROFILE = Object.freeze({
   goals: [],
   name: "Ken",
 });
+
+export function buildWelcomeInstructions(profile = DEFAULT_AGENT_PROFILE) {
+  const { name } = normalizeAgentProfile(profile);
+  const target = name ? ` ${name}` : "";
+  return `Greet the user now with a single short, casual opener like "Hey${target}, what's up?". Keep it to one sentence and don't list your capabilities.`;
+}
 
 export function buildAgentInstructions(profile = DEFAULT_AGENT_PROFILE) {
   return [STATIC_VOICE_INSTRUCTIONS, buildAgentProfileInstructions(profile)]

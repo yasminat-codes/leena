@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { existsSync, promises as fs } from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -30,13 +31,19 @@ import {
   migrateLegacyActivityStore,
   recordActivity,
 } from "./realtime/tools/activity-store.js";
+import { loadAgentProfile, saveAgentProfile } from "./realtime/tools/agent-profile-store.js";
 import { setDatabaseUserDataPath } from "./realtime/tools/database.js";
 import { executeRealtimeTool, getRealtimeToolDefinitions } from "./realtime/tools/index.js";
+import {
+  loadMicrophoneDeviceId,
+  saveMicrophoneDeviceId,
+} from "./realtime/tools/microphone-store.js";
 import {
   listCalendarItems,
   listTasks,
   migrateLegacyPlannerStore,
 } from "./realtime/tools/planner-store.js";
+import { loadWindowPosition, saveWindowPosition } from "./realtime/tools/window-state-store.js";
 
 const { autoUpdater } = electronUpdater;
 const execFileAsync = promisify(execFile);
@@ -81,7 +88,14 @@ const windowModes = Object.freeze({
 let mainWindow;
 let windowMode = "panel";
 let windowFadeTimer = null;
+let windowFadeResolve = null;
 let activeComputerUseController = null;
+// User-chosen window position (set by dragging the panel), persisted across
+// launches. Only the draggable main panel honors it; transient call/orb modes
+// keep their anchored placement.
+let userWindowPosition = null;
+let suppressMoveSave = false;
+let moveSaveTimer = null;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -103,8 +117,12 @@ function createMainWindow() {
     },
   });
 
-  positionMainWindow(mainWindow, windowModes.panel);
+  applyWindowBounds(getWindowBoundsForMode(windowModes.panel, "panel"));
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+
+  // Persist the position whenever the user drags the panel so it is restored on
+  // the next launch. Programmatic moves (mode switches) are suppressed.
+  mainWindow.on("move", handleWindowMove);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -112,12 +130,46 @@ function createMainWindow() {
   });
 }
 
-function positionMainWindow(window, size) {
-  const display = screen.getPrimaryDisplay();
-  const { width, height } = size ?? window.getBounds();
-  const x = Math.round(display.workArea.x + display.workArea.width - width - 24);
-  const y = Math.round(display.workArea.y + display.workArea.height - height - 24);
-  window.setPosition(x, y, false);
+function handleWindowMove() {
+  if (suppressMoveSave || windowMode !== "panel" || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  if (moveSaveTimer !== null) {
+    clearTimeout(moveSaveTimer);
+  }
+  moveSaveTimer = setTimeout(() => {
+    moveSaveTimer = null;
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return;
+    }
+    const [x, y] = mainWindow.getPosition();
+    userWindowPosition = { x, y };
+    try {
+      saveWindowPosition(userWindowPosition);
+    } catch (error) {
+      safeConsole("warn", "Failed to persist window position", error);
+    }
+  }, 400);
+}
+
+// Applies bounds without recording them as a user-initiated move.
+function applyWindowBounds(bounds) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  suppressMoveSave = true;
+  mainWindow.setBounds(bounds, false);
+  setImmediate(() => {
+    suppressMoveSave = false;
+  });
+}
+
+function clampToVisibleArea(x, y, width, height) {
+  const display = screen.getDisplayMatching({ x, y, width, height }) ?? screen.getPrimaryDisplay();
+  const area = display.workArea;
+  const clampedX = Math.min(Math.max(x, area.x), area.x + area.width - width);
+  const clampedY = Math.min(Math.max(y, area.y), area.y + area.height - height);
+  return { x: Math.round(clampedX), y: Math.round(clampedY) };
 }
 
 async function setMainWindowMode(mode) {
@@ -126,7 +178,7 @@ async function setMainWindowMode(mode) {
   }
   const target = windowModes[mode] ?? windowModes.orb;
   windowMode = windowModes[mode] ? mode : "orb";
-  const targetBounds = getWindowBoundsForMode(target);
+  const targetBounds = getWindowBoundsForMode(target, windowMode);
   const currentBounds = mainWindow.getBounds();
   const sizeChanged =
     currentBounds.width !== targetBounds.width || currentBounds.height !== targetBounds.height;
@@ -134,14 +186,25 @@ async function setMainWindowMode(mode) {
     await fadeMainWindowTo(0, 110);
   }
   mainWindow.setMinimumSize(targetBounds.width, targetBounds.height);
-  mainWindow.setBounds(targetBounds, false);
+  applyWindowBounds(targetBounds);
   if (sizeChanged) {
     await fadeMainWindowTo(1, 130);
   }
   return windowMode;
 }
 
-function getWindowBoundsForMode(target) {
+function getWindowBoundsForMode(target, mode) {
+  // The main panel is the only draggable surface, so it restores the user's
+  // saved position; call/orb keep their anchored placement.
+  if (mode === "panel" && userWindowPosition) {
+    const { x, y } = clampToVisibleArea(
+      userWindowPosition.x,
+      userWindowPosition.y,
+      target.width,
+      target.height,
+    );
+    return { x, y, width: target.width, height: target.height };
+  }
   const display = screen.getPrimaryDisplay();
   const margin = target.placement === "bottom-center" ? 14 : 24;
   const x =
@@ -156,23 +219,34 @@ function getWindowBoundsForMode(target) {
   };
 }
 
-function fadeMainWindowTo(targetOpacity, duration) {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return Promise.resolve();
-  }
+function endActiveFade() {
   if (windowFadeTimer !== null) {
     clearInterval(windowFadeTimer);
     windowFadeTimer = null;
   }
+  // Resolve a superseded fade's promise so anything awaiting it (e.g. the
+  // window:set-mode IPC handler) never hangs — a hung await leaves the IPC
+  // reply unsent ("reply was never sent").
+  if (windowFadeResolve !== null) {
+    const resolvePrevious = windowFadeResolve;
+    windowFadeResolve = null;
+    resolvePrevious();
+  }
+}
+
+function fadeMainWindowTo(targetOpacity, duration) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return Promise.resolve();
+  }
+  endActiveFade();
   const startOpacity = mainWindow.getOpacity();
   const startedAt = Date.now();
 
   return new Promise((resolve) => {
+    windowFadeResolve = resolve;
     windowFadeTimer = setInterval(() => {
       if (!mainWindow || mainWindow.isDestroyed()) {
-        clearInterval(windowFadeTimer);
-        windowFadeTimer = null;
-        resolve();
+        endActiveFade();
         return;
       }
       const progress = Math.min(1, (Date.now() - startedAt) / duration);
@@ -182,6 +256,7 @@ function fadeMainWindowTo(targetOpacity, duration) {
       if (progress >= 1) {
         clearInterval(windowFadeTimer);
         windowFadeTimer = null;
+        windowFadeResolve = null;
         mainWindow.setOpacity(targetOpacity);
         resolve();
       }
@@ -247,9 +322,14 @@ ipcMain.handle("openai:create-realtime-secret", async (_event, options = {}) => 
 
   return createRealtimeClientSecret(credentials, {
     ...options,
-    instructions: buildRealtimeInstructions(),
+    instructions: buildRealtimeInstructions({ profile: loadAgentProfile() }),
   });
 });
+
+ipcMain.handle("agent:get-profile", () => loadAgentProfile());
+ipcMain.handle("agent:set-profile", (_event, profile) => saveAgentProfile(profile));
+ipcMain.handle("audio:get-microphone", () => loadMicrophoneDeviceId());
+ipcMain.handle("audio:set-microphone", (_event, deviceId) => saveMicrophoneDeviceId(deviceId));
 
 ipcMain.handle("planner:list-tasks", () => listTasks());
 ipcMain.handle("planner:list-calendar", () => listCalendarItems());
@@ -269,6 +349,10 @@ ipcMain.handle("window:minimize", () => {
     return false;
   }
   mainWindow.minimize();
+  return true;
+});
+ipcMain.handle("app:quit", () => {
+  app.quit();
   return true;
 });
 ipcMain.handle("permissions:get-status", async () => getOsPermissionStatus());
@@ -334,6 +418,9 @@ ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
       session: {
         cancelComputerUse,
       },
+      fileSystem: {
+        rootPath: app.getPath("home"),
+      },
     });
     await writeDiagnosticLog("tool.execute.finish", {
       tool: name,
@@ -372,6 +459,7 @@ function cancelComputerUse() {
 
 app.whenReady().then(() => {
   initializeDataStore();
+  void startDiagnosticSession();
   wireUpdateEvents();
   createMainWindow();
 
@@ -405,6 +493,11 @@ function initializeDataStore() {
     migrateLegacyActivityStore();
   } catch (error) {
     safeConsole("warn", "Legacy store migration failed", error);
+  }
+  try {
+    userWindowPosition = loadWindowPosition();
+  } catch (error) {
+    safeConsole("warn", "Failed to load window position", error);
   }
 }
 
@@ -530,15 +623,13 @@ async function revealScreenshot(name) {
   return { revealed: true };
 }
 
+const MAX_DIAGNOSTIC_LOG_BYTES = 1_000_000;
+
 async function writeDiagnosticLog(event, details = {}) {
-  const entry = {
-    time: new Date().toISOString(),
-    event,
-    pid: process.pid,
-    appPath: app.getAppPath(),
-    isPackaged: app.isPackaged,
-    details,
-  };
+  // Per-line entries stay lean (time/event/details) so the log is easy to read
+  // and copy-paste; the static environment context lives in the session.start
+  // header written once per launch.
+  const entry = { time: new Date().toISOString(), event, details };
   const line = `${JSON.stringify(entry)}\n`;
   try {
     await fs.mkdir(path.dirname(getDiagnosticLogPath()), { recursive: true });
@@ -547,6 +638,31 @@ async function writeDiagnosticLog(event, details = {}) {
     safeConsole("error", "diagnostic log write failed", error);
   }
   safeConsole("info", "diagnostic", event, details);
+}
+
+// Rotates the log when it grows large and writes a session header so every run
+// in the log is self-describing (app version, platform, displays).
+async function startDiagnosticSession() {
+  const logPath = getDiagnosticLogPath();
+  try {
+    const stats = await fs.stat(logPath);
+    if (stats.size > MAX_DIAGNOSTIC_LOG_BYTES) {
+      await fs.rename(logPath, `${logPath}.prev`);
+    }
+  } catch {
+    // No existing log to rotate.
+  }
+  const primary = screen.getPrimaryDisplay();
+  await writeDiagnosticLog("session.start", {
+    appVersion: app.getVersion(),
+    electron: process.versions.electron,
+    platform: `${process.platform} ${process.arch}`,
+    osRelease: os.release(),
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    displayCount: screen.getAllDisplays().length,
+    primaryWorkArea: primary.workArea,
+  });
 }
 
 function safeConsole(level, ...args) {
@@ -657,6 +773,8 @@ async function requestOsPermission(id) {
   if (id === "microphone") {
     if (process.platform === "darwin") {
       await systemPreferences.askForMediaAccess("microphone");
+    } else if (process.platform === "win32") {
+      await openOsPermissionSettings("microphone");
     }
     return getOsPermissionStatus();
   }
@@ -719,6 +837,11 @@ function getMediaAccessStatus(mediaType) {
 }
 
 function ensureOsControlAllowed() {
+  // OS-level mouse/keyboard control only requires platform privacy grants on macOS.
+  // Windows (and other platforms) drive nut-js without Screen Recording or Accessibility grants.
+  if (process.platform !== "darwin") {
+    return { ok: true };
+  }
   const screenGranted = getMediaAccessStatus("screen") === "granted";
   const accessibilityGranted = getAccessibilityStatus() === "granted";
   if (screenGranted && accessibilityGranted) {

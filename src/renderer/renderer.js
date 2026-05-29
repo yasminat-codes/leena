@@ -1,6 +1,13 @@
+import { buildWelcomeInstructions, normalizeAgentProfile } from "../realtime/prompts.js";
+import { initClickSound } from "./click-sound.js";
 import { createPanelController } from "./panel.js";
 import { createRealtimePlaybackTracker, isBenignCancelError } from "./realtime-playback.js";
+import {
+  createRealtimeResponseCoordinator,
+  isActiveResponseConflictError,
+} from "./realtime-response-queue.js";
 import { createRealtimeToolHandler } from "./realtime-tool-handler.js";
+import { createWaitingSound } from "./waiting-sound.js";
 
 const appShellElement = document.querySelector("#app-shell");
 const statusElement = document.querySelector("#status");
@@ -8,13 +15,22 @@ const connectOpenAIButton = document.querySelector("#connect-openai");
 const menuToggleButton = document.querySelector("#menu-toggle");
 const appMenuElement = document.querySelector("#app-menu");
 const openAIIndicatorElement = document.querySelector("#openai-indicator");
+const micSelectElement = document.querySelector("#mic-select");
 const permissionsToggleButton = document.querySelector("#permissions-toggle");
 const windowMinimizeButton = document.querySelector("#window-minimize");
+const appQuitButton = document.querySelector("#app-quit");
 const permissionsPanelElement = document.querySelector("#permissions-panel");
 const permissionsBackButton = document.querySelector("#permissions-back");
 const permissionsRefreshButton = document.querySelector("#permissions-refresh");
 const diagnosticsOpenButton = document.querySelector("#diagnostics-open");
 const permissionsListElement = document.querySelector("#permissions-list");
+const agentToggleButton = document.querySelector("#agent-toggle");
+const agentPanelElement = document.querySelector("#agent-panel");
+const agentBackButton = document.querySelector("#agent-back");
+const agentFormElement = document.querySelector("#agent-form");
+const agentNameInput = document.querySelector("#agent-name");
+const agentGoalsInput = document.querySelector("#agent-goals");
+const agentStatusElement = document.querySelector("#agent-status");
 const callToggleButton = document.querySelector("#call-toggle");
 const headerCallButton = document.querySelector("#header-call");
 const headerCallLabelElement = document.querySelector("#header-call-label");
@@ -44,18 +60,35 @@ let audioLevelMonitor = null;
 let pendingHangup = false;
 let hangupFallbackTimer = null;
 const playbackTracker = createRealtimePlaybackTracker();
+const responseCoordinator = createRealtimeResponseCoordinator();
+const waitingSound = createWaitingSound();
 let callTimerInterval = null;
 let callStartedAt = 0;
 let isCallActive = false;
+let agentProfile = normalizeAgentProfile(null);
+// Preferred microphone deviceId, or null to follow the system default.
+let selectedMicId = null;
 const realtimeToolHandler = createRealtimeToolHandler({
   executeTool: (name, args) => window.brah.executeRealtimeTool(name, args),
   sendEvent: sendRealtimeDataChannelEvent,
   setMode,
   setStatus,
   onEndCall: requestHangup,
-  onToolStart: showToolActivity,
-  onToolEnd: hideToolActivity,
+  onToolStart: handleToolStart,
+  onToolEnd: handleToolEnd,
 });
+
+// While the agent is busy in a tool call it produces no audio, so fill the
+// silence with the looping waiting ambience (fading in/out via waiting-sound).
+function handleToolStart(name) {
+  showToolActivity(name);
+  waitingSound.start();
+}
+
+function handleToolEnd(name) {
+  hideToolActivity(name);
+  waitingSound.stop();
+}
 
 function showToolActivity(name) {
   if (!stoppableTools.has(name)) {
@@ -231,6 +264,31 @@ async function refreshOsPermissions() {
   renderOsPermissions(permissions);
 }
 
+async function loadAgentProfile() {
+  agentProfile = normalizeAgentProfile(await window.brah.getAgentProfile());
+  renderAgentProfile();
+}
+
+function renderAgentProfile() {
+  agentNameInput.value = agentProfile.name;
+  agentGoalsInput.value = agentProfile.goals.join("\n");
+}
+
+async function saveAgentProfile() {
+  const profile = {
+    name: agentNameInput.value,
+    goals: agentGoalsInput.value.split("\n"),
+  };
+  agentStatusElement.textContent = "Saving\u2026";
+  try {
+    agentProfile = normalizeAgentProfile(await window.brah.setAgentProfile(profile));
+    renderAgentProfile();
+    agentStatusElement.textContent = "Saved";
+  } catch (error) {
+    agentStatusElement.textContent = `Save failed: ${error.message}`;
+  }
+}
+
 function renderOsPermissions(permissions) {
   permissionsListElement.replaceChildren(
     ...permissions.map((permission, index) => {
@@ -353,9 +411,10 @@ async function startCall() {
   try {
     const secret = await window.brah.createRealtimeSecret();
     await writeRendererDiagnostic("call.secret.created", { hasValue: Boolean(secret?.value) });
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    localStream = await acquireMicrophoneStream();
     await writeRendererDiagnostic("call.microphone.stream", describeMediaStream(localStream));
     startAudioLevelMonitor(localStream);
+    void populateMicDevices();
 
     peerConnection = new RTCPeerConnection();
     dataChannel = peerConnection.createDataChannel("oai-events");
@@ -385,10 +444,15 @@ async function startCall() {
       void writeRendererDiagnostic("call.data_channel.open", {});
       setStatus("Listening");
       setMode("listening");
+      sendRealtimeWelcome();
     });
     dataChannel.addEventListener("message", (event) => {
       const realtimeEvent = JSON.parse(event.data);
-      void writeRendererDiagnostic("realtime.event", summarizeRealtimeEvent(realtimeEvent));
+      // Skip high-frequency streaming deltas so the diagnostic log stays a
+      // readable, copy-pasteable record of meaningful events.
+      if (!isNoisyRealtimeEvent(realtimeEvent?.type)) {
+        void writeRendererDiagnostic("realtime.event", summarizeRealtimeEvent(realtimeEvent));
+      }
       void handleRealtimeEvent(realtimeEvent);
     });
 
@@ -460,6 +524,8 @@ async function stopCall() {
   }
   pendingHangup = false;
   playbackTracker.reset();
+  responseCoordinator.reset();
+  waitingSound.reset();
 
   realtimeToolHandler.reset();
   hideToolActivity();
@@ -472,6 +538,11 @@ async function stopCall() {
 
 async function handleRealtimeEvent(event) {
   playbackTracker.observe(event);
+  const queuedCreate = responseCoordinator.observe(event);
+  if (queuedCreate) {
+    // The active response just ended; release the create we queued earlier.
+    sendRealtimeDataChannelEvent(queuedCreate);
+  }
   if (await realtimeToolHandler.handleEvent(event)) {
     return;
   }
@@ -502,6 +573,16 @@ async function handleRealtimeEvent(event) {
     // races the server VAD's own interrupt; don't surface it as a call error.
     if (isBenignCancelError(event.error)) {
       void writeRendererDiagnostic("realtime.cancel.benign", { code: event.error?.code });
+      return;
+    }
+    // A response.create that raced an already-active response is a recoverable
+    // barge-in/VAD race, not a session failure: re-queue it to retry on the
+    // next response.done rather than surfacing an error.
+    if (isActiveResponseConflictError(event.error)) {
+      responseCoordinator.noteActiveResponseConflict();
+      void writeRendererDiagnostic("realtime.response_create.conflict", {
+        code: event.error?.code,
+      });
       return;
     }
     setStatus(event.error?.message ?? "Realtime error");
@@ -554,7 +635,152 @@ function formatRendererError(error) {
     : { message: String(error) };
 }
 
+function buildAudioConstraints() {
+  // Echo cancellation is essential on laptop speakers: without it the mic
+  // captures the assistant's own audio (e.g. the welcome greeting), the
+  // semantic VAD treats it as a user turn, and the model replies to itself.
+  // Pinning the chosen input device re-runs this processing for that mic, so
+  // switching devices adjusts the capture pipeline dynamically.
+  const base = {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  };
+  return selectedMicId ? { ...base, deviceId: { exact: selectedMicId } } : base;
+}
+
+async function loadMicPreference() {
+  try {
+    selectedMicId = (await window.brah.getMicrophoneDevice()) ?? null;
+  } catch {
+    selectedMicId = null;
+  }
+}
+
+async function populateMicDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    return;
+  }
+  let devices;
+  try {
+    devices = await navigator.mediaDevices.enumerateDevices();
+  } catch {
+    return;
+  }
+  // Windows lists "default"/"communications" pseudo-devices alongside the real
+  // ones; drop them (and any unlabeled placeholders) so the list is the same
+  // shape on macOS and Windows, with our own "Default microphone" entry on top.
+  const inputs = devices.filter(
+    (device) => device.kind === "audioinput" && isRealAudioInputId(device.deviceId),
+  );
+  const activeDeviceId = localStream?.getAudioTracks?.()[0]?.getSettings?.().deviceId ?? null;
+  const options = [createMicOption("", "Default microphone")];
+  inputs.forEach((device, index) => {
+    options.push(createMicOption(device.deviceId, device.label || `Microphone ${index + 1}`));
+  });
+  micSelectElement.replaceChildren(...options);
+  // Reflect the device actually in use during a call, else the saved choice.
+  const desired = activeDeviceId ?? selectedMicId ?? "";
+  micSelectElement.value = options.some((option) => option.value === desired) ? desired : "";
+}
+
+function createMicOption(value, label) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  return option;
+}
+
+function isRealAudioInputId(deviceId) {
+  return (
+    typeof deviceId === "string" &&
+    deviceId !== "" &&
+    deviceId !== "default" &&
+    deviceId !== "communications"
+  );
+}
+
+// Acquires the mic with the chosen device + echo cancellation. If a pinned
+// device is missing (unplugged, or saved on a different machine/OS), it falls
+// back to the system default so calls still connect cross-platform.
+async function acquireMicrophoneStream() {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: buildAudioConstraints() });
+  } catch (error) {
+    if (!selectedMicId) {
+      throw error;
+    }
+    await writeRendererDiagnostic("audio.mic.fallback_default", {
+      deviceId: selectedMicId,
+      error: error instanceof Error ? error.name : String(error),
+    });
+    selectedMicId = null;
+    try {
+      await window.brah.setMicrophoneDevice(null);
+    } catch {
+      // Persisting the fallback is best-effort.
+    }
+    return navigator.mediaDevices.getUserMedia({ audio: buildAudioConstraints() });
+  }
+}
+
+async function handleMicSelection() {
+  selectedMicId = micSelectElement.value || null;
+  try {
+    await window.brah.setMicrophoneDevice(selectedMicId);
+  } catch (error) {
+    await writeRendererDiagnostic("audio.mic.persist_failed", formatRendererError(error));
+  }
+  // Apply live if a call is active; otherwise it takes effect on the next call.
+  if (peerConnection && localStream) {
+    await switchMicrophone();
+  }
+}
+
+async function switchMicrophone() {
+  try {
+    const newStream = await acquireMicrophoneStream();
+    const [newTrack] = newStream.getAudioTracks();
+    if (!newTrack) {
+      return;
+    }
+    const sender = peerConnection?.getSenders().find((entry) => entry.track?.kind === "audio");
+    if (sender) {
+      await sender.replaceTrack(newTrack);
+    }
+    for (const track of localStream.getTracks()) {
+      track.stop();
+    }
+    localStream = newStream;
+    startAudioLevelMonitor(localStream);
+    await writeRendererDiagnostic("audio.mic.switched", describeMediaStream(localStream));
+    void populateMicDevices();
+  } catch (error) {
+    await writeRendererDiagnostic("audio.mic.switch_failed", formatRendererError(error));
+  }
+}
+
+function sendRealtimeWelcome() {
+  sendRealtimeDataChannelEvent({
+    type: "response.create",
+    response: {
+      output_modalities: ["audio"],
+      instructions: buildWelcomeInstructions(agentProfile),
+    },
+  });
+}
+
 function sendRealtimeDataChannelEvent(event) {
+  if (event?.type === "response.create") {
+    // Only one response may be in progress at a time. Gate creates through the
+    // coordinator so a barge-in/VAD-initiated response doesn't collide with our
+    // welcome or tool-output creates; queued creates flush on response.done.
+    const allowed = responseCoordinator.requestCreate(event);
+    if (!allowed) {
+      void writeRendererDiagnostic("realtime.response_create.queued", {});
+      return;
+    }
+  }
   if (dataChannel?.readyState !== "open") {
     void writeRendererDiagnostic("realtime.send.skipped", {
       type: event?.type,
@@ -581,6 +807,24 @@ function summarizeRealtimeClientEvent(event) {
     summary.outputModalities = event.response.output_modalities;
   }
   return summary;
+}
+
+// Streaming/per-token events that fire dozens of times per turn and add no
+// diagnostic value; everything else (lifecycle, errors, tool calls) is kept.
+const NOISY_REALTIME_EVENTS = new Set([
+  "response.function_call_arguments.delta",
+  "response.output_audio_transcript.delta",
+  "response.output_audio.delta",
+  "response.output_text.delta",
+  "response.audio_transcript.delta",
+  "response.audio.delta",
+  "response.text.delta",
+  "conversation.item.input_audio_transcription.delta",
+  "rate_limits.updated",
+]);
+
+function isNoisyRealtimeEvent(type) {
+  return typeof type === "string" && NOISY_REALTIME_EVENTS.has(type);
 }
 
 function summarizeRealtimeEvent(event) {
@@ -810,9 +1054,28 @@ permissionsToggleButton.addEventListener("click", () => {
     void refreshOsPermissions();
   }
 });
+agentToggleButton.addEventListener("click", () => {
+  setMenuOpen(false);
+  agentPanelElement.hidden = !agentPanelElement.hidden;
+  if (!agentPanelElement.hidden) {
+    agentStatusElement.textContent = "";
+    void loadAgentProfile();
+  }
+});
+agentBackButton.addEventListener("click", () => {
+  agentPanelElement.hidden = true;
+});
+agentFormElement.addEventListener("submit", (event) => {
+  event.preventDefault();
+  void saveAgentProfile();
+});
 windowMinimizeButton.addEventListener("click", () => {
   setMenuOpen(false);
   void window.brah.minimizeWindow();
+});
+appQuitButton.addEventListener("click", () => {
+  setMenuOpen(false);
+  void window.brah.quitApp();
 });
 permissionsBackButton.addEventListener("click", () => {
   permissionsPanelElement.hidden = true;
@@ -831,6 +1094,8 @@ const panelController = createPanelController({
 });
 panelController.init({ openByDefault: true });
 
+initClickSound();
+
 callToggleButton.addEventListener("click", toggleCall);
 headerCallButton.addEventListener("click", toggleCall);
 callEndButton.addEventListener("click", () => {
@@ -838,6 +1103,12 @@ callEndButton.addEventListener("click", () => {
 });
 toolActivityStopButton.addEventListener("click", () => {
   void stopComputerUse();
+});
+micSelectElement.addEventListener("change", () => {
+  void handleMicSelection();
+});
+navigator.mediaDevices?.addEventListener?.("devicechange", () => {
+  void populateMicDevices();
 });
 setOrbLevel(0);
 
@@ -848,3 +1119,9 @@ refreshOpenAIStatus().catch((error) => {
 refreshOsPermissions().catch((error) => {
   setStatus(`Permissions failed: ${error.message}`);
 });
+loadAgentProfile().catch((error) => {
+  setStatus(`Agent profile failed: ${error.message}`);
+});
+loadMicPreference()
+  .then(() => populateMicDevices())
+  .catch(() => {});

@@ -32,9 +32,6 @@
             <span class="menu-glyph" aria-hidden="true"></span>
           </button>
           <span class="panel-title">Brah</span>
-          <span id="openai-indicator" class="openai-indicator" data-connected="false"
-            >Offline</span
-          >
           <button
             id="header-call"
             type="button"
@@ -42,6 +39,19 @@
             disabled
             aria-pressed="false"
           >
+            <svg
+              class="header-call-icon"
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M6.6 10.8a15.5 15.5 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.58 3.6a1 1 0 0 1-.25 1z"
+                fill="currentColor"
+              />
+            </svg>
             <span id="header-call-label">Call</span>
           </button>
         </header>
@@ -49,11 +59,17 @@
           <button id="connect-openai" type="button" class="menu-item" role="menuitem">
             Connect OpenAI
           </button>
+          <button id="agent-toggle" type="button" class="menu-item" role="menuitem">
+            Agent
+          </button>
           <button id="permissions-toggle" type="button" class="menu-item" role="menuitem">
             Permissions
           </button>
           <button id="window-minimize" type="button" class="menu-item" role="menuitem">
             Minimize
+          </button>
+          <button id="app-quit" type="button" class="menu-item" role="menuitem">
+            Quit
           </button>
         </div>
         <section
@@ -64,7 +80,15 @@
         >
           <div class="view-header">
             <button id="permissions-back" type="button" class="view-back" aria-label="Back">
-              ‹
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path
+                  d="M15 5l-7 7 7 7"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             </button>
             <strong class="view-title">OS permissions</strong>
             <button id="permissions-refresh" type="button">Refresh</button>
@@ -72,9 +96,88 @@
           </div>
           <div id="permissions-list" class="permissions-list"></div>
         </section>
+        <section id="agent-panel" class="agent-panel" hidden aria-label="Agent profile">
+          <div class="view-header">
+            <button id="agent-back" type="button" class="view-back" aria-label="Back">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path
+                  d="M15 5l-7 7 7 7"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <strong class="view-title">Agent</strong>
+          </div>
+          <form id="agent-form" class="agent-form">
+            <label class="agent-field">
+              <span class="agent-label">Your name</span>
+              <input
+                id="agent-name"
+                type="text"
+                class="agent-input"
+                autocomplete="off"
+                placeholder="What should I call you?"
+                maxlength="80"
+              />
+            </label>
+            <label class="agent-field">
+              <span class="agent-label">Your goals</span>
+              <textarea
+                id="agent-goals"
+                class="agent-textarea"
+                rows="5"
+                placeholder="One goal per line"
+              ></textarea>
+            </label>
+          </form>
+          <footer class="panel-footer">
+            <span
+              id="agent-status"
+              class="panel-footer-text"
+              role="status"
+              aria-live="polite"
+            ></span>
+            <button id="agent-save" type="submit" form="agent-form" class="agent-save">Save</button>
+          </footer>
+        </section>
         <nav id="panel-tabs" class="panel-tabs" role="tablist" aria-label="Activity tabs"></nav>
         <div id="panel-body" class="panel-body" role="tabpanel"></div>
-        <footer id="panel-footer" class="panel-footer"></footer>
+        <footer id="panel-footer" class="panel-footer">
+          <label class="mic-picker">
+            <svg
+              class="mic-picker-icon"
+              viewBox="0 0 24 24"
+              width="13"
+              height="13"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"
+                stroke="currentColor"
+                stroke-width="1.6"
+              />
+              <path
+                d="M5 11a7 7 0 0 0 14 0M12 18v3"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            <select id="mic-select" class="mic-select" aria-label="Microphone">
+              <option value="">Default microphone</option>
+            </select>
+          </label>
+          <span
+            id="openai-indicator"
+            class="openai-indicator openai-indicator-footer"
+            data-connected="false"
+            >Offline</span
+          >
+        </footer>
       </section>
       <div id="call-stage" class="call-stage">
         <div id="call-meta" class="call-meta" aria-hidden="true">

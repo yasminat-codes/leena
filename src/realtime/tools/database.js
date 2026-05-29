@@ -69,6 +69,10 @@ function applySchema(db) {
       data TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_activity_kind_time ON activity (kind, time);
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 }
 

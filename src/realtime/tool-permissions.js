@@ -44,6 +44,21 @@ const toolPermissionMetadata = Object.freeze({
     label: "Read web page",
     description: "Fetch and read a public web page.",
   },
+  read_file: {
+    level: "read",
+    label: "Read file",
+    description: "Read a text file from your local workspace.",
+  },
+  write_file: {
+    level: "write",
+    label: "Write file",
+    description: "Create or overwrite a file in your local workspace.",
+  },
+  edit_file: {
+    level: "write",
+    label: "Edit file",
+    description: "Replace text inside a file in your local workspace.",
+  },
   list_screenshot_sources: {
     level: "screen",
     label: "List screen sources",
@@ -127,6 +142,12 @@ function summarizeToolRequest(name, args) {
       return summarizeFields(args, ["query"]);
     case "web_fetch":
       return summarizeFields(args, ["url"]);
+    case "read_file":
+      return summarizeFields(args, ["path"]);
+    case "write_file":
+      return summarizeFields(args, ["path"]);
+    case "edit_file":
+      return summarizeFields(args, ["path", "replaceAll"]);
     case "take_screenshot":
     case "analyze_screen":
       return summarizeFields(args, ["target", "source_id", "reason", "question"]);

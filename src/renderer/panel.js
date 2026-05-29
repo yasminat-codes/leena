@@ -6,6 +6,8 @@ const tabs = Object.freeze([
   { id: "computer", label: "Computer", category: "computer" },
 ]);
 
+const MAX_ACTIVITY_ITEMS = 20;
+
 const statusOrder = Object.freeze(["in_progress", "todo", "completed"]);
 const statusLabels = Object.freeze({
   todo: "To do",
@@ -18,7 +20,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   const panelElement = document.querySelector("#panel");
   const tabsElement = document.querySelector("#panel-tabs");
   const bodyElement = document.querySelector("#panel-body");
-  const footerElement = document.querySelector("#panel-footer");
+  const footerElement = document.querySelector("#panel-footer-text");
 
   let isOpen = false;
   let activeTabId = tabs[0].id;
@@ -196,7 +198,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   }
 
   function renderScreenshots(screenshots) {
-    const list = Array.isArray(screenshots) ? screenshots : [];
+    const list = (Array.isArray(screenshots) ? screenshots : []).slice(0, MAX_ACTIVITY_ITEMS);
     if (list.length === 0) {
       mountBody(buildEmptyState("No screenshots yet", "Ask Brah to capture your screen."));
       setFooter("No screenshots");
@@ -233,8 +235,8 @@ export function createPanelController({ brah, onModeChange } = {}) {
   }
 
   function renderWeb(searches, fetches) {
-    const searchList = Array.isArray(searches) ? searches : [];
-    const fetchList = Array.isArray(fetches) ? fetches : [];
+    const searchList = (Array.isArray(searches) ? searches : []).slice(0, MAX_ACTIVITY_ITEMS);
+    const fetchList = (Array.isArray(fetches) ? fetches : []).slice(0, MAX_ACTIVITY_ITEMS);
     if (searchList.length === 0 && fetchList.length === 0) {
       mountBody(buildEmptyState("No web activity", "Ask Brah to search or read a page."));
       setFooter("No web activity");
@@ -299,7 +301,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   }
 
   function renderComputer(runs) {
-    const list = Array.isArray(runs) ? runs : [];
+    const list = (Array.isArray(runs) ? runs : []).slice(0, MAX_ACTIVITY_ITEMS);
     if (list.length === 0) {
       mountBody(buildEmptyState("No computer runs", "Ask Brah to use the browser for you."));
       setFooter("No runs");

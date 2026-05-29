@@ -1,0 +1,149 @@
+const SOUND_URL = "./assets/waiting.mp3";
+const TARGET_GAIN = 0.45;
+const FADE_IN_SECONDS = 0.4;
+const FADE_OUT_SECONDS = 0.5;
+// Near-instant tools (e.g. add_task) shouldn't blip the sound on/off, so wait a
+// beat before starting; if the tool finishes first the start is cancelled.
+const START_DELAY_MS = 250;
+
+/**
+ * Looping "thinking" ambience that fills the silence while the agent is busy
+ * running tool calls (not while it is speaking). Uses the Web Audio API with a
+ * GainNode so it can fade in and out smoothly, and reference-counts overlapping
+ * tools so the sound spans an entire busy stretch rather than restarting.
+ */
+export function createWaitingSound() {
+  let audioContext = null;
+  let buffer = null;
+  let decodePromise = null;
+  let source = null;
+  let gainNode = null;
+  let activeCount = 0;
+  let startTimer = null;
+
+  function getContext() {
+    if (!audioContext) {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) {
+        return null;
+      }
+      audioContext = new Ctor();
+    }
+    return audioContext;
+  }
+
+  async function ensureBuffer(context) {
+    if (buffer) {
+      return buffer;
+    }
+    if (!decodePromise) {
+      decodePromise = (async () => {
+        const response = await fetch(SOUND_URL);
+        const arrayBuffer = await response.arrayBuffer();
+        buffer = await context.decodeAudioData(arrayBuffer);
+        return buffer;
+      })();
+    }
+    return decodePromise;
+  }
+
+  async function beginPlayback() {
+    const context = getContext();
+    if (!context) {
+      return;
+    }
+    try {
+      if (context.state === "suspended") {
+        await context.resume();
+      }
+      const decoded = await ensureBuffer(context);
+      // The busy stretch may have ended (or playback already started) while we
+      // were awaiting context resume/decode.
+      if (activeCount === 0 || source) {
+        return;
+      }
+      gainNode = context.createGain();
+      gainNode.gain.setValueAtTime(0, context.currentTime);
+      gainNode.gain.linearRampToValueAtTime(TARGET_GAIN, context.currentTime + FADE_IN_SECONDS);
+      source = context.createBufferSource();
+      source.buffer = decoded;
+      source.loop = true;
+      source.connect(gainNode).connect(context.destination);
+      source.start(0);
+    } catch {
+      // Audio is best-effort; never let playback failures break the call.
+    }
+  }
+
+  function stopPlayback() {
+    const context = audioContext;
+    const endingSource = source;
+    const endingGain = gainNode;
+    source = null;
+    gainNode = null;
+    if (!context || !endingSource || !endingGain) {
+      return;
+    }
+    try {
+      const now = context.currentTime;
+      endingGain.gain.cancelScheduledValues(now);
+      endingGain.gain.setValueAtTime(endingGain.gain.value, now);
+      endingGain.gain.linearRampToValueAtTime(0, now + FADE_OUT_SECONDS);
+      endingSource.stop(now + FADE_OUT_SECONDS + 0.05);
+      endingSource.onended = () => {
+        try {
+          endingSource.disconnect();
+          endingGain.disconnect();
+        } catch {
+          // Already torn down.
+        }
+      };
+    } catch {
+      try {
+        endingSource.stop();
+      } catch {
+        // Already stopped.
+      }
+    }
+  }
+
+  return {
+    // Mark a tool as running. Starts (or keeps) the waiting sound.
+    start() {
+      activeCount += 1;
+      if (activeCount > 1 || startTimer || source) {
+        return;
+      }
+      startTimer = setTimeout(() => {
+        startTimer = null;
+        void beginPlayback();
+      }, START_DELAY_MS);
+    },
+
+    // Mark a tool as finished. Fades the sound out once nothing is running.
+    stop() {
+      if (activeCount > 0) {
+        activeCount -= 1;
+      }
+      if (activeCount > 0) {
+        return;
+      }
+      if (startTimer) {
+        clearTimeout(startTimer);
+        startTimer = null;
+        return;
+      }
+      stopPlayback();
+    },
+
+    // Hard reset (e.g. the call ended); cancels pending start and fades out.
+    reset() {
+      activeCount = 0;
+      if (startTimer) {
+        clearTimeout(startTimer);
+        startTimer = null;
+      }
+      stopPlayback();
+    },
+  };
+}

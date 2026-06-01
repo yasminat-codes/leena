@@ -1,0 +1,20 @@
+{
+  "date": "2026-06-01",
+  "plan_version": "v1",
+  "key_decisions": [
+    {"decision": "Kill terminal dependency via packaged .app + launch-on-login + tray, not a daemon", "rationale": "electron-builder already configured; uses native Electron lifecycle", "risk_if_wrong": "low — reversible"},
+    {"decision": "Memory as a swappable MemoryStore interface: custom node:sqlite baseline + Mem0 adapter", "rationale": "honors both user answers without stacking 3 storage layers; doesn't bet centerpiece on unproven Mem0 Node local mode", "risk_if_wrong": "medium — Phase 2 spike picks the default; baseline always works"},
+    {"decision": "Flatten 4 memory types to episodic + semantic + procedural(layer); long-term=retention axis", "rationale": "avoids over-building 4 subsystems; maps to proven two-tier research design", "risk_if_wrong": "low — can add stores later"},
+    {"decision": "Composio via one generic MCP client (@modelcontextprotocol/sdk), main process", "rationale": "any MCP server incl all Composio apps becomes config, not bespoke code", "risk_if_wrong": "low"},
+    {"decision": "openWakeWord behind WakeEngine interface", "rationale": "Porcupine free tier dies 2026-06-30; openWakeWord free/Apache; interface removes lock-in", "risk_if_wrong": "medium — accuracy validated in Phase 5 spike; hotkey fallback"},
+    {"decision": "Code signing + per-user safeStorage key onboarding for share-with-few distribution", "rationale": "cannot ship owner secrets", "risk_if_wrong": "medium — depends on Apple Developer ID"}
+  ],
+  "assumptions_embedded": [
+    {"assumption": "ChatGPT-OAuth realtime flow generalizes to each shared user's own account within ToS", "confidence": "low", "tracked_as": "R-1/OQ-1 — Phase 1 Task 1 verifies; API-key fallback planned"},
+    {"assumption": "Brute-force cosine over hundreds-to-thousands of memories is fast enough (<5ms)", "confidence": "high", "tracked_as": "R-4"},
+    {"assumption": "openWakeWord WASM in renderer gives acceptable false-accept rate for 'Hey Lena'", "confidence": "medium", "tracked_as": "R-3/OQ-2 — Phase 5 spike"},
+    {"assumption": "Mem0 Node OSS local/vector mode is production-viable", "confidence": "low", "tracked_as": "R-2/OQ-3 — adapter, not default, until validated"}
+  ],
+  "what_excluded": ["mobile", "Windows (deferred; mac-only v1)", "public open-source release", "Mem0 graph/Neo4j mode (too heavy to ship)", "Picovoice Porcupine (cost cliff)", "Vercel plan dashboard (user wanted .md only)", "cloud sync / multi-device"],
+  "recommendation": "Start Phase 1 with Task 1 (verify R-1 auth) before any rename work — it can force an API-key pivot that touches onboarding. Spike Mem0 (R-2) and openWakeWord (R-3) early since the plan's value depends on them. Keep the WakeEngine and MemoryStore interfaces strict — they are the project's main de-risking levers."
+}

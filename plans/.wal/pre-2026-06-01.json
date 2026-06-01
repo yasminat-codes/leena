@@ -1,0 +1,23 @@
+{
+  "date": "2026-06-01",
+  "request_summary": "Transform cloned open-source Electron voice assistant 'Brah' into 'Lena' — a persistent, personalized, voice-first desktop AI agent. Six sequenced phases: (1) Foundation: standalone packaged .app, launch-on-login, menubar tray, global hotkey, rename to Lena, per-user key onboarding; (2) Memory: rich multi-type memory (procedural/episodic/semantic/long-term) via Mem0 + node:sqlite substrate + local transformers.js embeddings; (3) Identity: custom identity + persona presets/modes settings UI; (4) MCP/Composio bridge: generic MCP client, Composio as remote MCP server (Gmail/Calendar/Slack/Notion + all apps), permission-gated; (5) Wake word: 'Hey Lena' via openWakeWord behind engine-agnostic interface; (6) UI/UX: skins/themes, resizable window, expandable text-chat panel, conversation history/search, proactive nudges.",
+  "prior_plan_exists": false,
+  "mode": "brownfield multi-phase build (existing Electron codebase, no prior plan folder)",
+  "learnings_applied": [],
+  "cold_start": true,
+  "known_constraints": {
+    "platform": "macOS only",
+    "distribution": "share with a few people — requires code signing/notarization + per-user key onboarding",
+    "cost": "always-ready, cost secondary — minimize auto-disconnects, keep realtime responsive",
+    "wake_engine": "openWakeWord (Apache-2.0, free) — Porcupine free tier dies 2026-06-30; build behind engine-agnostic interface",
+    "memory": "Mem0 (Node OSS, vector mode — NOT graph/Neo4j) + node:sqlite tiers + transformers.js local embeddings; support procedural/episodic/semantic/long-term",
+    "integrations": "Composio as remote MCP server via @modelcontextprotocol/sdk; Gmail, Google Calendar, Slack, Notion first",
+    "existing_stack": "Electron 42, node:sqlite, Playwright, @nut-tree-fork/nut-js, OpenAI Realtime API (gpt-realtime-2) via ChatGPT OAuth, WebRTC in renderer",
+    "existing_assets": "personalization scaffold (agent-profile-store + prompts.js personas), tool dispatch (executeRealtimeTool), permission system (tool-permissions.js), electron-builder mac dir target, auto-update"
+  },
+  "research_completed": [
+    "Memory systems comparison (Mem0/Letta/Zep/Cognee/txtai/LlamaIndex/Hindsight/Mastra) — Mem0 only embeddable Node option; node:sqlite cannot load sqlite-vec on macOS (OMIT_LOAD_EXTENSION); brute-force cosine OK at personal scale",
+    "MCP + Composio in Electron — @modelcontextprotocol/sdk v1.29.0, StreamableHTTPClientTransport for Composio, stdio for local servers; main-process only; tool-poisoning/rug-pull risks",
+    "Wake word — openWakeWord (free, WASM-in-renderer or Python sidecar) vs Porcupine (best but free tier ends 2026-06-30); two-stage gating pattern standard; nice-to-have feature scan (hotkey, tray, history/search, meeting transcription, text+voice)"
+  ]
+}

@@ -49,6 +49,23 @@
 
 > Phases overlap across Band B waves because tasks are scheduled by dependency, not by phase. The topo-sort interleaves phases for maximum parallelism.
 
+### ⚠️ Plan-doc → SPEC phase number mapping (numbering changed when the provider layer was inserted)
+
+The `plans/phases/*.md` docs use the **original** 6-phase numbering. This SPEC inserted **Provider Layer as a new Phase 2**, shifting everything after it. Some task `context_files` still point at the original doc names — those files are correct in *content*; only the number in the filename differs. Use this table to translate:
+
+| Plan doc (`plans/phases/`) | = SPEC phase | Subsystem |
+|----------------------------|--------------|-----------|
+| `phase-0-visual-shell.md` | Phase 0 | Visual shell |
+| `phase-1-foundation.md` | Phase 1 | Foundation & rename |
+| *(no doc — new this build)* | **Phase 2** | **Provider layer (OpenAI/OpenRouter/Ollama)** |
+| `phase-2-memory.md` | Phase 3 | Memory |
+| `phase-3-identity.md` | Phase 4 | Identity |
+| `phase-4-mcp-composio.md` | Phase 5 | MCP |
+| `phase-5-wake-word.md` | Phase 6 | Wake word |
+| `phase-6-ui-ux.md` | Phase 7 | UI wire + distribution |
+
+Executor agents: when a task's `context_files` names e.g. `phase-5-wake-word.md`, that is the **wake-word** spec (SPEC Phase 6) — read it for content, ignore the legacy number.
+
 ## Critical Path (to the deliverable)
 
 ```

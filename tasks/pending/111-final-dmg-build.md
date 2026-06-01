@@ -24,21 +24,17 @@ Produce a distributable unsigned .dmg and .zip via `npm run build:mac`, verify t
 This is the deliverable — a .dmg file someone can download, install, and run on their Mac. Without this, everything else is just code in a repo.
 
 ## Steps
-1. Run `npm run build:mac` — verify it completes without errors, producing both `.dmg` and `.zip` in `dist/`.
-2. Mount the .dmg, verify the drag-to-Applications layout renders correctly (app icon + Applications symlink).
-3. Copy Leena.app to /Applications (or a test directory), launch it — verify it opens without Terminal, displays the shell, and doesn't crash.
-4. Verify the auto-updater `checkForUpdates()` call doesn't throw (should return the "packaged builds only" guard message from existing code).
-5. Verify all native addons (`@nut-tree-fork` in asarUnpack) load correctly in the packaged build.
-6. Write `INSTALL.md` at project root with: download link placeholder, drag-install instructions, Gatekeeper bypass command (`xattr -cr /Applications/Leena.app`), known limitations (unsigned), and first-run guide.
+1. Run `npm run build:mac` (unsigned — `CSC_IDENTITY_AUTO_DISCOVERY=false` if no cert) — verify it completes without errors, producing both `.dmg` and `.zip` in `dist/`.
+2. **Headless structural verification (autonomous-safe — no GUI needed):** `hdiutil verify` the dmg; mount read-only; confirm drag-to-Applications layout (app bundle + Applications symlink), `Leena.app/Contents/MacOS/Leena` executable present, fonts present under `Resources`, and the `@nut-tree-fork` native addon present in `app.asar.unpacked`. These confirm a well-formed build without launching it.
+3. Write `INSTALL.md` at project root: download instructions, drag-install steps, Gatekeeper bypass (`xattr -cr /Applications/Leena.app`), unsigned-build note, first-run guide.
+4. Write path + SHA-256 of `dist/Leena-*.dmg` to `tasks/DELIVERABLE.md`, plus a clearly-flagged **owner manual checklist** (requires GUI session — NOT an autonomous gate): launches from Applications without Terminal, shell renders with correct fonts/themes, native addons load, `checkForUpdates()` returns the packaged-builds guard message.
 
 ## Acceptance Criteria
-- [ ] `npm run build:mac` produces .dmg and .zip without errors
-- [ ] .dmg mounts and shows drag-to-install layout
-- [ ] App launches from Applications without Terminal
-- [ ] Design system renders correctly in packaged build (fonts, themes)
-- [ ] Native addons load without errors
-- [ ] Auto-updater doesn't throw
-- [ ] INSTALL.md written with complete setup instructions
+- [ ] `npm run build:mac` produces .dmg and .zip without errors (`electron-builder` exit 0)
+- [ ] `hdiutil verify` passes; dmg mounts; `Leena.app` bundle + executable + fonts + unpacked native addon present (headless structural check)
+- [ ] `INSTALL.md` written with complete setup + Gatekeeper bypass instructions
+- [ ] `tasks/DELIVERABLE.md` records artifact path + SHA-256 + owner GUI launch checklist
+- [ ] *(owner, GUI session — not an autonomous gate)* app launches without Terminal, renders shell, addons load, auto-updater doesn't throw
 
 ## Tests Required
 - No automated tests — this is a build verification task. Manual verification checklist above serves as the test.

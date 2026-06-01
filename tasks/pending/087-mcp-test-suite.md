@@ -39,7 +39,12 @@ MCP is a security-critical external integration. Untested schema conversion sile
 - [ ] Error paths tested: MCP server crash, malformed response, timeout — none crash the test runner
 
 ## Tests Required
-- This task IS the test suite. Files listed in Steps 1-4.
+- This task IS the test suite, comprising these 4 files (full specs in Steps 1-4):
+  - `test/mcp-client.test.js` — connect (HTTP + stdio), listTools, callTool, disconnect, retry, MCPError
+  - `test/mcp-schema-converter.test.js` — flat/nested/array/enum schemas, namespacing round-trip, merged defs
+  - `test/mcp-permission-gate.test.js` — 9 perm×risk combos, auto-approve logic, risk inference, default-deny
+  - `test/mcp-integration.test.js` — end-to-end add→connect→merge→execute→disconnect; non-MCP regression
+- All run under `node --test test/mcp-*.test.js`, zero failures; `npm test` stays green (no regression).
 
 ## Outputs
 - `test/mcp-client.test.js`

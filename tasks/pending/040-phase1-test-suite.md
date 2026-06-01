@@ -43,8 +43,12 @@ Phase 1 changes foundational systems (auth, naming, database, settings). Regress
 - [ ] No existing tests broken by Phase 1 changes
 
 ## Tests Required
-- This IS the test task — it writes and verifies all Phase 1 tests
-- Total: ≥14 test cases across 4 test files
+- This IS the test task — it writes and verifies all Phase 1 tests across these 4 files:
+  - `test/settings-store.test.js` — settings round-trips (string/bool/number/json), defaults, overwrite, delete
+  - `test/auth-paths.test.js` — API-key storage, skip-refresh for API-key shape, getAuthType
+  - `test/rename-migration.test.js` — brah.db → lena.db auto-migration with data intact
+  - `test/hotkey.test.js` — globalShortcut register/unregister/change/conflict
+- Total: ≥14 test cases across the 4 files; all run under `node --test`, zero failures.
 
 ## Outputs
 - New/verified: `test/settings-store.test.js`, `test/auth-paths.test.js`, `test/rename-migration.test.js`, `test/hotkey.test.js`

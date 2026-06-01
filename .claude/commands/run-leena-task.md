@@ -32,7 +32,14 @@ Usage:
 
 8. **On gate failure:** fix → re-run. **When a fix works: append it to `tasks/LEARNINGS.md` (what broke / why / fix), then continue.** `attempts >= 10` → `blocked/`, `status: blocked`, release claims, TASKLOG + LEARNINGS entry, caller skips to next. `security_block: true` → immediate `blocked/`, no retries.
 
-9. **On success:**
+9. **Independent verification (MANDATORY — never trust the agent's self-report).**
+   A dispatched agent reporting "done" is NOT evidence. Before moving a task to `completed/`, the orchestrator independently confirms:
+   - `git diff --stat` (or `git status --porcelain`) shows **non-empty** changes for this task. Empty diff = nothing was built = the "done" was false.
+   - **Every file named in the task's `## Outputs` actually exists** on disk (`ls` each path).
+   - The orchestrator **re-runs `npm run check` + `node --test` itself** and sees them pass — it does not take the agent's word that gates passed.
+   - If the diff is empty, a named output is missing, or a re-run gate fails → the "done" was false: treat as a failed attempt (`attempts +1`, retry from step 5), NOT a completion. Log the false-completion to `tasks/LEARNINGS.md`.
+
+10. **On verified success:**
    - Fill `## Outputs`, `## Interface Contracts` (actual signatures), `## Handoff Notes`.
    - WAL `post_run`. Move `in-progress/ → completed/`. `status: completed`. Release file claims.
    - Commit atomically: `git add -A && git commit -m "<id>: <title>"`.

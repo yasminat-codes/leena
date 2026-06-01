@@ -52,18 +52,22 @@ Usage:
 5. LSP diagnostics on changed files — zero errors.
 6. On any gate fail: fix → re-run. `attempts++`. **When a fix works: append the fix to `tasks/LEARNINGS.md` (what broke, why, the fix), then continue.**
 7. `attempts >= 10` → `blocked/`, `status: blocked`, log to TASKLOG + LEARNINGS, release file claims, **caller skips to next eligible task**. `security_block: true` → immediate `blocked/`, no retries.
-8. On success: fill `## Outputs` + `## Interface Contracts` (actual) + `## Handoff Notes`; WAL `post_run`; move `in-progress/ → completed/`; release file claims; update OVERVIEW.
+8. **Independent verification before completion (MANDATORY — agent self-reports are NOT evidence).** When an agent returns "done," the orchestrator independently confirms before moving the task to `completed/`: (a) `git status --porcelain` shows non-empty changes for the task (empty diff = false "done"); (b) every file in the task's `## Outputs` exists on disk; (c) the orchestrator **re-runs `npm run check` + `node --test` itself** and sees them pass. If the diff is empty, an output is missing, or a re-run gate fails → the "done" was false: `attempts +1`, retry (do NOT mark completed); log the false-completion to LEARNINGS.md. *(Three sub-agents mis-reported completion on 2026-06-01 — this gate exists because that failure is real.)*
+9. On verified success: fill `## Outputs` + `## Interface Contracts` (actual) + `## Handoff Notes`; WAL `post_run`; move `in-progress/ → completed/`; release file claims; update OVERVIEW.
 
 ### Step 3 — Wave must be COMPLETE before advancing
 - Do **not** advance until **every** task in the wave is in a terminal state (`completed/` OR `blocked/`). No half-built waves.
 - If some tasks blocked but others' deps are now satisfiable (including pull-ahead from later waves), keep dispatching — no idle.
 
 ### Step 4 — Post-wave (MANDATORY, in order)
+
+**Branch model:** each wave runs on a branch `wave-NN` cut from `main` at wave start. Tasks commit atomically to that branch. The wave is PR'd and merged to `main` only after the full vetting sequence below. "Commit vetted code to production" = merge to `main` only post-vetting. Remote is `origin` (github.com/yasminat-codes/leena); `gh` is authed.
+
 1. `reviewer` agent: review all wave changes (correctness, regressions, over-engineering, security).
-2. Fix any reviewer-flagged blockers (re-dispatch the owning agent). Re-run gates.
+2. Fix any reviewer-flagged blockers (re-dispatch the owning agent). Re-run gates + independent verification (Step 2.8).
 3. `advisor()` gate on the wave's changes. Address blockers; log warnings to TASKLOG.
-4. CodeRabbit: create PR, run review. **Record findings in LEARNINGS.md. Never block.**
-5. Commit vetted code: `git add -A && git commit -m "wave-NN: <summary>"` (atomic per task is also fine).
+4. **CodeRabbit (mandatory, advisory-only — NEVER blocks):** push `wave-NN`, open a PR to `main` (`gh pr create`), request CodeRabbit. Record findings in LEARNINGS.md. Proceed regardless of verdict. **If the CodeRabbit GitHub App is not installed on the repo, the review silently no-ops — that is acceptable (advisory only); note "CodeRabbit not configured — skipped" in TASKLOG and continue. Never block on it.**
+5. **Merge vetted code to production:** after reviewer + advisor pass (and CodeRabbit findings recorded), merge `wave-NN` → `main` (`gh pr merge --squash` or fast-forward). This is the only path code reaches `main`.
 6. Append wave summary + new learnings to `tasks/LEARNINGS.md` and `tasks/TASKLOG.md`. Update OVERVIEW (wave marked complete).
 
 ### Step 5 — APPROVAL GATE (wave-06 ONLY — the single human gate)

@@ -20,6 +20,7 @@ const rootTokens = [
   "--font-mono",
   "--r-inner",
   "--r-win",
+  "--r-sculpt",
   "--r-card",
   "--r-panel",
   "--r-pill",
@@ -154,7 +155,7 @@ test("visible wallpaper surfaces cross-fade background over 200ms", () => {
 });
 
 test("every treatment defines gradient, accent, and orb tokens", () => {
-  for (const treatment of ["aurora", "coral", "iris"]) {
+  for (const treatment of ["workspace", "aurora", "coral", "iris"]) {
     const selector = `.leena[data-treatment="${treatment}"]`;
     const body = extractRuleBody(cssWithoutComments, selector);
 
@@ -173,8 +174,18 @@ test("default aurora treatment uses neutral premium tokens instead of purple AI 
   assert.doesNotMatch(body, /#9a7bff|#1a0578|#6b3df5|#2a0a9c/i);
 });
 
+test("workspace treatment matches the teal and paper reference palette", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-treatment="workspace"]');
+
+  assertIncludesAll(
+    body,
+    ["--grad-1: #f7f5ed", "--grad-2: #0b3432", "--accent: #0b3432", "--orb-c: #0b3432"],
+    "workspace treatment",
+  );
+});
+
 test("every theme defines surface, text, glass, shadow, and wallpaper tokens", () => {
-  for (const theme of ["light", "dark", "vercel-dark"]) {
+  for (const theme of ["workspace", "light", "dark", "vercel-dark"]) {
     const selector = `.leena[data-theme="${theme}"]`;
     const body = extractRuleBody(cssWithoutComments, selector);
 
@@ -192,6 +203,16 @@ test("default dark theme is graphite neutral, not lavender purple", () => {
     "dark premium neutral theme",
   );
   assert.doesNotMatch(body, /#0a0912|#f1ecff|24,\s*3,\s*127|20,\s*4,\s*80/i);
+});
+
+test("workspace theme uses a dark teal frame with paper working surfaces", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-theme="workspace"]');
+
+  assertIncludesAll(
+    body,
+    ["--bg: #0b3432", "--surface: #fffdfa", "--surface-2: #eff5f2", "--text: #0b2624"],
+    "workspace theme",
+  );
 });
 
 test("every density defines spacing tokens", () => {
@@ -288,7 +309,7 @@ test("index.html imports leena.css before styles.css and mounts the leena wrappe
   assert.ok(stylesImport > -1, "index.html imports styles.css");
   assert.ok(leenaImport < stylesImport, "leena.css is imported before styles.css");
   assert.match(html, /class="leena app-shell"/);
-  assert.match(html, /data-theme="(?:light|dark|vercel-dark)"/);
-  assert.match(html, /data-treatment="(?:aurora|coral|iris)"/);
+  assert.match(html, /data-theme="(?:workspace|light|dark|vercel-dark)"/);
+  assert.match(html, /data-treatment="(?:workspace|aurora|coral|iris)"/);
   assert.match(html, /data-density="(?:compact|comfortable)"/);
 });

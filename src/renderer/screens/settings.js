@@ -11,11 +11,13 @@ export const SETTINGS_MOCK_DATA = Object.freeze({
   }),
   appearance: Object.freeze({
     theme: Object.freeze([
+      Object.freeze({ label: "Workspace", value: "workspace" }),
       Object.freeze({ label: "Light", value: "light" }),
       Object.freeze({ label: "Dark", value: "dark" }),
       Object.freeze({ label: "Vercel Dark", value: "vercel-dark" }),
     ]),
     treatment: Object.freeze([
+      Object.freeze({ label: "Workspace", value: "workspace" }),
       Object.freeze({ label: "Aurora", value: "aurora" }),
       Object.freeze({ label: "Coral", value: "coral" }),
       Object.freeze({ label: "Iris", value: "iris" }),
@@ -54,8 +56,8 @@ export const SETTINGS_MOCK_DATA = Object.freeze({
 });
 
 export const DEFAULT_APPEARANCE = Object.freeze({
-  theme: "dark",
-  treatment: "aurora",
+  theme: "workspace",
+  treatment: "workspace",
   density: "comfortable",
 });
 

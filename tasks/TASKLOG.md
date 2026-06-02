@@ -154,3 +154,11 @@ _(wave execution entries appended below as the build runs)_
 - Kept the existing composition but changed the default visual language: Aurora is now graphite/blue-neutral, the dark theme is near-black with neutral text, broad purple wallpaper/orb/card glow was removed, and blue is reserved for small state accents.
 - Added CSS token tests that reject the old purple default treatment/theme values and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-x-premium-*.png`.
 - Gates passed after neutral pass: `npm run check`, focused home/token/shell tests, full `node --test` (205 tests), `npm test` (205 tests), `git diff --check`, `node --check test/leena-css-tokens.test.js`, and Electron/Playwright five-screen screenshot sweep.
+
+## 2026-06-02 — Wave 06 Workspace reference-token follow-up
+
+- Owner provided a dark-teal/warm-white workspace UI reference and asked to change the entire design-token direction instead of continuing the purple/graphite pass.
+- Re-applied the installed GitHub taste skill, high-end visual design checklist, and required `kencode-search` reference pass before code.
+- Added `Workspace` as the default theme/treatment, with a deep teal outer frame, warm-white command/work surfaces, mint rows, dark teal pill controls, restrained orb material, and a quiet abstract right-side shape.
+- Added Workspace token/default tests, added the new `--r-sculpt` radius token after the design audit caught a literal decorative radius, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-workspace-mode-*.png`.
+- Gates passed after the Workspace pass: `npm run check`, focused design-audit/token tests, full `node --test` (207 tests), `git diff --check`, and `node --check` on changed JS/test files.

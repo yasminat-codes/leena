@@ -282,8 +282,8 @@ test("shell sidebar navigation switches all screens", () => {
   assert.equal(typeof shell?.setActiveScreen, "function");
   assert.equal(title.textContent, "Home");
   assert.match(content.innerHTML, /home-screen/);
-  assert.equal(wrapper.dataset.theme, "dark");
-  assert.equal(wrapper.dataset.treatment, "aurora");
+  assert.equal(wrapper.dataset.theme, "workspace");
+  assert.equal(wrapper.dataset.treatment, "workspace");
   assert.equal(wrapper.dataset.density, "comfortable");
 
   for (const navItem of navItems) {

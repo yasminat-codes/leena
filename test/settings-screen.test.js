@@ -97,6 +97,12 @@ function createSettingsRoot() {
   const themeDark = new TestElement({
     dataset: { appearanceKey: "theme", appearanceValue: "dark" },
   });
+  const themeWorkspace = new TestElement({
+    dataset: { appearanceKey: "theme", appearanceValue: "workspace" },
+  });
+  const treatmentWorkspace = new TestElement({
+    dataset: { appearanceKey: "treatment", appearanceValue: "workspace" },
+  });
   const treatmentCoral = new TestElement({
     dataset: { appearanceKey: "treatment", appearanceValue: "coral" },
   });
@@ -104,7 +110,15 @@ function createSettingsRoot() {
     dataset: { appearanceKey: "density", appearanceValue: "compact" },
   });
 
-  root.children.push(wrapper, themeLight, themeDark, treatmentCoral, densityCompact);
+  root.children.push(
+    wrapper,
+    themeLight,
+    themeDark,
+    themeWorkspace,
+    treatmentWorkspace,
+    treatmentCoral,
+    densityCompact,
+  );
   return { densityCompact, root, themeDark, themeLight, treatmentCoral, wrapper };
 }
 
@@ -144,17 +158,17 @@ test("applyAppearancePreference only targets the exact app-shell leena wrapper",
   assert.equal(storage.get("leena-theme"), "dark");
 });
 
-test("loadAppearancePreferences uses dark aurora comfortable defaults", () => {
+test("loadAppearancePreferences uses workspace mode comfortable defaults", () => {
   installLocalStorage();
   const { root, wrapper } = createSettingsRoot();
 
   assert.deepEqual(loadAppearancePreferences(root), {
-    theme: "dark",
-    treatment: "aurora",
+    theme: "workspace",
+    treatment: "workspace",
     density: "comfortable",
   });
-  assert.equal(wrapper.dataset.theme, "dark");
-  assert.equal(wrapper.dataset.treatment, "aurora");
+  assert.equal(wrapper.dataset.theme, "workspace");
+  assert.equal(wrapper.dataset.treatment, "workspace");
   assert.equal(wrapper.dataset.density, "comfortable");
 });
 
@@ -207,8 +221,10 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /class="btn btn--ghost" type="button">Edit<\/button>/);
   assert.match(html, /Appearance/);
   assert.match(html, /data-appearance-key="theme"/);
+  assert.match(html, /data-appearance-value="workspace"/);
   assert.match(html, /data-appearance-value="vercel-dark"/);
   assert.match(html, /data-appearance-key="treatment"/);
+  assert.match(html, />\s*Workspace\s*<\/button>/);
   assert.match(html, /data-appearance-value="coral"/);
   assert.match(html, /data-appearance-key="density"/);
   assert.match(html, /data-appearance-value="compact"/);

@@ -40,6 +40,8 @@
 - **Refine composition before ornament.** For Leena approval screens, the assistant identity must live in one intentional command surface. Avoid scattering the greeting, orb, chat affordance, and command center across generic cards; use whitespace, quiet dividers, and nested hardware-like surfaces before adding decoration.
 - **Keep orb and prompt in separate visual lanes.** On approval surfaces, the orb may be adjacent or ambient, but it must not sit directly above or over the command input. Use a dedicated orb well or integrated control composition so the prompt remains the primary action.
 - **Default shell must not read as purple AI-template UI.** The default approval theme should feel graphite, neutral, precise, and product-grade. Keep violet/purple out of the default dark wallpaper/orb/primary surfaces; reserve color for tiny state accents and avoid broad saturated glow.
+- **Reference-derived appearance changes must become first-class token modes.** When owner feedback supplies a strong material reference, encode it as an explicit theme/treatment/default if the reference changes the product model; do not keep layering cosmetic tweaks onto the rejected mode.
+- **Decorative geometry still uses named radius tokens.** Even abstract pseudo-elements and background shapes must use `--r-*` tokens for `border-radius`; if a new shape needs a new radius, add a named token instead of a literal runtime value.
 
 ---
 
@@ -80,6 +82,20 @@
 - **Root cause:** The default Aurora treatment, dark wallpaper, orb, command deck, and gradient utilities still leaned on broad violet/purple glow, making the shell look like an AI template instead of a precise desktop product.
 - **Fix:** Changed the default Aurora treatment to graphite/blue-neutral tokens, made the dark theme near-black with neutral text, removed purple shadows and broad radial glow from shell/card/home surfaces in `src/renderer/leena.css`, converted the orb to a restrained graphite/silver material with a tiny blue signal, and added CSS token tests that reject the old purple defaults.
 - **Rule added?:** yes — Default shell must not read as purple AI-template UI.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Workspace reference token mode
+- **Symptom:** Owner asked to change the entire design token direction to match a supplied dark-teal/paper workspace reference, after the graphite pass still did not feel refined enough.
+- **Root cause:** The previous passes were still modifying the rejected visual language instead of creating a new material model: deep teal outer frame, warm-white working panel, mint rows, restrained pill controls, and a quiet sculptural background shape.
+- **Fix:** Added `workspace` theme/treatment defaults in `src/renderer/screens/settings.js` and `src/renderer/index.html`, rebuilt the corresponding token/surface overrides in `src/renderer/leena.css`, added Workspace coverage in renderer/default tests, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-workspace-mode-*.png`.
+- **Rule added?:** yes — Reference-derived appearance changes must become first-class token modes.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Workspace pseudo-element radius token gate
+- **Symptom:** `node --test` failed `runtime CSS border-radius declarations use radius tokens` with `src/renderer/leena.css:536 58px`, then rejected `calc(var(--r-win) + 24px)` because runtime radius values must start with a `--r-*` token.
+- **Root cause:** The new workspace abstract background shape used one-off decorative geometry that was not promoted into the design-token scale.
+- **Fix:** Added `--r-sculpt: 58px` to the root radius tokens, used `border-radius: var(--r-sculpt)` for the workspace pseudo-element, added token coverage in `test/leena-css-tokens.test.js`, and reran the audit.
+- **Rule added?:** yes — Decorative geometry still uses named radius tokens.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
 ### Fix — Wave 06 — 021 — Renderer design-token audit cleanup

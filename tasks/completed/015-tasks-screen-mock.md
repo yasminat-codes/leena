@@ -2,7 +2,7 @@
 id: "015"
 title: "Tasks/planner screen with mock data"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 10000
@@ -14,7 +14,9 @@ context_files:
   - src/realtime/tools/planner-tools.js
 skills: []
 tags: [phase-0, screen, tasks, planner]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T02:05:14Z"
+completed_at: "2026-06-02T02:19:22Z"
 created_at: "2026-06-01"
 ---
 
@@ -45,6 +47,8 @@ The planner is a core feature of Leena — users manage tasks and calendar via v
 ## Outputs
 - `src/renderer/screens/tasks.js`
 - `test/tasks-screen.test.js`
+- `src/renderer/shell.js` — integrated Tasks route into `#shell-content`
+- `src/renderer/leena.css` — responsive Tasks layout and status/priority token classes
 
 ## Interface Contracts
 - `renderTasks()` returns HTML mountable in `.content`
@@ -52,10 +56,11 @@ The planner is a core feature of Leena — users manage tasks and calendar via v
 - Phase 6 replaces mock data with live planner queries
 
 ## Handoff Notes
-_Filled after completion._
+- Mock task objects preserve the current SQLite planner task columns (`id`, `name`, `description`, `priority`, `status`) plus display-only `dueDate`.
+- Parent verification passed `npm run check`, `node --test` (186 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Initial worker markup used inline token styles. Parent integration moved those to `leena.css` classes and updated stale test assertions.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

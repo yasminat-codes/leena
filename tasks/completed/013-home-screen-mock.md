@@ -2,7 +2,7 @@
 id: "013"
 title: "Home screen with mock data"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -13,7 +13,9 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, screen, home]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T02:05:14Z"
+completed_at: "2026-06-02T02:19:22Z"
 created_at: "2026-06-01"
 ---
 
@@ -45,6 +47,8 @@ Home is the default landing screen — the first thing the user sees. It sets th
 ## Outputs
 - `src/renderer/screens/home.js` — Home screen renderer with mock data
 - `test/home-screen.test.js`
+- `src/renderer/shell.js` — integrated Home route into `#shell-content`
+- `src/renderer/leena.css` — responsive Home layout styles
 
 ## Interface Contracts
 - `renderHome()` returns HTML string or DocumentFragment mountable in `.content`
@@ -52,10 +56,11 @@ Home is the default landing screen — the first thing the user sees. It sets th
 - The orb placeholder will be replaced by the real orb component (task 019)
 
 ## Handoff Notes
-_Filled after completion._
+- `renderHome()` returns an HTML string and is routed by `setActiveScreen("Home")`.
+- Parent verification passed `npm run check`, `node --test` (186 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-_Filled if errors occur._
+- None for task-owned files.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

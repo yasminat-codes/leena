@@ -362,6 +362,7 @@ function wireUpdateEvents() {
 }
 
 ipcMain.handle("app:get-version", () => app.getVersion());
+ipcMain.handle("app:is-development", () => isDevelopment);
 ipcMain.handle("update:check", async () => {
   if (isDevelopment) {
     return "Updates are checked only in packaged builds.";

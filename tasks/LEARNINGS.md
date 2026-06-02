@@ -34,6 +34,7 @@
 - **Native addons stay in `asarUnpack`** (`@nut-tree-fork/**`, onnxruntime native bits).
 - **Tests are mandatory, not optional.** No task is complete without the tests named in its `## Tests Required`, and they must pass. E2E coverage for any user-facing flow.
 - **Sub-agent completion reports are NOT evidence — verify on disk.** A dispatched agent returning "done" (even with high token/tool-use counts) may have written nothing, done adjacent work, or hallucinated a summary. After ANY dispatched agent: independently confirm the named output files exist, `git status --porcelain`/`git diff` is non-empty, and re-run `npm run check` + `node --test` yourself before trusting the result. *(Evidence: on 2026-06-01, three sub-agents reported success — `wave-writer`/`wave-writer2`/`ollama-model-download` — and two had written nothing; the wave files were claimed-written and were absent. Caught only by an on-disk `ls` count.)*
+- **Verify the exact worktree path, not just filenames.** A worker can produce correct-looking output in the wrong checkout. Completion verification must test the requested worktree path explicitly before marking a task complete.
 - **Verify content, not just structure.** File counts, section-header presence, and dependency-graph parity all pass even when section bodies are placeholder/hollow. Body-level verification (non-trivial content per section, numbered Steps, named test paths, atomicity cap) is mandatory for any generated artifact — a `wc -l` + `grep` pass is not enough.
 
 ---
@@ -41,6 +42,49 @@
 ## Wave Log
 
 > Append below. Newest wave at the bottom. Never delete entries.
+
+### Fix — Wave 04 — 018 — Wrong checkout output recovery
+- **Symptom:** Command Center worker reported completion but its files were absent from `/Users/yasmineseidu/leena-wave-04`; they existed under the primary checkout `/Users/yasmineseidu/leena`.
+- **Root cause:** The worker wrote to the wrong checkout despite being instructed to use the wave worktree.
+- **Fix:** Copied only the task-owned command-center files into `/Users/yasmineseidu/leena-wave-04`, removed those worker-created untracked files from the primary checkout, and added an Active Rule to verify exact worktree paths.
+- **Rule added?:** yes — Verify the exact worktree path, not just filenames.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 04 — integration — Tokenized screen styling
+- **Symptom:** Full `node --test` failed after parent integration because worker tests still expected inline `style` attributes for text weight/color and avatar sizing.
+- **Root cause:** Worker modules used inline token styles; parent integration moved visual rules into `leena.css`, but tests still asserted the old inline implementation detail.
+- **Fix:** Added shared token classes in `src/renderer/leena.css`, removed inline styles from screen renderers, and updated tests to assert class-based styling.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 04 — 018 — Production-safe Command Center demo gate
+- **Symptom:** Reviewer found `location.protocol === "file:"` enabled the Ctrl+D Command Center demo in packaged Electron, not only development.
+- **Root cause:** The renderer treated URL protocol as a trust boundary even though packaged Electron loads local files too.
+- **Fix:** Added main-process `app:is-development` IPC, exposed it through preload, gated the renderer demo listener on that trusted value, and added `test/dev-mode-gate.test.js`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 04 — 017 — Exact settings appearance target
+- **Symptom:** Reviewer found Settings appearance writes could target loose `.leena` or `#app-shell` fallback elements instead of the app shell wrapper contract.
+- **Root cause:** The helper accepted fallback selectors after looking for the exact `#app-shell.leena` wrapper.
+- **Fix:** Restricted `resolveAppearanceRoot()` to exact `#app-shell.leena` and added a regression test proving loose wrappers are ignored.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 04 — 017 — Direct-root exact settings target
+- **Symptom:** Reviewer re-review found direct loose roots still mutated appearance state: a root with only `id="app-shell"` or only `.leena` passed the wrapper check.
+- **Root cause:** `isLeenaWrapper()` still used `id === "app-shell" OR classList.contains("leena")` for a direct root.
+- **Fix:** Changed the helper to require the exact `#app-shell.leena` selector, added direct loose-root regression coverage, and restored the task-required dark/aurora/comfortable missing-storage defaults.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 04 — summary
+- Built all six Phase 0 mock surfaces: Home, Activity, Tasks, Integrations, Settings, and the Command Center variants/states.
+- Integrated screen routing through `src/renderer/shell.js` and kept reusable layout/visual treatment in `src/renderer/leena.css` rather than inline screen styles.
+- Command Center demo mode must be treated like a development-only debug surface; renderer file URLs are not sufficient because packaged Electron also uses local files.
+- Settings appearance controls now write only to an exact `#app-shell.leena` root, preserving the Wave 03 shell contract for theme/treatment/density attributes.
+- Independent gates after reviewer re-review fixes passed: `npm run check`, `node --test` (189 tests), `node --check`, `git diff --check`, output existence checks, and short `npm start` smoke.
+- Reviewer re-review and advisor gates passed. Downstream wire-live work should keep the shell route and renderer contracts stable while replacing mock data with real stores/providers.
 
 ### Fix — Wave 03 — 012 — Exact shell icon paths
 - **Symptom:** Parent verification found the first app-shell implementation used approximate Tasks, Settings, and bell SVG paths even though task 012 required inline design-system §3 icons.

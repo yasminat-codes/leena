@@ -1,4 +1,22 @@
+import { renderActivity } from "./screens/activity.js";
+import { renderHome } from "./screens/home.js";
+import { renderIntegrations } from "./screens/integrations.js";
+import {
+  bindSettingsControls,
+  loadAppearancePreferences,
+  renderSettings,
+} from "./screens/settings.js";
+import { renderTasks } from "./screens/tasks.js";
+
 const screens = Object.freeze(["Home", "Activity", "Tasks", "Integrations", "Settings"]);
+
+const screenRenderers = Object.freeze({
+  Activity: renderActivity,
+  Home: renderHome,
+  Integrations: renderIntegrations,
+  Settings: renderSettings,
+  Tasks: renderTasks,
+});
 
 function getRoot(root) {
   if (root) {
@@ -52,10 +70,10 @@ export function setActiveScreen(name, root) {
 
   const content = doc.querySelector("#shell-content");
   if (content) {
-    const placeholder = doc.createElement("div");
-    placeholder.className = "screen-placeholder";
-    placeholder.textContent = `Screen: ${screen}`;
-    content.replaceChildren(placeholder);
+    content.innerHTML = screenRenderers[screen]();
+    if (screen === "Settings") {
+      bindSettingsControls(doc);
+    }
   }
 
   return screen;
@@ -66,6 +84,8 @@ export function initShell(root) {
   if (!doc?.querySelectorAll) {
     return null;
   }
+
+  loadAppearancePreferences(doc);
 
   for (const node of doc.querySelectorAll(".nav-item")) {
     node.addEventListener("click", () => setActiveScreen(node.dataset.screen, doc));

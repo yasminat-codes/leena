@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld("brah", {
   setWindowFocusable: (focusable) => ipcRenderer.invoke("window:set-focusable", focusable),
   minimizeWindow: () => ipcRenderer.invoke("window:minimize"),
   quitApp: () => ipcRenderer.invoke("app:quit"),
+  isDevelopment: () => ipcRenderer.invoke("app:is-development"),
   onDataChanged: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("data:changed", listener);

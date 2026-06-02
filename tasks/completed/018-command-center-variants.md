@@ -2,7 +2,7 @@
 id: "018"
 title: "Command Center — all 4 variants and 6 assistant states"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: L
 estimated_tokens: 22000
@@ -13,7 +13,10 @@ context_files:
   - src/renderer/renderer.js
 skills: []
 tags: [phase-0, command-center, voice-ui]
-attempts: 0
+attempts: 2
+claim_started: "2026-06-02T02:05:14Z"
+review_fix_started: "2026-06-02T02:24:00Z"
+completed_at: "2026-06-02T02:37:14Z"
 created_at: "2026-06-01"
 ---
 
@@ -51,18 +54,26 @@ The Command Center is Leena's primary voice interaction surface — it's the flo
 - `src/renderer/components/command-center.js` — CommandCenter component
 - CSS additions to `leena.css` or new `src/renderer/components/command-center.css`
 - `test/command-center.test.js`
+- `src/renderer/renderer.js` — development-only Ctrl+D demo toggle mount
+- `src/main.js` and `src/preload.js` — trusted `app:is-development` IPC used to gate demo mode
+- `src/renderer/leena.css` — fixed-position command-center mount styling
+- `test/dev-mode-gate.test.js` — regression coverage for production-safe demo gating
 
 ## Interface Contracts
 - `CommandCenter` is instantiated by `renderer.js` to handle voice UI state
+- Demo mode is enabled only when main-process `isDevelopment` is true; renderer URL/protocol is not a trust boundary
 - Phase 1 (hotkey) will trigger `setVariant('compact')` on ⌘Space
 - Realtime engine will call `setState()` as conversation progresses
 - The expanded variant's preview row will be populated by tool results in Phase 6
 
 ## Handoff Notes
-_Filled after completion._
+- `CommandCenter` is self-contained and loads `command-center.css` on mount; renderer development mode toggles the all-states demo with Ctrl+D after the trusted IPC confirms unpackaged development.
+- Parent verification after reviewer fixes passed `npm run check`, `node --test` (189 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-_Filled if errors occur._
+- The worker wrote command-center files into the primary checkout (`/Users/yasmineseidu/leena`) instead of the wave worktree. Parent verification caught the missing outputs, copied the task-owned files into `/Users/yasmineseidu/leena-wave-04`, and removed only those worker-created untracked files from the primary checkout.
+- `command-center.css` initially referenced undefined `--danger-soft`; parent integration replaced it with a token-based `color-mix()` expression.
+- Reviewer found renderer demo gating used `location.protocol === "file:"`, which is also true in packaged Electron. Fixed with main-process `app:is-development` IPC and regression coverage.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

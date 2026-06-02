@@ -3,7 +3,10 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("brah", {
   getOpenAIStatus: () => ipcRenderer.invoke("openai:get-status"),
   loginOpenAI: () => ipcRenderer.invoke("openai:login"),
+  saveApiKey: (apiKey) => ipcRenderer.invoke("openai:save-api-key", { apiKey }),
+  getAuthType: () => ipcRenderer.invoke("openai:get-auth-type"),
   logoutOpenAI: () => ipcRenderer.invoke("openai:logout"),
+  createRealtimeSession: (options) => ipcRenderer.invoke("realtime:create-session", options),
   createRealtimeSecret: (options) => ipcRenderer.invoke("openai:create-realtime-secret", options),
   getAgentProfile: () => ipcRenderer.invoke("agent:get-profile"),
   setAgentProfile: (profile) => ipcRenderer.invoke("agent:set-profile", profile),

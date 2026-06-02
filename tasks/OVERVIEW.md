@@ -8,10 +8,10 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 49 |
+| Pending | 45 |
 | In-Progress | 0 |
-| Completed | 23 |
-| Blocked | 0 |
+| Completed | 26 |
+| Blocked | 1 |
 
 ## Wave Map
 
@@ -92,7 +92,7 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 
 ## Blockers
 
-None.
+- `091` — openWakeWord accuracy spike blocked: no trained `hey-lena.onnx`, no one-hour ambient corpus, and no 50-utterance positive corpus. Task 092 must wait for measured wake results or use the documented Porcupine/hotkey-only fallback.
 
 ## Completed Waves
 
@@ -103,6 +103,7 @@ None.
 - Wave 05 — Live theme switching (`020`) completed 2026-06-02.
 - Wave 06 — Phase 0 integration test and polish (`021`) completed 2026-06-02; owner approval granted 2026-06-02 and Band B is underway.
 - Wave 07 — Provider implementations, subsystem interfaces, auth verification, and Tasks live-data wiring (`030`, `050`, `051`, `052`, `060`, `080`, `090`, `102`) completed 2026-06-02.
+- Wave 08 — Auth key, realtime provider integration, MCP schema conversion, and wake-word accuracy spike (`031`, `055`, `082`, `091`) terminal 2026-06-02: `031`, `055`, and `082` completed; `091` blocked pending real wake-word model/audio measurement.
 
 ## Discovered Tasks
 

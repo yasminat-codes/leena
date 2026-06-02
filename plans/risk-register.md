@@ -1,0 +1,17 @@
+# Lena — Risk Register
+
+Likelihood (L) / Impact (I): Low / Med / High.
+
+| ID | Risk | L | I | Mitigation | Owner phase |
+|---|---|---|---|---|---|
+| **R-1** | **ChatGPT-account OAuth realtime flow (`codex_cli_simplified_flow`) may not generalize to other users' accounts, or may violate OpenAI ToS.** Breaks "share with a few people." | Med | High | Phase 1 Task 1: verify with a second account. Build an **OpenAI API-key auth path** as a first-class fallback in the onboarding flow. Don't hardwire the OAuth assumption. | 1 |
+| R-2 | Mem0 Node OSS local mode immature / requires Ollama or unexpected cloud calls. | Med | Med | Custom sqlite baseline is the default impl (ADR-2). Mem0 is an adapter validated in a Phase 2 spike before being made default. Never the sole memory path. | 2 |
+| R-3 | openWakeWord custom "Hey Lena" too many false accepts/rejects in-renderer WASM. | Med | Med | Phase 5 spike measures FA/hr + FR%. Tune threshold; add optional custom verifier model. Hotkey is always a fallback summon. Engine interface allows swapping to Porcupine/OS speech. | 5 |
+| R-4 | `node:sqlite` cannot load `sqlite-vec` on macOS (`OMIT_LOAD_EXTENSION`) — confirmed. | High | Low | Use brute-force cosine in JS (<5ms at personal scale). If >10k memories, switch impl to `better-sqlite3` + `sqlite-vec` via `asarUnpack` (same pattern as `@nut-tree-fork`). | 2 |
+| R-5 | MCP tool poisoning / rug-pull / prompt injection via external tool descriptions or results. | Med | High | ADR-6: default-deny permission level, server allowlist, definition hashing + drift re-prompt, description sanitization. | 4 |
+| R-6 | Always-on local mic = privacy concern + macOS shows persistent mic indicator; shared users may object. | Med | Med | Explicit consent in onboarding; visible listening state in tray; one-click mute/pause; wake detection is fully on-device (audio never leaves machine until session starts). | 5 |
+| R-7 | Code signing/notarization friction (Apple Developer ID cert required; native addons must be signed). | Med | Med | Hardened runtime + entitlements already configured. Acquire Developer ID; sign `@nut-tree-fork` + any wake/embedding native bits; notarize in build pipeline. Until then, document the one-time Gatekeeper bypass. | 1 |
+| R-8 | OpenAI realtime cost runs high under "always-ready." | Med | Low | ADR-8 idle timeout setting; local embeddings free; Phase 6 cheaper text mode. Surface usage expectations in onboarding. | 6 |
+| R-9 | Packaged-app subprocess PATH issues break local stdio MCP servers (Finder-launched apps get minimal PATH). | Med | Low | Default to HTTP transport (Composio) which avoids subprocesses. For stdio servers, resolve full login-shell PATH at startup and pass via `StdioServerParameters.env`; use `ELECTRON_RUN_AS_NODE=1`. | 4 |
+| R-10 | Dynamic MCP tool list bloats the realtime tool set / breaks OpenAI strict mode (`additionalProperties:false`). | Med | Low | Limit enabled Composio toolkits/tools (<20); recursively patch schemas or set `strict:false`; namespace tool names to avoid collisions. | 4 |
+| R-11 | Renaming `brah.db` / `com.unstablemind.brah` orphans existing user data + keychain entries + TCC permissions. | Low | Med | Provide a one-time migration (copy old `userData`/db) or keep the bundle ID stable and only change `productName`. Decide explicitly in Phase 1. | 1 |

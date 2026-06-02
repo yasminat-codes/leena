@@ -47,6 +47,7 @@ import {
   updateTaskStatus,
 } from "./realtime/tools/planner-store.js";
 import { loadWindowPosition, saveWindowPosition } from "./realtime/tools/window-state-store.js";
+import { redactSensitiveText, serializeError } from "./utils/errors.js";
 
 const { autoUpdater } = electronUpdater;
 const execFileAsync = promisify(execFile);
@@ -104,6 +105,14 @@ let suppressMoveSave = false;
 let moveSaveTimer = null;
 // Set while we resize the window ourselves, so the resize guard ignores it.
 let suppressBoundsGuard = false;
+
+process.on("uncaughtException", (error) => {
+  reportGlobalError("process.uncaughtException", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  reportGlobalError("process.unhandledRejection", reason);
+});
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -584,6 +593,26 @@ function broadcastDataChanged(category) {
   mainWindow.webContents.send("data:changed", { category });
 }
 
+function reportGlobalError(event, error) {
+  const diagnosticPayload = { event, error: serializeError(error) };
+  void writeDiagnosticLog(event, sanitizeDiagnosticValue(diagnosticPayload));
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  const rendererPayload = sanitizeDiagnosticValue({
+    event,
+    error: serializeError(error, {
+      includeStack: shouldExposeRendererErrorStack(),
+      redactSecrets: true,
+    }),
+  });
+  mainWindow.webContents.send("leena:error", rendererPayload);
+}
+
+function shouldExposeRendererErrorStack() {
+  return !app.isPackaged && process.env.NODE_ENV !== "production";
+}
+
 function categoryForTool(name) {
   switch (name) {
     case "add_task":
@@ -840,29 +869,13 @@ function summarizeToolResult(result) {
 
 const SECRET_KEY =
   /(token|secret|authorization|bearer|password|passwd|api[-_]?key|apikey|client_secret|refresh|access_token|cookie|credential|private[-_]?key)/i;
-const SECRET_VALUE =
-  /\b(sk-[A-Za-z0-9_-]{16,}|ek_[A-Za-z0-9]+|eyJ[A-Za-z0-9._-]{20,}|Bearer\s+[A-Za-z0-9._-]+)\b/g;
-
-function scrubString(str) {
-  let out = str.replace(SECRET_VALUE, "[redacted]");
-  // Strip query/fragment from any http(s) URL value (codes/tokens live there).
-  try {
-    const u = new URL(out);
-    if (u.protocol === "http:" || u.protocol === "https:") {
-      if (u.search || u.hash) out = `${u.origin}${u.pathname}?[redacted]`;
-    }
-  } catch {
-    /* not a URL */
-  }
-  return out.slice(0, 500);
-}
 
 function sanitizeDiagnosticValue(value) {
   if (Array.isArray(value)) {
     return value.map(sanitizeDiagnosticValue);
   }
   if (!value || typeof value !== "object") {
-    return typeof value === "string" ? scrubString(value) : value;
+    return typeof value === "string" ? redactSensitiveText(value) : value;
   }
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => [

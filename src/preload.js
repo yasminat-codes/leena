@@ -40,4 +40,12 @@ contextBridge.exposeInMainWorld("brah", {
   offDataChanged: (listener) => {
     ipcRenderer.removeListener("data:changed", listener);
   },
+  onLeenaError: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on("leena:error", listener);
+    return listener;
+  },
+  offLeenaError: (listener) => {
+    ipcRenderer.removeListener("leena:error", listener);
+  },
 });

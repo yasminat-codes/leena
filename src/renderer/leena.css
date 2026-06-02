@@ -1239,6 +1239,7 @@
   display: grid;
   gap: 4px;
   min-width: 0;
+  padding-block: 2px;
 }
 
 .home-card,
@@ -1305,7 +1306,11 @@
 }
 
 .integrations-header {
+  display: flex;
+  min-height: 94px;
+  align-items: center;
   padding: var(--pad);
+  overflow: visible;
 }
 
 .integrations-grid {

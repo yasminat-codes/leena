@@ -59,6 +59,13 @@
 - **Rule added?:** yes — Refine composition before ornament.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
+### Fix — Wave 06 — 021 — Integrations header clipping
+- **Symptom:** Reviewer found the committed taste-repair Integrations artifact clipped the `6 connected` approval-gate stat and hid the description line.
+- **Root cause:** The compact glass header reused `.panel-glass` hidden overflow with only token padding, which left the three-line header without a stable visual height after the shell density repair.
+- **Fix:** Made `.integrations-header` a non-clipping centered flex surface with a stable `min-height`, added copy padding in `src/renderer/leena.css`, added CSS regression coverage in `test/integrations-screen.test.js`, and refreshed `tasks/artifacts/wave-06-taste-repair-integrations.png`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
 ### Fix — Wave 06 — 021 — Renderer design-token audit cleanup
 - **Symptom:** The Phase 0 design audit found hardcoded renderer colors and non-token radius/font fallbacks in legacy runtime CSS, and the first radius audit draft skipped `leena.css`.
 - **Root cause:** Wave 01-05 token work covered the new shell CSS first, but legacy `styles.css`, `renderer.js` canvas colors, and Command Center fallbacks still carried direct hex/radius values.

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -6,8 +7,18 @@ import {
   renderIntegrations,
 } from "../src/renderer/screens/integrations.js";
 
+const leenaCss = readFileSync(new URL("../src/renderer/leena.css", import.meta.url), "utf8");
+
 function countMatches(source, pattern) {
   return source.match(pattern)?.length ?? 0;
+}
+
+function extractRuleBody(source, selector) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = source.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`));
+
+  assert.ok(match, `${selector} rule exists`);
+  return match[1];
 }
 
 test("MOCK_INTEGRATIONS_DATA defines 9 valid integration tiles", () => {
@@ -55,4 +66,15 @@ test("renderIntegrations maps integration statuses to the required chip classes"
   assert.equal(countMatches(html, /class="chip chip--green">On<\/span>/g), 6);
   assert.equal(countMatches(html, /class="chip chip--accent">\+ Connect<\/span>/g), 1);
   assert.equal(countMatches(html, /class="chip chip--mcp">MCP<\/span>/g), 2);
+});
+
+test("integrations header CSS protects approval-gate stats from clipping", () => {
+  const headerBody = extractRuleBody(leenaCss, ".integrations-header");
+  const copyBody = extractRuleBody(leenaCss, ".integrations-header__copy");
+
+  assert.match(headerBody, /display:\s*flex/);
+  assert.match(headerBody, /min-height:\s*94px/);
+  assert.match(headerBody, /align-items:\s*center/);
+  assert.match(headerBody, /overflow:\s*visible/);
+  assert.match(copyBody, /padding-block:\s*2px/);
 });

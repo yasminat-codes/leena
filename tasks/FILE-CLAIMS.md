@@ -18,9 +18,24 @@
 
 | File | Claimed by (task) | Claimed at | Status |
 |------|-------------------|------------|--------|
-_(empty — no active Wave 01 claims)_
+| `src/utils/retry.js` | 001 | 2026-06-02T00:13:31Z | active |
+| `test/retry.test.js` | 001 | 2026-06-02T00:13:31Z | active |
+| `src/providers/types.js` | 002 | 2026-06-02T00:13:31Z | active |
+| `src/providers/base-provider.js` | 002 | 2026-06-02T00:13:31Z | active |
+| `src/providers/index.js` | 002 | 2026-06-02T00:13:31Z | active |
+| `src/providers/provider-settings.js` | 002 | 2026-06-02T00:13:31Z | active |
+| `test/provider-registry.test.js` | 002 | 2026-06-02T00:13:31Z | active |
+| `src/renderer/assets/fonts/` | 011 | 2026-06-02T00:13:31Z | active |
+| `src/renderer/leena.css` | 011 | 2026-06-02T00:13:31Z | active |
+| `src/renderer/index.html` | 011 | 2026-06-02T00:13:31Z | active |
+| `test/font-bundle.test.js` | 011 | 2026-06-02T00:13:31Z | active |
+| `src/renderer/components/orb.js` | 019 | 2026-06-02T00:13:31Z | active |
+| `src/renderer/components/waveform.js` | 019 | 2026-06-02T00:13:31Z | active |
+| `test/orb-waveform.test.js` | 019 | 2026-06-02T00:13:31Z | active |
 
 ## Claim History
+
+- 2026-06-02T00:13:31Z — Wave 02 task `019` scoped to non-stylesheet implementation first because `src/renderer/leena.css` is actively claimed by task `011`; any required stylesheet edits will wait until `011` releases its claim.
 
 - 2026-06-01T23:37:45Z — Released Wave 01 claims for task `000`: `src/utils/errors.js`, `src/main.js`, `src/preload.js`, `test/errors.test.js`.
 - 2026-06-01T23:37:45Z — Released Wave 01 claims for task `010`: `src/renderer/leena.css`, `src/renderer/index.html`, `test/leena-css-tokens.test.js`.

@@ -26,4 +26,10 @@ _(wave execution entries appended below as the build runs)_
 - Focused reviewer found one more blocker: embedded callback URLs in longer strings were not redacted. Re-dispatched task `000` owner; fixed URL-substring scrubbing and regression coverage.
 - Final reviewer found the diagnostics path still used a separate sanitizer. Re-dispatched task `000` owner; fixed diagnostics to reuse the shared redaction helper.
 - Independent gates passed in the parent checkout after the fix: `npm run check`, `node --test` (127 tests), and `node --check` for changed JS files.
+
+## 2026-06-02 — Wave 02 started
+
+- Cut clean branch/worktree `wave-02` from `origin/main` after PR #1 (`Wave 01 foundations`) merged.
+- Moved tasks `001`, `002`, `011`, and `019` to `in-progress` with attempt 1 and pre-run WAL entries.
+- Detected a mandatory file-claim conflict: tasks `011` and `019` both may need `src/renderer/leena.css`. Per `FILE-CLAIMS.md`, dispatching all four agents, with `019` limited to component/test files until `011` releases the stylesheet.
 - CodeRabbit advisory review was requested on PR #1. At merge decision time it had posted only the generated "review in progress" comment with no actionable findings; advisory status did not block the wave.

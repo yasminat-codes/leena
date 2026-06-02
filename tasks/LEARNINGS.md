@@ -42,6 +42,13 @@
 
 > Append below. Newest wave at the bottom. Never delete entries.
 
+### Wave 02 — pre-run file-claim note
+- **Symptom:** Wave 02 decomposition lists tasks `011` and `019` as parallel, but both may require `src/renderer/leena.css`.
+- **Root cause:** Font-face bundling and orb/waveform visual states share the central design-system stylesheet.
+- **Fix:** Dispatch all four Wave 02 agents, but scope `019` to component/test files first; any `leena.css` edits for `019` wait until task `011` releases its stylesheet claim.
+- **Rule added?:** no — existing `FILE-CLAIMS.md` conflict resolution already requires serialization for shared files.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
 ### Fix entry template
 ```
 ### Fix — Wave NN — <task id> — <one-line title>

@@ -2,7 +2,7 @@
 id: "001"
 title: "Retry with exponential backoff utility"
 type: infrastructure
-status: pending
+status: in_progress
 priority: critical
 complexity: S
 estimated_tokens: 7000
@@ -11,7 +11,8 @@ context_files:
   - src/utils/errors.js
 skills: []
 tags: [infrastructure, retry, resilience]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T00:13:31Z"
 created_at: "2026-06-01"
 ---
 

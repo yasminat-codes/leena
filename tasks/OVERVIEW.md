@@ -8,8 +8,8 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 70 |
-| In-Progress | 0 |
+| Pending | 66 |
+| In-Progress | 4 |
 | Completed | 2 |
 | Blocked | 0 |
 

@@ -2,7 +2,7 @@
 id: "011"
 title: "Bundle and normalize brand fonts"
 type: ui
-status: pending
+status: in_progress
 priority: high
 complexity: S
 estimated_tokens: 8000
@@ -14,7 +14,8 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, fonts, assets]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T00:13:31Z"
 created_at: "2026-06-01"
 ---
 

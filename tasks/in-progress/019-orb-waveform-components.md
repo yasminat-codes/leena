@@ -2,7 +2,7 @@
 id: "019"
 title: "Orb and waveform visualization components"
 type: ui
-status: pending
+status: in_progress
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -12,7 +12,8 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, orb, waveform, animation]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T00:13:31Z"
 created_at: "2026-06-01"
 ---
 

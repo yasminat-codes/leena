@@ -21,6 +21,8 @@
 
 ## Claim History
 
+- 2026-06-02T15:12:56Z — Released Wave 06 reviewer privacy-sweep claims for task `021`: sanitized remaining task bookkeeping paths in LEARNINGS/WAL, widened scans, and passed required gates.
+- 2026-06-02T15:07:17Z — Released Wave 06 CodeRabbit hygiene claims for task `021`: modernized visually-hidden CSS helpers, sanitized local task-log paths, added LEARNINGS/WAL records, and passed required gates.
 - 2026-06-02T14:35:27Z — Released Wave 06 off-white dominance claims for task `021`: made Workspace paper/off-white dominant, constrained teal to accents, refreshed screenshots, updated token coverage, and recorded bookkeeping.
 - 2026-06-02T14:13:52Z — Released Wave 06 workspace-token claims for task `021`: added Workspace default theme/treatment, rebuilt tokens from the dark-teal/paper reference, added radius/token/default tests, refreshed screenshots, and updated bookkeeping.
 - 2026-06-02T13:56:47Z — Released Wave 06 X-style premium neutral claims for task `021`: neutralized purple default treatment/theme, tightened orb and shell material, added anti-purple token tests, refreshed screenshots, and updated bookkeeping.

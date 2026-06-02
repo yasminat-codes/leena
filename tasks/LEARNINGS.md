@@ -113,6 +113,20 @@
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
+### Fix — Wave 06 — 021 — CodeRabbit hygiene cleanup
+- **Symptom:** CodeRabbit flagged deprecated visually-hidden CSS and hard-coded local workstation paths in the task log.
+- **Root cause:** Earlier wave bookkeeping kept absolute worktree paths, and hidden helper blocks retained the legacy `clip: rect(...)` pattern.
+- **Fix:** Replaced hidden-helper blocks in `src/renderer/leena.css` with the modern `clip-path: inset(50%)` pattern and sanitized task bookkeeping local paths to safe placeholders.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Reviewer privacy path sweep
+- **Symptom:** Reviewer found the CodeRabbit hygiene fix only scanned `TASKLOG.md`, leaving absolute local paths in `LEARNINGS.md` and WAL records.
+- **Root cause:** The first hygiene scan was scoped to the exact CodeRabbit comment file instead of all committed task bookkeeping artifacts.
+- **Fix:** Sanitized remaining local checkout paths in `tasks/LEARNINGS.md` and `tasks/.wal/wal.jsonl`, then widened the verification scan to task bookkeeping files.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
 ### Fix — Wave 06 — 021 — CSS token test radius expectations
 - **Symptom:** Full `node --test` failed in `test/leena-css-tokens.test.js` with `.dot missing border-radius: 50%` after runtime radii were moved to tokens.
 - **Root cause:** The older token-foundation regression test still asserted literal circular radii for `.dot` and `.orb`, conflicting with the Wave 06 no-literal-radius audit.
@@ -136,9 +150,9 @@
 - **WAL ref:** tasks/.wal/wal.jsonl
 
 ### Fix — Wave 04 — 018 — Wrong checkout output recovery
-- **Symptom:** Command Center worker reported completion but its files were absent from `/Users/yasmineseidu/leena-wave-04`; they existed under the primary checkout `/Users/yasmineseidu/leena`.
+- **Symptom:** Command Center worker reported completion but its files were absent from `<wave-04-worktree>`; they existed under `<primary-checkout>`.
 - **Root cause:** The worker wrote to the wrong checkout despite being instructed to use the wave worktree.
-- **Fix:** Copied only the task-owned command-center files into `/Users/yasmineseidu/leena-wave-04`, removed those worker-created untracked files from the primary checkout, and added an Active Rule to verify exact worktree paths.
+- **Fix:** Copied only the task-owned command-center files into `<wave-04-worktree>`, removed those worker-created untracked files from `<primary-checkout>`, and added an Active Rule to verify exact worktree paths.
 - **Rule added?:** yes — Verify the exact worktree path, not just filenames.
 - **WAL ref:** tasks/.wal/wal.jsonl
 

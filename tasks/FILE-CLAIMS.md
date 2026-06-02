@@ -21,6 +21,11 @@
 
 ## Claim History
 
+- 2026-06-02T01:20:00Z — Released Wave 03 claims for task `012`: `src/renderer/index.html`, `src/renderer/panel.js`, `src/renderer/shell.js`, `src/renderer/renderer.js`, `src/renderer/leena.css`, `src/renderer/assets/gradients/`, `package.json`, `test/shell-navigation.test.js`.
+- 2026-06-02T01:23:46Z — Reopened Wave 03 reviewer-fix claims for task `012`: `src/main.js`, `src/renderer/index.html`.
+- 2026-06-02T01:26:49Z — Released Wave 03 reviewer-fix claims for task `012`: `src/main.js`, `src/renderer/index.html`.
+- 2026-06-02T01:29:28Z — Reopened Wave 03 reviewer-fix claim for task `012`: `src/renderer/index.html`.
+- 2026-06-02T01:31:53Z — Released Wave 03 reviewer-fix claim for task `012`: `src/renderer/index.html`.
 - 2026-06-02T00:13:31Z — Wave 02 task `019` scoped to non-stylesheet implementation first because `src/renderer/leena.css` is actively claimed by task `011`; any required stylesheet edits will wait until `011` releases its claim.
 - 2026-06-02T00:28:53Z — Released Wave 02 claims for task `001`: `src/utils/retry.js`, `test/retry.test.js`.
 - 2026-06-02T00:28:53Z — Released Wave 02 claims for task `002`: `src/providers/types.js`, `src/providers/base-provider.js`, `src/providers/index.js`, `src/providers/provider-settings.js`, `test/provider-registry.test.js`.

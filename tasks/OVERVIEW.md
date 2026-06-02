@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 66 |
+| Pending | 65 |
 | In-Progress | 0 |
-| Completed | 6 |
+| Completed | 7 |
 | Blocked | 0 |
 
 ## Wave Map
@@ -98,6 +98,7 @@ None.
 
 - Wave 01 — Foundations begin (`000`, `010`) completed 2026-06-02.
 - Wave 02 — Utilities, provider skeleton, fonts, orb/waveform primitives (`001`, `002`, `011`, `019`) completed 2026-06-02.
+- Wave 03 — App shell scaffold (`012`) completed 2026-06-02.
 
 ## Discovered Tasks
 

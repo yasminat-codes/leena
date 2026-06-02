@@ -89,7 +89,7 @@ const windowModes = Object.freeze({
   // normal window and can be sent behind other windows.
   orb: { width: 172, height: 188, placement: "bottom-right", alwaysOnTop: false },
   call: { width: 226, height: 52, placement: "bottom-center", alwaysOnTop: true },
-  panel: { width: 440, height: 600, placement: "bottom-right", alwaysOnTop: false },
+  panel: { width: 1060, height: 712, placement: "bottom-right", alwaysOnTop: false },
 });
 
 let mainWindow;

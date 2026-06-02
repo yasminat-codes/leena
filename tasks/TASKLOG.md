@@ -108,3 +108,13 @@ _(wave execution entries appended below as the build runs)_
 - Advisor gate passed with no blockers. Non-blocking bookkeeping warning about the completed-wave list was addressed by adding Wave 05 to `tasks/OVERVIEW.md`.
 - GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
 - Opened PR #5 (`wave-05` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit returned a rate-limit/usage-credit warning and produced no actionable review findings; advisory status did not block the wave.
+
+## 2026-06-02 — Wave 06 started
+
+- Cut clean branch/worktree `wave-06` from `origin/main` after Wave 05 landed.
+- Moved task `021` to `in-progress` with attempt 1, active claims, and a pre-run WAL entry.
+- Primary checkout remains stale/dirty versus `origin/main`; Wave 06 is running from `/Users/yasmineseidu/leena-wave-06` to keep unrelated local plan edits out of the wave branch.
+- Completed task `021`: added Phase 0 shell rendering coverage, design-system audit coverage, tokenized legacy renderer values found by the audit, and captured the approval screenshot.
+- Independent task gates passed: `npm run check`, `node --test` (202 tests), `npm test`, `node --check` on changed JS/test files, `git diff --check`, and Electron/Playwright visual sweep with 5 screens, 18 appearance combinations, Ctrl+D Command Center demo, and screenshot capture.
+- Reviewer gate passed with no blockers. Residual risk noted: synthetic DOM tests depend on the parent Electron/Playwright sweep for pixel/layout coverage.
+- Advisor gate passed with no blockers. Warning recorded: keep the Electron/Playwright visual sweep as the authority for pixel/layout review at the Wave 06 approval gate.

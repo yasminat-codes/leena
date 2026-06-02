@@ -43,6 +43,27 @@
 
 > Append below. Newest wave at the bottom. Never delete entries.
 
+### Fix — Wave 06 — 021 — Renderer design-token audit cleanup
+- **Symptom:** The Phase 0 design audit found hardcoded renderer colors and non-token radius/font fallbacks in legacy runtime CSS, and the first radius audit draft skipped `leena.css`.
+- **Root cause:** Wave 01-05 token work covered the new shell CSS first, but legacy `styles.css`, `renderer.js` canvas colors, and Command Center fallbacks still carried direct hex/radius values.
+- **Fix:** Moved legacy color values behind Leena CSS tokens, changed renderer waveform colors to read CSS variables, tokenized radius/font declarations across runtime CSS, and tightened `test/design-system-audit.test.js` to scan all renderer CSS for radius declarations.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — CSS token test radius expectations
+- **Symptom:** Full `node --test` failed in `test/leena-css-tokens.test.js` with `.dot missing border-radius: 50%` after runtime radii were moved to tokens.
+- **Root cause:** The older token-foundation regression test still asserted literal circular radii for `.dot` and `.orb`, conflicting with the Wave 06 no-literal-radius audit.
+- **Fix:** Updated the existing token regression test to expect `border-radius: var(--r-round)` for `.dot` and `.orb`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 06 — summary
+- Completed Phase 0 approval-gate coverage for task `021`: shell rendering tests, design-system audit tests, token cleanup, and approval screenshot capture.
+- The design audit now keeps hardcoded renderer colors centralized in `leena.css` and requires runtime CSS font/radius declarations to use tokens.
+- Electron/Playwright visual sweep verified all five screens, all 18 theme/treatment/density combinations, Ctrl+D Command Center demo mode, and saved `tasks/artifacts/wave-06-phase0-approval.png`.
+- Independent gates passed: `npm run check`, `node --test` (202 tests), `npm test` (202 tests), `node --check` on changed JS/test files, `git diff --check`, reviewer gate, and advisor gate.
+- Wave 06 is ready for the single Phase 0 owner approval gate before Band B.
+
 ### Fix — Wave 05 — 020 — Visible wallpaper transition
 - **Symptom:** Reviewer found theme changes could still snap because `.win` also painted `background: var(--wall)` while only `.leena` had the 200ms background transition.
 - **Root cause:** The first task 020 fix covered the wrapper wallpaper but missed the visible shell wallpaper surface rule shared by `.leena-page` and `.win`.

@@ -2,7 +2,7 @@
 id: "021"
 title: "Phase 0 integration test and polish"
 type: test
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 12000
@@ -15,7 +15,9 @@ context_files:
   - src/renderer/components/
 skills: []
 tags: [phase-0, test, integration, polish]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T04:04:10Z"
+completed_at: "2026-06-02T04:29:28Z"
 created_at: "2026-06-01"
 ---
 
@@ -52,21 +54,31 @@ Phase 0 is the user's first look at Leena. Every screen, every theme combo, ever
 - `test/design-system-audit.test.js` — hardcoded color/font/radius scanner
 
 ## Outputs
-- `test/shell-rendering.test.js`
-- `test/design-system-audit.test.js`
-- Any fixes to existing Phase 0 files found during testing
-- Screenshot for approval review
+- `test/shell-rendering.test.js` — verifies all five screen renderers, shell navigation, Command Center variants/states, orb/waveform factories, and all 18 appearance combinations.
+- `test/design-system-audit.test.js` — recursively audits renderer source for hardcoded hex outside `leena.css`, non-token font families, and non-token border radii.
+- `src/renderer/leena.css` — added legacy color/radius tokens and tokenized remaining circular/radius declarations.
+- `src/renderer/styles.css` — routed legacy renderer colors and radii through Leena tokens.
+- `src/renderer/components/command-center.css` — removed font/radius fallbacks that violated the token audit.
+- `src/renderer/renderer.js` — moved call waveform gradient colors to Leena CSS tokens.
+- `test/leena-css-tokens.test.js` — updated circular-radius expectations to the `--r-round` token contract.
+- `tasks/artifacts/wave-06-phase0-approval.png` — approval screenshot captured in Dark/Aurora/Comfortable mode.
 
 ## Interface Contracts
-- Passing this task = Phase 0 COMPLETE
-- All subsequent phases build on this approved shell
-- The "take screenshot" step should use Electron's `webContents.capturePage()` or manual screenshot
+- Passing task `021` means Phase 0 visual shell is complete and ready for the Wave 06 owner approval gate.
+- All subsequent phases build on this shell route contract: `Home`, `Activity`, `Tasks`, `Integrations`, and `Settings`.
+- Appearance controls remain scoped to exact `#app-shell.leena` and support 3 themes x 3 treatments x 2 densities.
+- Command Center supports all 4 variants x 6 states and the trusted-development Ctrl+D demo path.
+- Approval screenshot is stored at `tasks/artifacts/wave-06-phase0-approval.png`.
 
 ## Handoff Notes
-_Filled after completion._
+- Parent-side independent verification confirmed non-empty diffs, required output files on disk, and all gates green.
+- Electron/Playwright visual sweep opened the app, navigated all five screens, applied all 18 appearance combinations, opened Ctrl+D Command Center demo mode, and captured the approval screenshot.
+- The Phase 0 hardcoded-value audit intentionally allows hex values only in `leena.css`; runtime legacy CSS now references those values through tokens.
+- Automated gates passed: `npm run check`, `node --test` (202 tests), `npm test`, `node --check` on changed JS files/tests, and `git diff --check`.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Two dispatched workers stalled before returning usable completion evidence; the second produced partial outputs before shutdown and parent-side verification/fixes brought the task to completion.
+- Initial full-suite rerun failed because `test/leena-css-tokens.test.js` still expected literal `50%` radius values after Wave 06 tokenized circular radii. The test was updated to assert `var(--r-round)`.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

@@ -21,6 +21,11 @@
 
 ## Claim History
 
+- 2026-06-02T04:04:10Z — Opened Wave 06 claims for task `021`: Phase 0 shell, screen, component, integration/audit test, and task bookkeeping files.
+- 2026-06-02T04:12:05Z — Extended Wave 06 task `021` claims to `src/renderer/styles.css` and `src/renderer/renderer.js` after the Phase 0 hardcoded-hex audit reached legacy runtime renderer files.
+- 2026-06-02T04:27:07Z — Extended Wave 06 task `021` claim to `test/leena-css-tokens.test.js` after tokenized circular radii required updating the existing token-foundation regression expectations.
+- 2026-06-02T04:29:00Z — Extended Wave 06 task `021` claim to approval screenshot artifact `tasks/artifacts/wave-06-phase0-approval.png`.
+- 2026-06-02T04:29:28Z — Released Wave 06 claims for task `021`: Phase 0 shell/screen/component files, renderer runtime CSS/JS, integration/audit/token tests, approval screenshot, and task bookkeeping files.
 - 2026-06-02T03:18:09Z — Released Wave 05 reviewer-fix claims for task `020`: `src/renderer/leena.css`, `test/leena-css-tokens.test.js`.
 - 2026-06-02T03:15:09Z — Reopened Wave 05 reviewer-fix claims for task `020`: `src/renderer/leena.css`, `test/leena-css-tokens.test.js`.
 - 2026-06-02T03:11:33Z — Released Wave 05 claims for task `020`: `src/renderer/shell.js`, `src/renderer/screens/settings.js`, `src/renderer/leena.css`, `test/theme-persistence.test.js`.

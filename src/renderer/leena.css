@@ -147,6 +147,17 @@
   --traffic-close: #ff5f57;
   --traffic-minimize: #febc2e;
   --traffic-zoom: #28c840;
+  --legacy-bg-elevated: #030719;
+  --legacy-bg-overlay: #001b33;
+  --legacy-accent: #0088ff;
+  --legacy-accent-bright: #60a5fa;
+  --legacy-success: #16c253;
+  --legacy-warn: #ffdd00;
+  --legacy-danger: #ff5252;
+  --legacy-nebula-1: #4867af;
+  --legacy-nebula-2: #6b62f2;
+  --legacy-nebula-3: #b855e7;
+  --legacy-nebula-4: #001b33;
 
   /* Typography */
   --font-display: "UlmGrotesk", system-ui, sans-serif;
@@ -159,6 +170,12 @@
   --r-card: 22px;
   --r-panel: 28px;
   --r-pill: 999px;
+  --r-round: 50%;
+  --r-pixel: 2px;
+  --r-micro: 3px;
+  --r-kbd: 6px;
+  --r-sm: 9px;
+  --r-md: 10px;
 
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -394,7 +411,7 @@
   height: 30px;
   flex: 0 0 auto;
   border: 1px solid var(--glass-bd);
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background:
     radial-gradient(circle at 28% 24%, var(--grad-hi), transparent 42%),
     linear-gradient(135deg, var(--grad-1), var(--grad-2));
@@ -450,7 +467,7 @@
   display: block;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
 }
 
 .win__lights i:nth-child(1) {
@@ -641,7 +658,7 @@
 .dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: currentColor;
 }
 
@@ -652,7 +669,7 @@
   height: 34px;
   padding: 0 11px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--text-dim);
   background: transparent;
   font-family: var(--font-body);
@@ -696,7 +713,7 @@
 .kbd {
   padding: 2px 6px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-kbd);
   color: var(--text);
   background: var(--surface);
   box-shadow: 0 1px 0 var(--border);
@@ -712,7 +729,7 @@
   height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--white);
   background: linear-gradient(135deg, var(--grad-1), var(--grad-2));
 }
@@ -743,7 +760,7 @@
 
 .orb {
   position: relative;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background:
     radial-gradient(circle at 32% 28%, var(--orb-a), transparent 42%),
     radial-gradient(circle at 70% 75%, var(--orb-c), transparent 55%),
@@ -757,7 +774,7 @@
   position: absolute;
   inset: -10px;
   border: 1.5px solid var(--orb-b);
-  border-radius: 50%;
+  border-radius: var(--r-round);
   opacity: 0.4;
 }
 
@@ -773,7 +790,7 @@
   display: block;
   width: 3px;
   min-height: 8px;
-  border-radius: 3px;
+  border-radius: var(--r-micro);
   background: currentColor;
   animation: lx-wave var(--dur-orb) var(--ease-standard) infinite alternate;
 }
@@ -811,7 +828,7 @@
   height: 32px;
   place-items: center;
   border: 1px solid var(--border-2);
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   color: var(--text-dim);
   background: var(--surface-2);
   cursor: pointer;

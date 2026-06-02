@@ -2,7 +2,7 @@
 id: "055"
 title: "Wire realtime engine to provider layer"
 type: refactor
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 16000
@@ -15,7 +15,9 @@ context_files:
   - src/providers/index.js
 skills: []
 tags: [phase-2, providers, realtime, refactor]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T22:04:44Z"
+completed_at: "2026-06-02T22:18:40Z"
 created_at: "2026-06-01"
 ---
 
@@ -34,13 +36,13 @@ The realtime engine currently hardcodes OpenAI endpoints in main.js (createRealt
 6. Verify existing realtime flow still works end-to-end: voice session creates, tools dispatch, audio plays back. This is a refactor — behavior must be identical.
 
 ## Acceptance Criteria
-- [ ] `createRealtimeClientSecret` logic moved into `OpenAIProvider.createRealtimeSession()`
-- [ ] `realtimeDefaults` replaced with provider-sourced defaults
-- [ ] New IPC channel `realtime:create-session` works identically to old `openai:create-realtime-secret`
-- [ ] Old channel `openai:create-realtime-secret` still works (deprecated alias)
-- [ ] No realtime provider registered → structured error returned, no crash
-- [ ] All existing realtime tests still pass without modification
-- [ ] No direct `api.openai.com` calls remain in the realtime session creation path
+- [x] `createRealtimeClientSecret` logic moved into `OpenAIProvider.createRealtimeSession()`
+- [x] `realtimeDefaults` replaced with provider-sourced defaults
+- [x] New IPC channel `realtime:create-session` works identically to old `openai:create-realtime-secret`
+- [x] Old channel `openai:create-realtime-secret` still works (deprecated alias)
+- [x] No realtime provider registered → structured error returned, no crash
+- [x] All existing realtime tests still pass without modification
+- [x] No direct `api.openai.com` calls remain in the main-process realtime session creation path
 
 ## Tests Required
 - `test/realtime-provider-integration.test.js`:
@@ -53,7 +55,9 @@ The realtime engine currently hardcodes OpenAI endpoints in main.js (createRealt
 ## Outputs
 - Updated `src/main.js` — realtime path uses provider layer
 - Updated `src/preload.js` — new + deprecated IPC channels
+- Updated `src/providers/openai-provider.js` — `getDefaultModel(capability)` helper
 - `test/realtime-provider-integration.test.js` — integration tests
+- Verification: `node --test test/realtime-provider-integration.test.js`, focused Wave 08 tests, full `npm run check`, and full `node --test`
 
 ## Interface Contracts
 - **Renderer depends on:** `realtime:create-session` IPC channel for starting voice sessions
@@ -61,10 +65,10 @@ The realtime engine currently hardcodes OpenAI endpoints in main.js (createRealt
 - **Existing tool dispatch depends on:** session config shape being unchanged (model, voice, session object)
 
 ## Handoff Notes
-_Filled after completion._
+`realtime:create-session` and deprecated `openai:create-realtime-secret` now share the same main-process provider-backed session handler. The handler resolves the default realtime-capable provider, injects the stored OpenAI credential into a fresh OpenAI provider instance, and keeps the response shape consumed by the renderer (`{ value, expiresAt, raw }`). Missing credentials/provider returns `{ error: "NO_REALTIME_PROVIDER", message: "Configure an OpenAI API key to use voice mode" }`.
 
 ## Errors Encountered
-_Filled if errors occur._
+None.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

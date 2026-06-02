@@ -25,6 +25,9 @@ import {
   getWindowsPrivacySettingsUrl,
   isKnownOsPermissionId,
 } from "./os-permissions.js";
+import { getRegistry } from "./providers/index.js";
+import { createOpenAIProvider } from "./providers/openai-provider.js";
+import { REALTIME } from "./providers/types.js";
 import { buildRealtimeInstructions } from "./realtime/prompts.js";
 import {
   listActivity,
@@ -77,11 +80,7 @@ const openAIAuthConfig = Object.freeze({
   redirectPath: "/auth/callback",
 });
 
-const realtimeDefaults = Object.freeze({
-  model: "gpt-realtime-2",
-  voice: "marin",
-  sampleRate: 24_000,
-});
+const API_KEY_EXPIRES_AT = Number.MAX_SAFE_INTEGER;
 
 const windowModes = Object.freeze({
   // `alwaysOnTop` is only set for the transient call overlay so it stays visible
@@ -382,24 +381,46 @@ ipcMain.handle("openai:login", async () => {
   return credentialsToStatus(credentials);
 });
 
+ipcMain.handle("openai:save-api-key", async (_event, payload = {}) => {
+  const credentials = await saveOpenAIApiKey(payload);
+  return credentialsToStatus(credentials);
+});
+
+ipcMain.handle("openai:get-auth-type", async () => getOpenAIAuthType());
+
 ipcMain.handle("openai:logout", async () => {
   await clearOpenAICredentials();
   return { connected: false };
 });
 
+ipcMain.handle("realtime:create-session", async (_event, options = {}) => {
+  return createRealtimeProviderSession(options);
+});
+
 ipcMain.handle("openai:create-realtime-secret", async (_event, options = {}) => {
+  return createRealtimeProviderSession(options);
+});
+
+async function createRealtimeProviderSession(options = {}) {
   const credentials = await getFreshOpenAICredentials();
   if (!credentials) {
-    throw new Error("Sign in to OpenAI before starting Realtime.");
+    return createNoRealtimeProviderResponse();
   }
 
   const profile = loadAgentProfile();
-  return createRealtimeClientSecret(credentials, {
+  const provider = createRealtimeProvider(credentials);
+  if (!provider) {
+    return createNoRealtimeProviderResponse();
+  }
+
+  return provider.createRealtimeSession({
     ...options,
+    model: getProviderDefaultModel(provider, REALTIME, options.model),
     voice: profile.voice,
     instructions: buildRealtimeInstructions({ profile }),
+    tools: getRealtimeToolDefinitions(),
   });
-});
+}
 
 ipcMain.handle("agent:get-profile", () => loadAgentProfile());
 ipcMain.handle("agent:set-profile", (_event, profile) => saveAgentProfile(profile));
@@ -1224,67 +1245,6 @@ async function postOpenAIForm(body, label) {
   return parseJsonResponse(response, label);
 }
 
-async function createRealtimeClientSecret(credentials, options) {
-  const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${credentials.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ session: buildRealtimeSessionConfig(options) }),
-  });
-  const raw = await parseJsonResponse(response, "Realtime client secret request");
-  const value = typeof raw.value === "string" ? raw.value : undefined;
-  if (!value) {
-    throw new Error("Realtime client secret response did not include a value.");
-  }
-
-  return {
-    value,
-    expiresAt: parseExpiresAt(raw.expires_at),
-    raw,
-  };
-}
-
-function buildRealtimeSessionConfig(options) {
-  const model = typeof options.model === "string" ? options.model : realtimeDefaults.model;
-  const voice = typeof options.voice === "string" ? options.voice : realtimeDefaults.voice;
-  const instructions =
-    typeof options.instructions === "string" && options.instructions.trim()
-      ? options.instructions.trim()
-      : buildRealtimeInstructions();
-
-  return {
-    type: "realtime",
-    model,
-    instructions,
-    output_modalities: ["audio"],
-    audio: {
-      input: {
-        format: { type: "audio/pcm", rate: realtimeDefaults.sampleRate },
-        noise_reduction: { type: "near_field" },
-        transcription: { model: "gpt-4o-transcribe" },
-        turn_detection: {
-          type: "semantic_vad",
-          eagerness: "high",
-          create_response: true,
-          interrupt_response: true,
-        },
-      },
-      output: {
-        format: { type: "audio/pcm", rate: realtimeDefaults.sampleRate },
-        voice,
-        speed: 1.0,
-      },
-    },
-    max_output_tokens: 4096,
-    reasoning: { effort: "minimal" },
-    tools: getRealtimeToolDefinitions(),
-    tool_choice: "auto",
-    tracing: "auto",
-  };
-}
-
 async function parseJsonResponse(response, label) {
   const text = await response.text();
   if (!response.ok) {
@@ -1298,10 +1258,66 @@ async function parseJsonResponse(response, label) {
   }
 }
 
+async function saveOpenAIApiKey(payload = {}) {
+  const apiKey = typeof payload.apiKey === "string" ? payload.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("OpenAI API key is required.");
+  }
+  const credentials = {
+    accessToken: apiKey,
+    refreshToken: null,
+    expiresAt: API_KEY_EXPIRES_AT,
+  };
+  await saveOpenAICredentials(credentials);
+  return credentials;
+}
+
+async function getOpenAIAuthType() {
+  const credentials = await loadOpenAICredentials();
+  if (!credentials) {
+    return "none";
+  }
+  return isOpenAIApiKeyCredentials(credentials) ? "api-key" : "oauth";
+}
+
+function createRealtimeProvider(credentials) {
+  const provider = getRegistry().getDefault(REALTIME);
+  if (!provider) {
+    return null;
+  }
+  if (provider.name === "openai") {
+    return createOpenAIProvider({
+      apiKey: credentials.accessToken,
+      fetchImpl: fetch,
+    });
+  }
+  return provider;
+}
+
+function getProviderDefaultModel(provider, capability, requestedModel) {
+  if (typeof requestedModel === "string" && requestedModel.trim()) {
+    return requestedModel;
+  }
+  const [defaultModel] = Array.isArray(provider.models?.[capability])
+    ? provider.models[capability]
+    : [];
+  return defaultModel;
+}
+
+function createNoRealtimeProviderResponse() {
+  return {
+    error: "NO_REALTIME_PROVIDER",
+    message: "Configure an OpenAI API key to use voice mode",
+  };
+}
+
 async function getFreshOpenAICredentials() {
   const credentials = await loadOpenAICredentials();
   if (!credentials) {
     return null;
+  }
+  if (isOpenAIApiKeyCredentials(credentials)) {
+    return credentials;
   }
   const refreshMarginMs = 5 * 60 * 1000;
   if (credentials.expiresAt - refreshMarginMs > Date.now()) {
@@ -1377,7 +1393,7 @@ function parseCredentials(value) {
   if (
     !isRecord(value) ||
     typeof value.accessToken !== "string" ||
-    typeof value.refreshToken !== "string" ||
+    (typeof value.refreshToken !== "string" && value.refreshToken !== null) ||
     typeof value.expiresAt !== "number"
   ) {
     return null;
@@ -1390,11 +1406,16 @@ function parseCredentials(value) {
   };
 }
 
+function isOpenAIApiKeyCredentials(credentials) {
+  return credentials.refreshToken === null;
+}
+
 function credentialsToStatus(credentials) {
   return {
     connected: true,
     expiresAt: credentials.expiresAt,
     accountId: credentials.accountId ?? null,
+    authType: isOpenAIApiKeyCredentials(credentials) ? "api-key" : "oauth",
   };
 }
 
@@ -1417,13 +1438,6 @@ function decodeJwt(token) {
   } catch {
     return null;
   }
-}
-
-function parseExpiresAt(value) {
-  if (typeof value !== "number") {
-    return undefined;
-  }
-  return value > 10_000_000_000 ? value : value * 1000;
 }
 
 function isRecord(value) {

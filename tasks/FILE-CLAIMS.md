@@ -21,6 +21,8 @@
 
 ## Claim History
 
+- 2026-06-02T22:18:40Z — Released Wave 08 claims for tasks `031`, `055`, `082`, and the shared integration files after API-key auth, provider-backed realtime session creation, and MCP schema conversion reached terminal state with focused verification passing.
+- 2026-06-02T22:11:22Z — Released task `091` wake-spike claims after documenting the blocked model/audio-corpus state, adding a real openWakeWord WAV evaluation harness, and refusing to fabricate FA/FR metrics.
 - 2026-06-02T22:00:50Z — Released Wave 07 PR/CodeRabbit advisory bookkeeping claims after recording PR #8 advisory status and re-running `npm run check`, `node --test`, WAL parse, and diff whitespace validation.
 - 2026-06-02T22:16:00Z — Released Wave 07 advisor-fix-2 claims after OpenRouter `getModels()` returned chat and embedding-capable models with per-model capability tags and full gates passed.
 - 2026-06-02T22:03:00Z — Released Wave 07 advisor-fix claims after provider contract normalization passed focused provider tests, full `node --test`, Biome, WAL parse, and diff whitespace validation.

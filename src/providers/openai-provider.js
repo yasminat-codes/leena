@@ -201,6 +201,11 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
+  getDefaultModel(capability) {
+    const models = this.models[capability];
+    return Array.isArray(models) ? (models[0] ?? null) : null;
+  }
+
   async getModels() {
     return OPENAI_MODEL_CATALOG.map(copyModel);
   }

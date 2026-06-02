@@ -38,6 +38,26 @@ _(wave execution entries appended below as the build runs)_
 - Final advisor gate passed with warnings only: Task 056 should lock terminal streaming metadata semantics; OpenRouter cached model arrays should avoid caller mutation; MCP renderer/user-config wiring must add allowlist and encrypted secret handling; existing `@nut-tree-fork/nut-js` dependency chain still reports 7 moderate `npm audit` advisories with no direct fix available.
 - Opened PR #8 (`wave-07` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "Review triggered" / "review in progress" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
 
+## 2026-06-02 — Wave 08 started
+
+- Cut clean branch/worktree `wave-08` from `origin/main` at `98199e5`; primary checkout remains dirty/diverged and was not touched.
+- Moved tasks `031`, `055`, `082`, and `091` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Ran the required initial `kencode-search` pass before code. Electron safeStorage/IPC and MCP `inputSchema` references were found; openWakeWord repository discovery found maintained custom-wake/training references. Workers must continue with narrower file-context searches before editing.
+- Reserved shared `src/main.js` and `src/preload.js` for the Wave 08 integration pass because tasks `031` and `055` both need those files. Task workers must keep their owned edits to non-conflicting files until integration.
+
+## 2026-06-02 — Wave 08 summary
+
+- Completed tasks `031`, `055`, and `082`; blocked task `091` without fabricated metrics because no trained `hey-lena.onnx`, one-hour ambient corpus, or 50-utterance positive corpus exists.
+- Added API-key auth IPC and preload helpers: `openai:save-api-key`, `openai:get-auth-type`, `window.brah.saveApiKey`, and `window.brah.getAuthType`.
+- Routed realtime session creation through the provider layer with `realtime:create-session`; kept `openai:create-realtime-secret` as a deprecated alias for renderer compatibility.
+- Added MCP schema conversion utilities and tests: MCP tool conversion, schema sanitization, namespacing, reverse parsing, static+MCP merge, and depth truncation.
+- Added `plans/spike-results-wake.md` plus `test/spike/wake_openwakeword_eval.py` so the wake spike can be rerun once a real model and audio corpora exist. Task `092` must wait for measured results or use the documented fallback.
+- Independent gates after reviewer fixes passed: `npm run check`, full `node --test` (282 tests), `node --check` on changed JS/test files, wake harness `py_compile` and `--help`, undersized-corpus negative probe, WAL JSON parse, and `git diff --check`.
+- Advisor gate passed with warnings: task `085` must fail closed on malformed MCP names, verify server ownership before `callTool`, sanitize MCP descriptions before prompt exposure, and enforce allowlist/tool-count/schema limits; task `092` must remain blocked for openWakeWord until real model + ambient/positive corpora produce measured FA/hr and FR%, while hotkey-only or Porcupine fallback can proceed without blocking the DMG path.
+- Reviewer gate initially blocked on stale task-move index state, unsafe MCP namespace round-tripping, wake harness corpus minimums, and task `082` wording. Fixed with final full staging, encoded reversible namespace segments, one-hour ambient plus 50-positive WAV preflight checks, and corrected task wording.
+- Task `091` is blocked rather than complete: no trained `src/wake/models/hey-lena.onnx`, one-hour ambient corpus, or 50-utterance positive corpus exists, so FA/hr, FR%, model size, and latency could not be measured without fabrication. Added `plans/spike-results-wake.md` and `test/spike/wake_openwakeword_eval.py`; Task 092 must wait for real measured results or choose the documented Porcupine/hotkey-only fallback.
+- Opened PR #9 (`wave-08` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit selected all 19 changed files but could not start a substantive review because the org hit review-rate and usage-credit limits; it posted no actionable code findings. Advisory status did not block merge. GitHub labels `codex` and `codex-automation` are not present in this repo.
+
 ## 2026-06-01 — Wave 01 completed
 
 - Dispatched two Wave 01 workers in parallel: `000` error handling infrastructure and `010` Leena design foundation CSS.

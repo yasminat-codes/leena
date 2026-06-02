@@ -43,6 +43,7 @@
 - **Reference-derived appearance changes must become first-class token modes.** When owner feedback supplies a strong material reference, encode it as an explicit theme/treatment/default if the reference changes the product model; do not keep layering cosmetic tweaks onto the rejected mode.
 - **Decorative geometry still uses named radius tokens.** Even abstract pseudo-elements and background shapes must use `--r-*` tokens for `border-radius`; if a new shape needs a new radius, add a named token instead of a literal runtime value.
 - **Off-white dominance means paper owns the shell.** If the owner says the dominant color should be off-white, teal/dark accents must not own the wallpaper, side rail, topbar, or major orb well. Keep strong teal to selected controls, active states, small marks, and subtle sculptural accents.
+- **Measurement spikes must not invent metrics.** For wake-word, model, audio, latency, or accuracy spikes, block with a usable harness and exact missing assets instead of reporting synthetic FA/FR/latency numbers.
 
 ---
 
@@ -86,6 +87,30 @@
 - Tasks live-data rendering now treats synchronous render as an empty safe state and refreshes asynchronously through the existing `window.brah.getPlannerTasks()` / `getCalendarItems()` bridge on Tasks navigation.
 - Independent gates passed: `npm run check`, focused provider/tasks/shell tests, full `node --test` (266 tests after advisor-fix coverage), `node --check` on integration files, WAL JSON parse, and `git diff --check`.
 - CodeRabbit advisory review was requested on PR #8. It posted generated "Review triggered" / "review in progress" comments and a pending advisory status at merge-decision time, with no actionable findings available; this did not block merge.
+
+### Fix — Wave 08 — integration — Realtime no-provider message contract
+- **Symptom:** The provider integration test expected `NO_REALTIME_PROVIDER` message text without a trailing period, while the shared main-process integration returned a period-suffixed string.
+- **Root cause:** The integration handler was written before the task 055 fixture finalized the exact structured-error contract.
+- **Fix:** Aligned `createNoRealtimeProviderResponse()` to return `Configure an OpenAI API key to use voice mode` exactly and reran focused auth/realtime/MCP tests.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 08 — reviewer — MCP namespace and wake harness hardening
+- **Symptom:** Reviewer found MCP namespacing was not reversible for server/tool names containing separators or unsafe characters, the wake harness could accept an undersized corpus, and the git index still contained stale task moves.
+- **Root cause:** The first converter used a delimiter-only namespace contract, the spike harness validated WAV format but not measurement volume, and final staging had not yet reconciled `git mv` state after terminal bookkeeping.
+- **Fix:** Added reversible encoded namespace segments that preserve the public `mcp__{serverId}__{toolName}` contract for safe names, required at least one hour of ambient WAVs plus 50 positive clips before wake metrics can pass, updated task wording to match truncation behavior, and made final `git add -A` a required pre-commit step.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 08 — summary
+- Completed tasks `031`, `055`, and `082`; blocked task `091` honestly because no trained `hey-lena.onnx`, one-hour ambient corpus, or 50-utterance positive corpus exists.
+- API-key auth now uses `openai:save-api-key`, `openai:get-auth-type`, `window.brah.saveApiKey`, and `window.brah.getAuthType`; API-key credentials use `refreshToken: null` plus a JSON-safe non-refreshing expiry sentinel.
+- Realtime session creation now goes through the provider layer. `realtime:create-session` is the new channel, and `openai:create-realtime-secret` remains a deprecated alias for compatibility.
+- MCP schema conversion now has a standalone converter for sanitization, namespacing, reverse parsing, and static+MCP tool merging; downstream tasks 083/085 should wire it into permission checks and execution routing.
+- Wake-word work remains decoupled from the deliverable path. Task 092 must wait for measured wake results or use the documented Porcupine/hotkey-only fallback.
+- Reviewer blockers were fixed before merge: stale index reconciliation, unsafe MCP namespace round-trip handling, and wake harness minimum-corpus enforcement.
+- Independent gates after reviewer fixes passed: `npm run check`, full `node --test` (282 tests), `node --check`, wake harness compile/help, undersized-corpus negative probe, WAL JSON parse, and `git diff --check`.
+- CodeRabbit advisory was requested on PR #9. It selected all 19 changed files but could not start a substantive review due to review-rate and usage-credit limits, then posted no actionable code findings; local reviewer/advisor gates remained authoritative.
 
 ### Fix — Wave 06 — 021 — Desktop visual scale repair after owner rejection
 - **Symptom:** Owner rejected Phase 0 approval: fonts were too big, the design was not refined, and the UX did not feel like a mature desktop app.

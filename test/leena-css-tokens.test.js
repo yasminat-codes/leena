@@ -125,9 +125,32 @@ test("leena.css defines all root design tokens", () => {
       '--font-display: "UlmGrotesk", system-ui, sans-serif',
       '--font-body: "Gellix", system-ui, sans-serif',
       '--font-mono: "Roboto Mono", ui-monospace, monospace',
+      "--dur-base: 200ms",
     ],
     ":root font tokens",
   );
+});
+
+test("leena wrapper cross-fades wallpaper background over 200ms", () => {
+  const body = extractRuleBody(cssWithoutComments, ".leena");
+
+  assertIncludesAll(
+    body,
+    ["background: var(--wall)", "transition: background var(--dur-base) var(--ease-out)"],
+    ".leena",
+  );
+});
+
+test("visible wallpaper surfaces cross-fade background over 200ms", () => {
+  for (const selector of [".leena-page", ".win"]) {
+    const body = extractRuleBody(cssWithoutComments, selector);
+
+    assertIncludesAll(
+      body,
+      ["background: var(--wall)", "transition: background var(--dur-base) var(--ease-out)"],
+      selector,
+    );
+  }
 });
 
 test("every treatment defines gradient, accent, and orb tokens", () => {

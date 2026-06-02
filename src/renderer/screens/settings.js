@@ -1,4 +1,4 @@
-const APPEARANCE_STORAGE_KEYS = Object.freeze({
+export const APPEARANCE_STORAGE_KEYS = Object.freeze({
   theme: "leena-theme",
   treatment: "leena-treatment",
   density: "leena-density",
@@ -53,7 +53,7 @@ export const SETTINGS_MOCK_DATA = Object.freeze({
   ]),
 });
 
-const DEFAULT_APPEARANCE = Object.freeze({
+export const DEFAULT_APPEARANCE = Object.freeze({
   theme: "dark",
   treatment: "aurora",
   density: "comfortable",

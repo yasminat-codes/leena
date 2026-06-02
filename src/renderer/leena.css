@@ -337,6 +337,7 @@
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   accent-color: var(--accent);
+  transition: background var(--dur-base) var(--ease-out);
 }
 
 .leena,
@@ -347,6 +348,7 @@
 .leena-page,
 .win {
   background: var(--wall);
+  transition: background var(--dur-base) var(--ease-out);
 }
 
 .win {

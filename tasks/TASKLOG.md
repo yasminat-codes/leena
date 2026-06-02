@@ -94,3 +94,15 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer re-review passed with no blockers after the Settings direct-root/default fix.
 - Advisor gate passed with no blockers. Warnings recorded: stage `test/dev-mode-gate.test.js` with the Wave 04 commit, and preserve the shell route shape when later replacing mock screen data with live stores/providers.
 - Opened PR #4 (`wave-04` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave.
+
+## 2026-06-02 — Wave 05 started
+
+- Cut clean branch/worktree `wave-05` from `origin/main` after Wave 04 landed.
+- Moved task `020` to `in-progress` with attempt 1, active claims, and a pre-run WAL entry.
+- Primary checkout is stale/dirty versus `origin/main`; Wave 05 is running from `/Users/yasmineseidu/leena-wave-05` to keep unrelated local plan changes out of the wave branch.
+- Completed task `020`: verified shell startup restores appearance preferences before first render, added required persistence tests, and added 200ms wallpaper cross-fade coverage.
+- Independent task gates passed: `npm run check`, `node --test` (193 tests), `node --check` on changed JS/test files, and `git diff --check`.
+- Reviewer found one blocker: the visible `.win` shell also paints `--wall`, so wrapper-only transition coverage could still allow the actual wallpaper surface to snap. Reopened task `020` for a focused CSS/test fix.
+- Fixed the reviewer blocker by adding the 200ms background transition to `.leena-page, .win`, adding selector coverage, and re-running gates: `npm run check`, `node --test` (194 tests), `node --check`, and `git diff --check`.
+- Reviewer re-review passed with no blockers after the visible wallpaper surface fix.
+- Advisor gate passed with no blockers. Non-blocking bookkeeping warning about the completed-wave list was addressed by adding Wave 05 to `tasks/OVERVIEW.md`.

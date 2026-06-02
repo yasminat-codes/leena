@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 59 |
+| Pending | 58 |
 | In-Progress | 0 |
-| Completed | 13 |
+| Completed | 14 |
 | Blocked | 0 |
 
 ## Wave Map
@@ -100,6 +100,7 @@ None.
 - Wave 02 — Utilities, provider skeleton, fonts, orb/waveform primitives (`001`, `002`, `011`, `019`) completed 2026-06-02.
 - Wave 03 — App shell scaffold (`012`) completed 2026-06-02.
 - Wave 04 — Mock screens and command center (`013`, `014`, `015`, `016`, `017`, `018`) completed 2026-06-02.
+- Wave 05 — Live theme switching (`020`) completed 2026-06-02.
 
 ## Discovered Tasks
 

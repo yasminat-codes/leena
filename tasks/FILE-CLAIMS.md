@@ -21,6 +21,9 @@
 
 ## Claim History
 
+- 2026-06-02T03:18:09Z — Released Wave 05 reviewer-fix claims for task `020`: `src/renderer/leena.css`, `test/leena-css-tokens.test.js`.
+- 2026-06-02T03:15:09Z — Reopened Wave 05 reviewer-fix claims for task `020`: `src/renderer/leena.css`, `test/leena-css-tokens.test.js`.
+- 2026-06-02T03:11:33Z — Released Wave 05 claims for task `020`: `src/renderer/shell.js`, `src/renderer/screens/settings.js`, `src/renderer/leena.css`, `test/theme-persistence.test.js`.
 - 2026-06-02T02:19:22Z — Released Wave 04 claims for tasks `013`-`018`: screen modules/tests, `src/renderer/components/command-center.js`, `src/renderer/components/command-center.css`, `test/command-center.test.js`, and integration files `src/renderer/shell.js`, `src/renderer/renderer.js`, `src/renderer/leena.css`.
 - 2026-06-02T01:20:00Z — Released Wave 03 claims for task `012`: `src/renderer/index.html`, `src/renderer/panel.js`, `src/renderer/shell.js`, `src/renderer/renderer.js`, `src/renderer/leena.css`, `src/renderer/assets/gradients/`, `package.json`, `test/shell-navigation.test.js`.
 - 2026-06-02T01:23:46Z — Reopened Wave 03 reviewer-fix claims for task `012`: `src/main.js`, `src/renderer/index.html`.

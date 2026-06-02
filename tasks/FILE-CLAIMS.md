@@ -18,7 +18,10 @@
 
 | File | Claimed by (task) | Claimed at | Status |
 |------|-------------------|------------|--------|
-_(empty — no active Wave 02 claims)_
+| `src/renderer/styles.css` | 011 | 2026-06-02T00:35:27Z | active-reviewer-fix |
+| `test/font-bundle.test.js` | 011 | 2026-06-02T00:35:27Z | active-reviewer-fix |
+| `src/providers/provider-settings.js` | 002 | 2026-06-02T00:35:27Z | active-reviewer-fix |
+| `test/provider-registry.test.js` | 002 | 2026-06-02T00:35:27Z | active-reviewer-fix |
 
 ## Claim History
 
@@ -27,6 +30,8 @@ _(empty — no active Wave 02 claims)_
 - 2026-06-02T00:28:53Z — Released Wave 02 claims for task `002`: `src/providers/types.js`, `src/providers/base-provider.js`, `src/providers/index.js`, `src/providers/provider-settings.js`, `test/provider-registry.test.js`.
 - 2026-06-02T00:28:53Z — Released Wave 02 claims for task `011`: `src/renderer/assets/fonts/`, `src/renderer/leena.css`, `src/renderer/index.html`, `test/font-bundle.test.js`.
 - 2026-06-02T00:28:53Z — Released Wave 02 claims for task `019`: `src/renderer/components/orb.js`, `src/renderer/components/waveform.js`, `test/orb-waveform.test.js`.
+- 2026-06-02T00:35:27Z — Reopened Wave 02 reviewer-fix claims for task `011`: `src/renderer/styles.css`, `test/font-bundle.test.js`.
+- 2026-06-02T00:35:27Z — Reopened Wave 02 reviewer-fix claims for task `002`: `src/providers/provider-settings.js`, `test/provider-registry.test.js`.
 
 - 2026-06-01T23:37:45Z — Released Wave 01 claims for task `000`: `src/utils/errors.js`, `src/main.js`, `src/preload.js`, `test/errors.test.js`.
 - 2026-06-01T23:37:45Z — Released Wave 01 claims for task `010`: `src/renderer/leena.css`, `src/renderer/index.html`, `test/leena-css-tokens.test.js`.

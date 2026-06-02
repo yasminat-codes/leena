@@ -36,4 +36,5 @@ _(wave execution entries appended below as the build runs)_
 - Completed task `002`: provider capability constants, base provider, registry, SQLite-backed provider settings, and tests.
 - Completed task `011`: bundled local brand fonts, removed Google Fonts, tightened CSP, and added font bundle tests.
 - Completed task `019`: standalone orb and waveform DOM factories plus tests, reusing the existing Leena CSS primitives.
+- Reviewer found two blockers: legacy `styles.css` still referenced removed Google font families, and provider API-key helpers persisted raw secrets in SQLite. Reopened tasks `011` and `002` for focused fixes.
 - CodeRabbit advisory review was requested on PR #1. At merge decision time it had posted only the generated "review in progress" comment with no actionable findings; advisory status did not block the wave.

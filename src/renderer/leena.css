@@ -187,15 +187,15 @@
 }
 
 .leena[data-treatment="aurora"] {
-  --grad-1: #9a7bff;
-  --grad-2: #1a0578;
-  --grad-hi: #ffbb98;
-  --accent: #6b3df5;
-  --accent-soft: #ece6ff;
-  --accent-dk: #c3b1ff;
-  --orb-a: #ffbb98;
-  --orb-b: #9a7bff;
-  --orb-c: #2a0a9c;
+  --grad-1: #d8dee9;
+  --grad-2: #0a0d12;
+  --grad-hi: #6ca6ff;
+  --accent: #1d9bf0;
+  --accent-soft: #d9ecff;
+  --accent-dk: #7dc3ff;
+  --orb-a: #f8fbff;
+  --orb-b: #8fa6c6;
+  --orb-c: #111723;
 }
 
 .leena[data-treatment="coral"] {
@@ -264,42 +264,29 @@
 
 .leena[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0a0912;
-  --bg-2: #08070d;
-  --surface: rgba(30, 27, 42, 0.68);
-  --surface-2: rgba(255, 255, 255, 0.045);
-  --side-glass: rgba(11, 9, 20, 0.72);
-  --glass: rgba(255, 255, 255, 0.052);
-  --glass-bd: rgba(255, 255, 255, 0.11);
-  --glass-hi: rgba(255, 255, 255, 0.13);
-  --glass-sheen: rgba(255, 255, 255, 0.045);
-  --text: #f1ecff;
-  --text-dim: rgba(241, 236, 255, 0.66);
-  --text-faint: rgba(241, 236, 255, 0.42);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-2: rgba(255, 255, 255, 0.06);
-  --chip: rgba(255, 255, 255, 0.08);
+  --bg: #050505;
+  --bg-2: #0a0b0d;
+  --surface: rgba(13, 15, 18, 0.9);
+  --surface-2: rgba(255, 255, 255, 0.034);
+  --side-glass: rgba(5, 5, 6, 0.86);
+  --glass: rgba(255, 255, 255, 0.044);
+  --glass-bd: rgba(255, 255, 255, 0.095);
+  --glass-hi: rgba(255, 255, 255, 0.105);
+  --glass-sheen: rgba(255, 255, 255, 0.032);
+  --text: #f4f4f5;
+  --text-dim: rgba(244, 244, 245, 0.64);
+  --text-faint: rgba(244, 244, 245, 0.38);
+  --border: rgba(255, 255, 255, 0.09);
+  --border-2: rgba(255, 255, 255, 0.055);
+  --chip: rgba(255, 255, 255, 0.07);
   --on-grad: #ffffff;
   --on-grad-dim: rgba(255, 255, 255, 0.8);
   --on-grad-faint: rgba(255, 255, 255, 0.55);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.24), 0 22px 46px -18px rgba(0, 0, 0, 0.58);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.42), 0 28px 64px -22px rgba(0, 0, 0, 0.74);
   --wall:
-    radial-gradient(
-      92% 76% at 72% -12%,
-      color-mix(in srgb, var(--grad-1) 34%, transparent),
-      transparent 50%
-    ),
-    radial-gradient(
-      96% 90% at -8% 118%,
-      color-mix(in srgb, var(--grad-2) 36%, transparent),
-      transparent 55%
-    ),
-    radial-gradient(
-      74% 58% at 110% 114%,
-      color-mix(in srgb, var(--grad-hi) 24%, transparent),
-      transparent 55%
-    ),
-    var(--bg);
+    radial-gradient(84% 64% at 78% -18%, rgba(108, 166, 255, 0.12), transparent 54%),
+    radial-gradient(76% 72% at -14% 116%, rgba(255, 255, 255, 0.045), transparent 58%),
+    radial-gradient(62% 48% at 112% 112%, rgba(29, 155, 240, 0.055), transparent 60%), var(--bg);
 }
 
 .leena[data-theme="vercel-dark"] {
@@ -386,7 +373,7 @@
   isolation: isolate;
   box-shadow:
     0 0 0 1px var(--border-2),
-    0 34px 76px rgba(20, 4, 80, 0.22),
+    0 34px 76px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 var(--glass-hi);
 }
 
@@ -396,8 +383,8 @@
   z-index: -1;
   border-radius: var(--r-win);
   background:
-    radial-gradient(110% 90% at 50% -20%, var(--glass-sheen), transparent 62%),
-    color-mix(in srgb, var(--surface) 76%, transparent);
+    linear-gradient(180deg, var(--glass-sheen), transparent 26%),
+    color-mix(in srgb, var(--surface) 94%, var(--black));
   pointer-events: none;
   content: "";
 }
@@ -409,10 +396,14 @@
   align-items: center;
   padding: 16px 10px;
   background:
-    linear-gradient(180deg, var(--side-glass), transparent 78%),
+    linear-gradient(
+      180deg,
+      var(--side-glass),
+      color-mix(in srgb, var(--side-glass) 44%, transparent)
+    ),
     linear-gradient(90deg, transparent, var(--border-2));
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .side__brand {
@@ -444,9 +435,11 @@
   border: 1px solid var(--glass-bd);
   border-radius: var(--r-sm);
   background:
-    radial-gradient(circle at 28% 24%, var(--grad-hi), transparent 42%),
-    linear-gradient(135deg, var(--grad-1), var(--grad-2));
-  box-shadow: inset 0 1px 0 var(--glass-hi);
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.58), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--grad-1) 28%, var(--black)), var(--grad-2));
+  box-shadow:
+    inset 0 1px 0 var(--glass-hi),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .side__nav {
@@ -576,8 +569,7 @@
 
 .card {
   position: relative;
-  background:
-    radial-gradient(125% 95% at 18% -8%, var(--glass-sheen), transparent 60%), var(--glass);
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 32%), var(--glass);
   border: 0;
   border-radius: var(--r-card);
   box-shadow:
@@ -588,15 +580,14 @@
 .panel-glass {
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(115% 130% at 16% -12%, var(--glass-sheen), transparent 62%), var(--glass);
-  backdrop-filter: blur(28px) saturate(150%);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 34%), var(--glass);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 0;
   border-radius: var(--r-panel);
   box-shadow:
     0 0 0 1px var(--glass-bd),
-    0 18px 46px rgba(20, 4, 80, 0.14),
+    0 18px 46px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 var(--glass-hi);
 }
 
@@ -653,7 +644,7 @@
 .btn--primary {
   color: var(--white);
   background: var(--accent);
-  box-shadow: 0 6px 16px -4px var(--accent);
+  box-shadow: 0 8px 18px -10px var(--accent);
 }
 
 .btn--primary:hover:not(:disabled) {
@@ -673,7 +664,11 @@
 
 .btn--grad {
   color: var(--on-grad);
-  background: linear-gradient(120deg, var(--grad-1), var(--grad-2));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--grad-1) 20%, var(--black)),
+    var(--grad-2)
+  );
 }
 
 .chip {
@@ -784,7 +779,11 @@
   place-items: center;
   border-radius: var(--r-md);
   color: var(--white);
-  background: linear-gradient(135deg, var(--grad-1), var(--grad-2));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--grad-1) 22%, var(--black)),
+    var(--grad-2)
+  );
 }
 
 .tooldot svg {
@@ -818,20 +817,21 @@
   position: relative;
   border-radius: var(--r-round);
   background:
-    radial-gradient(circle at 32% 28%, var(--orb-a), transparent 42%),
-    radial-gradient(circle at 70% 75%, var(--orb-c), transparent 55%),
+    radial-gradient(circle at 31% 25%, var(--orb-a), transparent 34%),
+    radial-gradient(circle at 70% 76%, rgba(29, 155, 240, 0.28), transparent 52%),
     linear-gradient(145deg, var(--orb-b), var(--orb-c));
   box-shadow:
-    0 12px 40px -6px var(--orb-b),
-    inset 0 2px 12px rgba(255, 255, 255, 0.4);
+    0 16px 44px -20px var(--accent),
+    inset 0 2px 14px rgba(255, 255, 255, 0.32),
+    inset 0 -18px 34px rgba(0, 0, 0, 0.34);
 }
 
 .orb__ring {
   position: absolute;
   inset: -10px;
-  border: 1.5px solid var(--orb-b);
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--glass-bd));
   border-radius: var(--r-round);
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .wave {
@@ -864,7 +864,11 @@
   overflow: hidden;
   border-radius: var(--r-card);
   color: var(--on-grad);
-  background: linear-gradient(157deg, var(--grad-1) -8%, var(--grad-2) 86%);
+  background: linear-gradient(
+    157deg,
+    color-mix(in srgb, var(--grad-1) 24%, var(--black)) -8%,
+    var(--grad-2) 86%
+  );
 }
 
 .grad::before {
@@ -874,7 +878,7 @@
   width: 70%;
   height: 90%;
   background: radial-gradient(ellipse at top right, var(--grad-hi), transparent 64%);
-  opacity: 0.85;
+  opacity: 0.34;
   content: "";
 }
 
@@ -1010,20 +1014,11 @@
   padding: 22px 24px 24px;
   border-radius: var(--r-panel);
   background:
-    radial-gradient(
-      72% 98% at 88% 50%,
-      color-mix(in srgb, var(--grad-1) 18%, transparent),
-      transparent 64%
-    ),
-    radial-gradient(
-      58% 82% at 8% 104%,
-      color-mix(in srgb, var(--grad-hi) 10%, transparent),
-      transparent 66%
-    ),
+    linear-gradient(180deg, var(--glass-sheen), transparent 28%),
     color-mix(in srgb, var(--surface) 86%, transparent);
   box-shadow:
     0 0 0 1px var(--glass-bd),
-    0 18px 50px rgba(20, 4, 80, 0.14),
+    0 18px 50px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 var(--glass-hi);
 }
 
@@ -1095,12 +1090,13 @@
   place-items: center;
   border-radius: var(--r-card);
   background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
     radial-gradient(
       72% 82% at 50% 44%,
-      color-mix(in srgb, var(--grad-1) 18%, transparent),
+      color-mix(in srgb, var(--accent) 8%, transparent),
       transparent 64%
     ),
-    color-mix(in srgb, var(--glass) 38%, transparent);
+    color-mix(in srgb, var(--glass) 44%, transparent);
   box-shadow:
     inset 1px 0 0 var(--border-2),
     inset 0 1px 0 var(--glass-hi);
@@ -1120,7 +1116,7 @@
   background: color-mix(in srgb, var(--glass) 66%, transparent);
   box-shadow:
     0 0 0 1px var(--glass-bd),
-    0 12px 28px rgba(20, 4, 80, 0.1),
+    0 12px 28px rgba(0, 0, 0, 0.16),
     inset 0 1px 0 var(--glass-hi);
   cursor: pointer;
   font-family: var(--font-body);
@@ -1145,9 +1141,11 @@
   height: 30px;
   border-radius: var(--r-round);
   background:
-    radial-gradient(circle at 34% 28%, var(--grad-hi), transparent 42%),
-    linear-gradient(135deg, var(--grad-1), var(--grad-2));
-  box-shadow: inset 0 1px 0 var(--glass-hi);
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.64), transparent 38%),
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 34%, var(--black)), var(--grad-2));
+  box-shadow:
+    0 0 0 1px var(--glass-bd),
+    inset 0 1px 0 var(--glass-hi);
 }
 
 .home-command__input-text {
@@ -1201,8 +1199,8 @@
   flex: 0 0 auto;
   margin: 0 10px;
   border-radius: var(--r-round);
-  background: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 74%, var(--text));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .home-list,
@@ -1222,10 +1220,11 @@
   border-radius: var(--r-panel);
   color: var(--on-grad);
   background:
-    radial-gradient(70% 100% at 92% 10%, var(--grad-hi), transparent 58%),
-    linear-gradient(145deg, var(--grad-1), var(--grad-2));
+    linear-gradient(180deg, var(--glass-sheen), transparent 34%),
+    color-mix(in srgb, var(--surface) 82%, var(--accent));
   box-shadow:
-    0 16px 36px rgba(20, 4, 80, 0.2),
+    0 0 0 1px color-mix(in srgb, var(--accent) 20%, var(--glass-bd)),
+    0 16px 36px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 var(--glass-hi);
   text-align: left;
   cursor: pointer;

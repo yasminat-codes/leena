@@ -146,3 +146,11 @@ _(wave execution entries appended below as the build runs)_
 - Re-ran the installed GitHub taste skill and the required `kencode-search` reference pass before code.
 - Changed the display font token to Gellix, moved the Home prompt into the left command column, separated the orb into a dedicated right-side well, removed the extra top-right readiness label, and refreshed five polish artifacts.
 - Gates passed after polish: `npm run check`, focused home/token/shell tests, five-screen screenshot sweep, full `node --test` (203 tests), `npm test` (203 tests), `git diff --check`, and `node --check src/renderer/screens/home.js`.
+
+## 2026-06-02 — Wave 06 X-style premium neutral follow-up
+
+- Owner said the shell still felt vibe-coded and suspected the purple visual language; target was ultra-premium restraint associated with X-style UI taste.
+- Re-applied the installed GitHub taste skill, high-end visual design checklist, and required `kencode-search` reference pass before code.
+- Kept the existing composition but changed the default visual language: Aurora is now graphite/blue-neutral, the dark theme is near-black with neutral text, broad purple wallpaper/orb/card glow was removed, and blue is reserved for small state accents.
+- Added CSS token tests that reject the old purple default treatment/theme values and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-x-premium-*.png`.
+- Gates passed after neutral pass: `npm run check`, focused home/token/shell tests, full `node --test` (205 tests), `npm test` (205 tests), `git diff --check`, `node --check test/leena-css-tokens.test.js`, and Electron/Playwright five-screen screenshot sweep.

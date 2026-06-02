@@ -162,6 +162,17 @@ test("every treatment defines gradient, accent, and orb tokens", () => {
   }
 });
 
+test("default aurora treatment uses neutral premium tokens instead of purple AI glow", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-treatment="aurora"]');
+
+  assertIncludesAll(
+    body,
+    ["--grad-1: #d8dee9", "--grad-2: #0a0d12", "--accent: #1d9bf0", "--orb-c: #111723"],
+    "aurora premium neutral treatment",
+  );
+  assert.doesNotMatch(body, /#9a7bff|#1a0578|#6b3df5|#2a0a9c/i);
+});
+
 test("every theme defines surface, text, glass, shadow, and wallpaper tokens", () => {
   for (const theme of ["light", "dark", "vercel-dark"]) {
     const selector = `.leena[data-theme="${theme}"]`;
@@ -170,6 +181,17 @@ test("every theme defines surface, text, glass, shadow, and wallpaper tokens", (
     assertHasProperties(body, themeTokens, selector);
     assert.match(body, /--wall\s*:[\s\S]*radial-gradient/, `${selector} defines wallpaper`);
   }
+});
+
+test("default dark theme is graphite neutral, not lavender purple", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-theme="dark"]');
+
+  assertIncludesAll(
+    body,
+    ["--bg: #050505", "--text: #f4f4f5", "rgba(108, 166, 255, 0.12)"],
+    "dark premium neutral theme",
+  );
+  assert.doesNotMatch(body, /#0a0912|#f1ecff|24,\s*3,\s*127|20,\s*4,\s*80/i);
 });
 
 test("every density defines spacing tokens", () => {
@@ -191,7 +213,7 @@ test("component class bodies include the expected design-system properties", () 
     [".btn", ["display: inline-flex", "height: 30px", "border-radius: var(--r-pill)"]],
     [".btn--primary", ["background: var(--accent)", "color: var(--white)"]],
     [".btn--ghost", ["background: var(--surface-2)", "border-color: var(--border)"]],
-    [".btn--grad", ["linear-gradient(120deg, var(--grad-1), var(--grad-2))"]],
+    [".btn--grad", ["linear-gradient(", "145deg", "var(--grad-2)"]],
     [".chip", ["font-family: var(--font-mono)", "text-transform: uppercase"]],
     [".dot", ["width: 6px", "border-radius: var(--r-round)"]],
     [".nav-item", ["height: 44px", "width: 44px", "color: var(--text-dim)"]],
@@ -202,9 +224,9 @@ test("component class bodies include the expected design-system properties", () 
     [".row", ["gap: 9px", "border-radius: var(--r-inner)", "background: var(--surface-2)"]],
     [".row__txt", ["min-width: 0"]],
     [".orb", ["border-radius: var(--r-round)", "var(--orb-a)", "var(--orb-b)", "var(--orb-c)"]],
-    [".orb__ring", ["inset: -10px", "border: 1.5px solid var(--orb-b)"]],
+    [".orb__ring", ["inset: -10px", "border: 1px solid", "var(--accent)"]],
     [".wave", ["display: flex", "color: var(--accent)"]],
-    [".grad", ["linear-gradient(157deg, var(--grad-1) -8%, var(--grad-2) 86%)"]],
+    [".grad", ["linear-gradient(", "157deg", "var(--grad-2) 86%"]],
     [".icon-btn", ["width: 28px", "height: 28px", "background: var(--surface-2)"]],
   ]);
 

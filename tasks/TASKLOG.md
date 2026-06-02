@@ -93,3 +93,4 @@ _(wave execution entries appended below as the build runs)_
 - Wave 04 gates after reviewer re-review fixes passed: `npm run check`, `node --test` (189 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and short `npm start` startup smoke.
 - Reviewer re-review passed with no blockers after the Settings direct-root/default fix.
 - Advisor gate passed with no blockers. Warnings recorded: stage `test/dev-mode-gate.test.js` with the Wave 04 commit, and preserve the shell route shape when later replacing mock screen data with live stores/providers.
+- Opened PR #4 (`wave-04` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave.

@@ -21,6 +21,15 @@
 
 ## Claim History
 
+- 2026-06-02T15:12:56Z — Released Wave 06 reviewer privacy-sweep claims for task `021`: sanitized remaining task bookkeeping paths in LEARNINGS/WAL, widened scans, and passed required gates.
+- 2026-06-02T15:07:17Z — Released Wave 06 CodeRabbit hygiene claims for task `021`: modernized visually-hidden CSS helpers, sanitized local task-log paths, added LEARNINGS/WAL records, and passed required gates.
+- 2026-06-02T14:35:27Z — Released Wave 06 off-white dominance claims for task `021`: made Workspace paper/off-white dominant, constrained teal to accents, refreshed screenshots, updated token coverage, and recorded bookkeeping.
+- 2026-06-02T14:13:52Z — Released Wave 06 workspace-token claims for task `021`: added Workspace default theme/treatment, rebuilt tokens from the dark-teal/paper reference, added radius/token/default tests, refreshed screenshots, and updated bookkeeping.
+- 2026-06-02T13:56:47Z — Released Wave 06 X-style premium neutral claims for task `021`: neutralized purple default treatment/theme, tightened orb and shell material, added anti-purple token tests, refreshed screenshots, and updated bookkeeping.
+- 2026-06-02T13:35:25Z — Released Wave 06 polish-followup claims for task `021`: swapped display font to Gellix, separated command input from orb well, refreshed polish screenshots, updated tests, and recorded bookkeeping.
+- 2026-06-02T12:36:46Z — Released Wave 06 taste-repair claims for task `021`: installed GitHub taste skill, rebuilt Home command surface, slimmed shell chrome, refined Command Center material, fixed Settings identity grid, refreshed taste-repair screenshots, and updated tests/bookkeeping.
+- 2026-06-02T12:41:00Z — Released Wave 06 visual-repair claims for task `021`: desktop shell scale, Command Center dimensions, Integrations header copy, test expectations, refreshed approval screenshots, and task bookkeeping files.
+- 2026-06-02T13:10:15Z — Released Wave 06 reviewer-fix claims for task `021`: fixed Integrations header clipping, added CSS regression coverage, refreshed `wave-06-taste-repair-integrations.png`, and updated task bookkeeping.
 - 2026-06-02T04:04:10Z — Opened Wave 06 claims for task `021`: Phase 0 shell, screen, component, integration/audit test, and task bookkeeping files.
 - 2026-06-02T04:12:05Z — Extended Wave 06 task `021` claims to `src/renderer/styles.css` and `src/renderer/renderer.js` after the Phase 0 hardcoded-hex audit reached legacy runtime renderer files.
 - 2026-06-02T04:27:07Z — Extended Wave 06 task `021` claim to `test/leena-css-tokens.test.js` after tokenized circular radii required updating the existing token-foundation regression expectations.

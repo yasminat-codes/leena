@@ -115,9 +115,9 @@ export function renderIntegrations() {
     <section class="integrations-screen" aria-label="Integrations">
       <header class="panel-glass integrations-header">
         <div class="integrations-header__copy">
-          <p class="lx-mono">/ connect your tools</p>
-          <p class="lx-display">${connectedCount} / ${MOCK_INTEGRATIONS_DATA.length}</p>
-          <p class="lx-sm text-dim">Available integrations and MCP servers for Leena's realtime workspace.</p>
+          <p class="lx-mono">Connections</p>
+          <p class="lx-h1">${connectedCount} connected</p>
+          <p class="lx-sm text-dim">${MOCK_INTEGRATIONS_DATA.length} available integrations and MCP servers for Leena's realtime workspace.</p>
         </div>
       </header>
 

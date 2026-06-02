@@ -36,6 +36,13 @@
 - **Sub-agent completion reports are NOT evidence — verify on disk.** A dispatched agent returning "done" (even with high token/tool-use counts) may have written nothing, done adjacent work, or hallucinated a summary. After ANY dispatched agent: independently confirm the named output files exist, `git status --porcelain`/`git diff` is non-empty, and re-run `npm run check` + `node --test` yourself before trusting the result. *(Evidence: on 2026-06-01, three sub-agents reported success — `wave-writer`/`wave-writer2`/`ollama-model-download` — and two had written nothing; the wave files were claimed-written and were absent. Caught only by an on-disk `ls` count.)*
 - **Verify the exact worktree path, not just filenames.** A worker can produce correct-looking output in the wrong checkout. Completion verification must test the requested worktree path explicitly before marking a task complete.
 - **Verify content, not just structure.** File counts, section-header presence, and dependency-graph parity all pass even when section bodies are placeholder/hollow. Body-level verification (non-trivial content per section, numbered Steps, named test paths, atomicity cap) is mandatory for any generated artifact — a `wc -l` + `grep` pass is not enough.
+- **Approval-gate visuals must pass owner taste, not just automated audits.** For Leena's desktop shell, avoid presentation-scale type and saturated AI-gradient wallpaper: default to desktop-app density, 11-14px operational text, restrained 16-22px headings, tight rows, smaller HUDs, and subdued work-surface backgrounds.
+- **Refine composition before ornament.** For Leena approval screens, the assistant identity must live in one intentional command surface. Avoid scattering the greeting, orb, chat affordance, and command center across generic cards; use whitespace, quiet dividers, and nested hardware-like surfaces before adding decoration.
+- **Keep orb and prompt in separate visual lanes.** On approval surfaces, the orb may be adjacent or ambient, but it must not sit directly above or over the command input. Use a dedicated orb well or integrated control composition so the prompt remains the primary action.
+- **Default shell must not read as purple AI-template UI.** The default approval theme should feel graphite, neutral, precise, and product-grade. Keep violet/purple out of the default dark wallpaper/orb/primary surfaces; reserve color for tiny state accents and avoid broad saturated glow.
+- **Reference-derived appearance changes must become first-class token modes.** When owner feedback supplies a strong material reference, encode it as an explicit theme/treatment/default if the reference changes the product model; do not keep layering cosmetic tweaks onto the rejected mode.
+- **Decorative geometry still uses named radius tokens.** Even abstract pseudo-elements and background shapes must use `--r-*` tokens for `border-radius`; if a new shape needs a new radius, add a named token instead of a literal runtime value.
+- **Off-white dominance means paper owns the shell.** If the owner says the dominant color should be off-white, teal/dark accents must not own the wallpaper, side rail, topbar, or major orb well. Keep strong teal to selected controls, active states, small marks, and subtle sculptural accents.
 
 ---
 
@@ -43,10 +50,80 @@
 
 > Append below. Newest wave at the bottom. Never delete entries.
 
+### Fix — Wave 06 — 021 — Desktop visual scale repair after owner rejection
+- **Symptom:** Owner rejected Phase 0 approval: fonts were too big, the design was not refined, and the UX did not feel like a mature desktop app.
+- **Root cause:** The first Phase 0 shell used presentation-scale type, saturated purple wallpaper, large cards/radii, a wide sidebar/topbar rhythm, and oversized Command Center dimensions. Automated tests verified token usage but did not encode taste-level desktop density.
+- **Fix:** Tightened `src/renderer/leena.css` typography/control/radius/density tokens, subdued the default dark wallpaper and glass surfaces, stacked row title/detail text for scanability, changed Integrations from a huge poster metric to a calmer connection summary, reduced Command Center dimensions in `src/renderer/components/command-center.js` and `.css`, and refreshed screenshot artifacts under `tasks/artifacts/wave-06-visual-repair-*.png`.
+- **Rule added?:** yes — Approval-gate visuals must pass owner taste, not just automated audits.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Command-surface composition repair after taste rejection
+- **Symptom:** Owner still rejected the repaired shell as cheap and poorly composed; the Home screen split the greeting, orb, and chat affordance into unrelated card-like chunks.
+- **Root cause:** The visual system treated Leena like a generic sidebar dashboard. The app identity was scattered across a hero card, ordinary list cards, and a separate floating command center, so shrinking fonts alone could not make it feel premium.
+- **Fix:** Installed the GitHub taste skill from `Leonxlnx/taste-skill`, applied the taste/redesign audit, rebuilt Home as one nested command surface in `src/renderer/screens/home.js`, changed `src/renderer/leena.css` to a slim icon rail, hidden title chrome, quiet context sections, calmer markers, and a corrected Settings identity grid; refreshed five-screen screenshots and verified with `npm test`.
+- **Rule added?:** yes — Refine composition before ornament.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Integrations header clipping
+- **Symptom:** Reviewer found the committed taste-repair Integrations artifact clipped the `6 connected` approval-gate stat and hid the description line.
+- **Root cause:** The compact glass header reused `.panel-glass` hidden overflow with only token padding, which left the three-line header without a stable visual height after the shell density repair.
+- **Fix:** Made `.integrations-header` a non-clipping centered flex surface with a stable `min-height`, added copy padding in `src/renderer/leena.css`, added CSS regression coverage in `test/integrations-screen.test.js`, and refreshed `tasks/artifacts/wave-06-taste-repair-integrations.png`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Orb/prompt lane and display font polish
+- **Symptom:** Owner said the repair looked better but still needed much more polish, calling out the font and the top orb sitting on the chat window.
+- **Root cause:** The Home command surface still placed the prompt below the full command stage, making the orb read as perched over the input, and the UlmGrotesk display token kept the greeting too rounded and toy-like for a premium desktop app.
+- **Fix:** Changed the display token to Gellix in `src/renderer/leena.css`, moved the command input into the left copy column in `src/renderer/screens/home.js`, added a dedicated right-side orb well, removed the cheap top-right readiness label, updated home/CSS tests, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-polish-followup-*.png`.
+- **Rule added?:** yes — Keep orb and prompt in separate visual lanes.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Purple AI-template neutralization
+- **Symptom:** Owner said the design still felt vibe-coded and suspected the purple visual language; target was ultra-premium UI taste associated with X-style restraint.
+- **Root cause:** The default Aurora treatment, dark wallpaper, orb, command deck, and gradient utilities still leaned on broad violet/purple glow, making the shell look like an AI template instead of a precise desktop product.
+- **Fix:** Changed the default Aurora treatment to graphite/blue-neutral tokens, made the dark theme near-black with neutral text, removed purple shadows and broad radial glow from shell/card/home surfaces in `src/renderer/leena.css`, converted the orb to a restrained graphite/silver material with a tiny blue signal, and added CSS token tests that reject the old purple defaults.
+- **Rule added?:** yes — Default shell must not read as purple AI-template UI.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Workspace reference token mode
+- **Symptom:** Owner asked to change the entire design token direction to match a supplied dark-teal/paper workspace reference, after the graphite pass still did not feel refined enough.
+- **Root cause:** The previous passes were still modifying the rejected visual language instead of creating a new material model: deep teal outer frame, warm-white working panel, mint rows, restrained pill controls, and a quiet sculptural background shape.
+- **Fix:** Added `workspace` theme/treatment defaults in `src/renderer/screens/settings.js` and `src/renderer/index.html`, rebuilt the corresponding token/surface overrides in `src/renderer/leena.css`, added Workspace coverage in renderer/default tests, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-workspace-mode-*.png`.
+- **Rule added?:** yes — Reference-derived appearance changes must become first-class token modes.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Workspace pseudo-element radius token gate
+- **Symptom:** `node --test` failed `runtime CSS border-radius declarations use radius tokens` with `src/renderer/leena.css:536 58px`, then rejected `calc(var(--r-win) + 24px)` because runtime radius values must start with a `--r-*` token.
+- **Root cause:** The new workspace abstract background shape used one-off decorative geometry that was not promoted into the design-token scale.
+- **Fix:** Added `--r-sculpt: 58px` to the root radius tokens, used `border-radius: var(--r-sculpt)` for the workspace pseudo-element, added token coverage in `test/leena-css-tokens.test.js`, and reran the audit.
+- **Rule added?:** yes — Decorative geometry still uses named radius tokens.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Off-white dominant Workspace hierarchy
+- **Symptom:** Owner clarified that the Workspace mode's dominant color should be off-white, not the dark teal frame.
+- **Root cause:** The first Workspace pass used off-white panels inside a dark teal wallpaper/chrome system, so teal still owned the first visual read.
+- **Fix:** Changed the Workspace wallpaper, side rail, topbar, Home context, Activity title, and orb well in `src/renderer/leena.css` to paper/off-white surfaces with teal only as accents; updated `test/leena-css-tokens.test.js` to assert the off-white dominant shell; refreshed `tasks/artifacts/wave-06-offwhite-dominant-*.png`.
+- **Rule added?:** yes — Off-white dominance means paper owns the shell.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
 ### Fix — Wave 06 — 021 — Renderer design-token audit cleanup
 - **Symptom:** The Phase 0 design audit found hardcoded renderer colors and non-token radius/font fallbacks in legacy runtime CSS, and the first radius audit draft skipped `leena.css`.
 - **Root cause:** Wave 01-05 token work covered the new shell CSS first, but legacy `styles.css`, `renderer.js` canvas colors, and Command Center fallbacks still carried direct hex/radius values.
 - **Fix:** Moved legacy color values behind Leena CSS tokens, changed renderer waveform colors to read CSS variables, tokenized radius/font declarations across runtime CSS, and tightened `test/design-system-audit.test.js` to scan all renderer CSS for radius declarations.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — CodeRabbit hygiene cleanup
+- **Symptom:** CodeRabbit flagged deprecated visually-hidden CSS and hard-coded local workstation paths in the task log.
+- **Root cause:** Earlier wave bookkeeping kept absolute worktree paths, and hidden helper blocks retained the legacy `clip: rect(...)` pattern.
+- **Fix:** Replaced hidden-helper blocks in `src/renderer/leena.css` with the modern `clip-path: inset(50%)` pattern and sanitized task bookkeeping local paths to safe placeholders.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Reviewer privacy path sweep
+- **Symptom:** Reviewer found the CodeRabbit hygiene fix only scanned `TASKLOG.md`, leaving absolute local paths in `LEARNINGS.md` and WAL records.
+- **Root cause:** The first hygiene scan was scoped to the exact CodeRabbit comment file instead of all committed task bookkeeping artifacts.
+- **Fix:** Sanitized remaining local checkout paths in `tasks/LEARNINGS.md` and `tasks/.wal/wal.jsonl`, then widened the verification scan to task bookkeeping files.
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
@@ -73,9 +150,9 @@
 - **WAL ref:** tasks/.wal/wal.jsonl
 
 ### Fix — Wave 04 — 018 — Wrong checkout output recovery
-- **Symptom:** Command Center worker reported completion but its files were absent from `/Users/yasmineseidu/leena-wave-04`; they existed under the primary checkout `/Users/yasmineseidu/leena`.
+- **Symptom:** Command Center worker reported completion but its files were absent from `<wave-04-worktree>`; they existed under `<primary-checkout>`.
 - **Root cause:** The worker wrote to the wrong checkout despite being instructed to use the wave worktree.
-- **Fix:** Copied only the task-owned command-center files into `/Users/yasmineseidu/leena-wave-04`, removed those worker-created untracked files from the primary checkout, and added an Active Rule to verify exact worktree paths.
+- **Fix:** Copied only the task-owned command-center files into `<wave-04-worktree>`, removed those worker-created untracked files from `<primary-checkout>`, and added an Active Rule to verify exact worktree paths.
 - **Rule added?:** yes — Verify the exact worktree path, not just filenames.
 - **WAL ref:** tasks/.wal/wal.jsonl
 

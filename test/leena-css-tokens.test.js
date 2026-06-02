@@ -20,6 +20,7 @@ const rootTokens = [
   "--font-mono",
   "--r-inner",
   "--r-win",
+  "--r-sculpt",
   "--r-card",
   "--r-panel",
   "--r-pill",
@@ -122,7 +123,7 @@ test("leena.css defines all root design tokens", () => {
   assertIncludesAll(
     rootBody,
     [
-      '--font-display: "UlmGrotesk", system-ui, sans-serif',
+      '--font-display: "Gellix", system-ui, sans-serif',
       '--font-body: "Gellix", system-ui, sans-serif',
       '--font-mono: "Roboto Mono", ui-monospace, monospace',
       "--dur-base: 200ms",
@@ -154,7 +155,7 @@ test("visible wallpaper surfaces cross-fade background over 200ms", () => {
 });
 
 test("every treatment defines gradient, accent, and orb tokens", () => {
-  for (const treatment of ["aurora", "coral", "iris"]) {
+  for (const treatment of ["workspace", "aurora", "coral", "iris"]) {
     const selector = `.leena[data-treatment="${treatment}"]`;
     const body = extractRuleBody(cssWithoutComments, selector);
 
@@ -162,14 +163,57 @@ test("every treatment defines gradient, accent, and orb tokens", () => {
   }
 });
 
+test("default aurora treatment uses neutral premium tokens instead of purple AI glow", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-treatment="aurora"]');
+
+  assertIncludesAll(
+    body,
+    ["--grad-1: #d8dee9", "--grad-2: #0a0d12", "--accent: #1d9bf0", "--orb-c: #111723"],
+    "aurora premium neutral treatment",
+  );
+  assert.doesNotMatch(body, /#9a7bff|#1a0578|#6b3df5|#2a0a9c/i);
+});
+
+test("workspace treatment matches the teal and paper reference palette", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-treatment="workspace"]');
+
+  assertIncludesAll(
+    body,
+    ["--grad-1: #f7f5ed", "--grad-2: #0b3432", "--accent: #0b3432", "--orb-c: #0b3432"],
+    "workspace treatment",
+  );
+});
+
 test("every theme defines surface, text, glass, shadow, and wallpaper tokens", () => {
-  for (const theme of ["light", "dark", "vercel-dark"]) {
+  for (const theme of ["workspace", "light", "dark", "vercel-dark"]) {
     const selector = `.leena[data-theme="${theme}"]`;
     const body = extractRuleBody(cssWithoutComments, selector);
 
     assertHasProperties(body, themeTokens, selector);
     assert.match(body, /--wall\s*:[\s\S]*radial-gradient/, `${selector} defines wallpaper`);
   }
+});
+
+test("default dark theme is graphite neutral, not lavender purple", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-theme="dark"]');
+
+  assertIncludesAll(
+    body,
+    ["--bg: #050505", "--text: #f4f4f5", "rgba(108, 166, 255, 0.12)"],
+    "dark premium neutral theme",
+  );
+  assert.doesNotMatch(body, /#0a0912|#f1ecff|24,\s*3,\s*127|20,\s*4,\s*80/i);
+});
+
+test("workspace theme uses off-white as the dominant shell color with teal accents", () => {
+  const body = extractRuleBody(cssWithoutComments, '.leena[data-theme="workspace"]');
+
+  assertIncludesAll(
+    body,
+    ["--bg: #fbf8ef", "--surface: #fffdfa", "--surface-2: #f0f5f0", "--text: #0b2624"],
+    "workspace theme",
+  );
+  assert.match(body, /linear-gradient\(135deg,\s*#fbf8ef,\s*#f2eee4\)/);
 });
 
 test("every density defines spacing tokens", () => {
@@ -183,29 +227,29 @@ test("every density defines spacing tokens", () => {
 
 test("component class bodies include the expected design-system properties", () => {
   const expected = new Map([
-    [".card", ["background:", "backdrop-filter:", "border-radius: var(--r-card)", "box-shadow:"]],
+    [".card", ["background:", "border: 0", "border-radius: var(--r-card)", "box-shadow:"]],
     [
       ".panel-glass",
       ["overflow: hidden", "backdrop-filter:", "border-radius: var(--r-panel)", "box-shadow:"],
     ],
-    [".btn", ["display: inline-flex", "height: 38px", "border-radius: var(--r-pill)"]],
+    [".btn", ["display: inline-flex", "height: 30px", "border-radius: var(--r-pill)"]],
     [".btn--primary", ["background: var(--accent)", "color: var(--white)"]],
     [".btn--ghost", ["background: var(--surface-2)", "border-color: var(--border)"]],
-    [".btn--grad", ["linear-gradient(120deg, var(--grad-1), var(--grad-2))"]],
+    [".btn--grad", ["linear-gradient(", "145deg", "var(--grad-2)"]],
     [".chip", ["font-family: var(--font-mono)", "text-transform: uppercase"]],
     [".dot", ["width: 6px", "border-radius: var(--r-round)"]],
-    [".nav-item", ["height: 34px", "gap: 11px", "color: var(--text-dim)"]],
-    [".nav-item--active", ["background: var(--accent-soft)", "color: var(--accent)"]],
+    [".nav-item", ["height: 44px", "width: 44px", "color: var(--text-dim)"]],
+    [".nav-item--active", ["background: var(--glass)", "color: var(--text)"]],
     [".badge", ["margin-left: auto", "font-family: var(--font-mono)"]],
     [".kbd", ["font-family: var(--font-mono)", "box-shadow: 0 1px 0 var(--border)"]],
-    [".tooldot", ["width: 34px", "display: grid", "place-items: center"]],
-    [".row", ["gap: 12px", "border-radius: var(--r-inner)", "background: var(--surface-2)"]],
+    [".tooldot", ["width: 28px", "display: grid", "place-items: center"]],
+    [".row", ["gap: 9px", "border-radius: var(--r-inner)", "background: var(--surface-2)"]],
     [".row__txt", ["min-width: 0"]],
     [".orb", ["border-radius: var(--r-round)", "var(--orb-a)", "var(--orb-b)", "var(--orb-c)"]],
-    [".orb__ring", ["inset: -10px", "border: 1.5px solid var(--orb-b)"]],
+    [".orb__ring", ["inset: -10px", "border: 1px solid", "var(--accent)"]],
     [".wave", ["display: flex", "color: var(--accent)"]],
-    [".grad", ["linear-gradient(157deg, var(--grad-1) -8%, var(--grad-2) 86%)"]],
-    [".icon-btn", ["width: 32px", "height: 32px", "background: var(--surface-2)"]],
+    [".grad", ["linear-gradient(", "157deg", "var(--grad-2) 86%"]],
+    [".icon-btn", ["width: 28px", "height: 28px", "background: var(--surface-2)"]],
   ]);
 
   for (const [selector, needles] of expected) {
@@ -216,15 +260,15 @@ test("component class bodies include the expected design-system properties", () 
 
 test("type scale classes are present with their font contracts", () => {
   const expected = new Map([
-    [".lx-display", ["font-family: var(--font-display)", "font-size: 48px"]],
-    [".lx-h1", ["font-family: var(--font-display)", "font-size: 30px"]],
-    [".lx-h2", ["font-family: var(--font-display)", "font-size: 21px"]],
-    [".lx-h3", ["font-family: var(--font-display)", "font-size: 16px"]],
-    [".lx-body", ["font-family: var(--font-body)", "font-size: 14px"]],
-    [".lx-sm", ["font-family: var(--font-body)", "font-size: 12.5px"]],
+    [".lx-display", ["font-family: var(--font-display)", "font-size: 25px"]],
+    [".lx-h1", ["font-family: var(--font-display)", "font-size: 22px"]],
+    [".lx-h2", ["font-family: var(--font-display)", "font-size: 16.5px"]],
+    [".lx-h3", ["font-family: var(--font-display)", "font-size: 13.5px"]],
+    [".lx-body", ["font-family: var(--font-body)", "font-size: 13px"]],
+    [".lx-sm", ["font-family: var(--font-body)", "font-size: 11.5px"]],
     [
       ".lx-mono",
-      ["font-family: var(--font-mono)", "font-size: 10.5px", "text-transform: uppercase"],
+      ["font-family: var(--font-mono)", "font-size: 9.5px", "text-transform: uppercase"],
     ],
   ]);
 
@@ -266,7 +310,7 @@ test("index.html imports leena.css before styles.css and mounts the leena wrappe
   assert.ok(stylesImport > -1, "index.html imports styles.css");
   assert.ok(leenaImport < stylesImport, "leena.css is imported before styles.css");
   assert.match(html, /class="leena app-shell"/);
-  assert.match(html, /data-theme="(?:light|dark|vercel-dark)"/);
-  assert.match(html, /data-treatment="(?:aurora|coral|iris)"/);
+  assert.match(html, /data-theme="(?:workspace|light|dark|vercel-dark)"/);
+  assert.match(html, /data-treatment="(?:workspace|aurora|coral|iris)"/);
   assert.match(html, /data-density="(?:compact|comfortable)"/);
 });

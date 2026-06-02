@@ -55,7 +55,7 @@ function escapeHtml(value) {
 function renderRecentAction(action) {
   return `
     <article class="row">
-      <span class="tooldot" aria-hidden="true">•</span>
+      <span class="home-marker" aria-hidden="true"></span>
       <span class="row__txt">
         <strong class="lx-body">${escapeHtml(action.label)}</strong>
         <span class="lx-sm">${escapeHtml(action.detail)}</span>
@@ -79,36 +79,55 @@ function renderTimelineEntry(item) {
 export function renderHome() {
   return `
     <section class="home-screen" aria-label="Home">
-      <section class="panel-glass home-hero" aria-labelledby="home-greeting">
-        <div class="home-hero__copy">
-          <p class="lx-mono">${escapeHtml(MOCK_HOME_DATA.status)}</p>
-          <h1 id="home-greeting" class="lx-h1">${escapeHtml(MOCK_HOME_DATA.greeting)}</h1>
+      <section class="home-command" aria-labelledby="home-greeting">
+        <div class="home-command__surface">
+          <div class="home-command__meta">
+            <span class="home-status">
+              <span class="home-status__dot" aria-hidden="true"></span>
+              ${escapeHtml(MOCK_HOME_DATA.status)}
+            </span>
+          </div>
+
+          <div class="home-command__center">
+            <div class="home-command__copy">
+              <h1 id="home-greeting" class="lx-display">${escapeHtml(MOCK_HOME_DATA.greeting)}</h1>
+              <p class="lx-body text-dim">Start with voice, type a command, or let Leena prepare the next move.</p>
+              <button class="home-command__input" type="button">
+                <span class="home-command__input-mark" aria-hidden="true"></span>
+                <span class="home-command__input-text">${escapeHtml(MOCK_HOME_DATA.askPlaceholder)}</span>
+                <span class="home-command__input-hint">Return</span>
+              </button>
+            </div>
+            <div class="home-command__orb-well" aria-hidden="true">
+              <div class="orb home-command__orb">
+                <span class="orb__ring" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="orb home-hero__orb" aria-hidden="true">
-          <span class="orb__ring" aria-hidden="true"></span>
-        </div>
-        <button class="btn btn--ghost home-ask" type="button">
-          ${escapeHtml(MOCK_HOME_DATA.askPlaceholder)}
-        </button>
       </section>
 
-      <section class="home-grid" aria-label="Home overview">
-        <section class="card home-card" aria-labelledby="recent-actions-title">
-          <h2 id="recent-actions-title" class="lx-h2">Recent Actions</h2>
-          <div class="home-list">
-            ${MOCK_HOME_DATA.recentActions.map(renderRecentAction).join("")}
-          </div>
-        </section>
+      <section class="home-context home-context--recent" aria-labelledby="recent-actions-title">
+        <div class="home-context__header">
+          <h2 id="recent-actions-title" class="lx-h2">Recent actions</h2>
+          <span class="lx-mono text-faint">Memory</span>
+        </div>
+        <div class="home-list">
+          ${MOCK_HOME_DATA.recentActions.map(renderRecentAction).join("")}
+        </div>
+      </section>
 
-        <section class="card home-card" aria-labelledby="up-next-title">
-          <h2 id="up-next-title" class="lx-h2">Up Next</h2>
+      <section class="home-context home-context--next" aria-labelledby="up-next-title">
+        <div class="home-context__header">
+          <h2 id="up-next-title" class="lx-h2">Up next</h2>
+          <span class="lx-mono text-faint">Today</span>
+        </div>
           <div class="home-list">
-            ${MOCK_HOME_DATA.upNext.map(renderTimelineEntry).join("")}
+          ${MOCK_HOME_DATA.upNext.map(renderTimelineEntry).join("")}
           </div>
-          <button class="grad home-brief" type="button">
-            <span class="lx-h3">${escapeHtml(MOCK_HOME_DATA.prompt)}</span>
-          </button>
-        </section>
+        <button class="home-brief" type="button">
+          <span class="lx-h3">${escapeHtml(MOCK_HOME_DATA.prompt)}</span>
+        </button>
       </section>
     </section>
   `;

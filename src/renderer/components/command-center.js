@@ -18,9 +18,9 @@ export const COMMAND_CENTER_STATES = Object.freeze([
 
 export const COMMAND_CENTER_DIMENSIONS = Object.freeze({
   "mini-orb": Object.freeze({ width: 44, height: 44 }),
-  "mini-pill": Object.freeze({ width: 200, height: 52 }),
-  compact: Object.freeze({ width: 560, height: 76 }),
-  expanded: Object.freeze({ width: 640, height: null }),
+  "mini-pill": Object.freeze({ width: 176, height: 44 }),
+  compact: Object.freeze({ width: 480, height: 60 }),
+  expanded: Object.freeze({ width: 520, height: null }),
 });
 
 const variantClasses = {

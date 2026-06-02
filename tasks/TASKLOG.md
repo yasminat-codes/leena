@@ -60,7 +60,7 @@ _(wave execution entries appended below as the build runs)_
 
 - Cut clean branch/worktree `wave-03` from `origin/main` after PR #2 (`Wave 02 utilities and visual primitives`) merged.
 - Moved task `012` to `in-progress` with attempt 1, active claims, and a pre-run WAL entry.
-- Clean worktree does not include the untracked `design-system/` reference directory; Wave 03 uses `/Users/yasmineseidu/leena/design-system/Leena Design System.md` and its gradient PNGs as external source references while committing only runtime outputs.
+- Clean worktree does not include the untracked `design-system/` reference directory; Wave 03 uses `<primary-checkout>/design-system/Leena Design System.md` and its gradient PNGs as external source references while committing only runtime outputs.
 - Completed task `012`: visible Leena window shell, sidebar/topbar navigation, shell state module, bundled gradient wallpapers, package asset include, and DOM-free shell navigation tests.
 - Parent verification caught approximate shell icon paths; re-dispatched task `012` owner for a focused exact-path fix, then re-ran all gates successfully.
 - Independent task gates passed: `npm run check`, `node --test` (161 tests), `node --check` on renderer JS/test files, exact icon path scan, `git diff --check`, and short `npm start` startup smoke.
@@ -86,7 +86,7 @@ _(wave execution entries appended below as the build runs)_
 - Moved tasks `013`, `014`, `015`, `016`, `017`, and `018` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
 - Shared integration files are reserved for a post-worker integration pass: screen workers own their screen modules/tests, task `018` owns command-center component/CSS/tests, and the orchestrator owns final `shell.js`/`renderer.js` wiring to avoid concurrent edits.
 - Completed tasks `013` through `018`: Home, Activity, Tasks, Integrations, Settings, and Command Center mock surfaces are wired into the Wave 03 shell with focused tests.
-- Parent verification caught task `018` worker output in the wrong checkout and recovered only the task-owned files into `/Users/yasmineseidu/leena-wave-04`.
+- Parent verification caught task `018` worker output in the wrong checkout and recovered only the task-owned files into `<wave-04-worktree>`.
 - Integrated all Wave 04 routes through `src/renderer/shell.js`, moved screen styling into `src/renderer/leena.css`, and reworked stale inline-style tests to assert class/token usage.
 - Reviewer found two blockers after first completion: Command Center demo mode used renderer file URL as a production signal, and Settings appearance writes allowed loose fallback targets. Both were fixed in attempt 2.
 - Reviewer re-review found Settings still accepted direct loose roots and the missing-storage theme default was light instead of dark. Task `017` was fixed in attempt 3 with exact `#app-shell.leena` selector matching and default coverage.
@@ -99,7 +99,7 @@ _(wave execution entries appended below as the build runs)_
 
 - Cut clean branch/worktree `wave-05` from `origin/main` after Wave 04 landed.
 - Moved task `020` to `in-progress` with attempt 1, active claims, and a pre-run WAL entry.
-- Primary checkout is stale/dirty versus `origin/main`; Wave 05 is running from `/Users/yasmineseidu/leena-wave-05` to keep unrelated local plan changes out of the wave branch.
+- Primary checkout is stale/dirty versus `origin/main`; Wave 05 is running from `<wave-05-worktree>` to keep unrelated local plan changes out of the wave branch.
 - Completed task `020`: verified shell startup restores appearance preferences before first render, added required persistence tests, and added 200ms wallpaper cross-fade coverage.
 - Independent task gates passed: `npm run check`, `node --test` (193 tests), `node --check` on changed JS/test files, and `git diff --check`.
 - Reviewer found one blocker: the visible `.win` shell also paints `--wall`, so wrapper-only transition coverage could still allow the actual wallpaper surface to snap. Reopened task `020` for a focused CSS/test fix.
@@ -113,10 +113,59 @@ _(wave execution entries appended below as the build runs)_
 
 - Cut clean branch/worktree `wave-06` from `origin/main` after Wave 05 landed.
 - Moved task `021` to `in-progress` with attempt 1, active claims, and a pre-run WAL entry.
-- Primary checkout remains stale/dirty versus `origin/main`; Wave 06 is running from `/Users/yasmineseidu/leena-wave-06` to keep unrelated local plan edits out of the wave branch.
+- Primary checkout remains stale/dirty versus `origin/main`; Wave 06 is running from `<wave-06-worktree>` to keep unrelated local plan edits out of the wave branch.
 - Completed task `021`: added Phase 0 shell rendering coverage, design-system audit coverage, tokenized legacy renderer values found by the audit, and captured the approval screenshot.
 - Independent task gates passed: `npm run check`, `node --test` (202 tests), `npm test`, `node --check` on changed JS/test files, `git diff --check`, and Electron/Playwright visual sweep with 5 screens, 18 appearance combinations, Ctrl+D Command Center demo, and screenshot capture.
 - Reviewer gate passed with no blockers. Residual risk noted: synthetic DOM tests depend on the parent Electron/Playwright sweep for pixel/layout coverage.
 - Advisor gate passed with no blockers. Warning recorded: keep the Electron/Playwright visual sweep as the authority for pixel/layout review at the Wave 06 approval gate.
 - GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
 - Opened PR #6 (`wave-06` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave.
+
+## 2026-06-02 — Wave 06 visual repair started
+
+- Owner rejected the Phase 0 approval gate: fonts were too big, design was not refined, and the UX did not feel like a mature desktop app.
+- Created branch `wave-06-visual-repair` from `origin/main` in `<wave-06-worktree>`; primary checkout remains dirty/diverged and was not used.
+- Checked GitHub/OpenAI skill sources for a literal `taste` skill. The curated OpenAI skill list and GitHub searches did not surface an installable exact match; local available taste/design skills were applied instead: `design-taste-frontend`, `gpt-taste`, `stitch-design-taste`, and `redesign-existing-projects`.
+- Repaired the Phase 0 shell visual scale: smaller desktop-app typography, narrower sidebar/topbar rhythm, tighter buttons/nav rows, reduced radii, calmer dark wallpaper, stacked row text, two-column integration tiles, quieter Integrations summary, and smaller Command Center mini/compact/expanded dimensions.
+- Refreshed approval artifacts: `tasks/artifacts/wave-06-visual-repair-home.png`, `activity.png`, `tasks.png`, `integrations.png`, `settings.png`, and `command-center.png`.
+- Gates passed after repair: `npm run check`, focused `node --test test/command-center.test.js test/leena-css-tokens.test.js test/shell-rendering.test.js`, full `node --test` (202 tests), `node --check` on changed JS files, `git diff --check`, and Electron/Playwright screenshot sweep.
+
+## 2026-06-02 — Wave 06 taste repair follow-up
+
+- Owner rejected the first visual repair as still cheap/poorly composed and specifically called out the Home/orb/chat grouping and sidebar/topbar refinement.
+- Found and installed the requested GitHub taste skill: `Leonxlnx/taste-skill` -> `<codex-skills>/gpt-tasteskill`. Codex must be restarted to auto-load it as a named skill, but its `SKILL.md` was read and applied in this run.
+- Ran the required `kencode-search` reference pass before code and used polished UI references to steer away from generic dashboard/card composition.
+- Rebuilt Home around a single nested command surface containing greeting, orb, and chat input; converted the shell sidebar into a slim icon rail; removed visible title chrome; softened Command Center material; made recent/up-next quiet context sections; and fixed the Settings identity grid after the screenshot sweep exposed an awkward Edit-button row.
+- Refreshed taste-repair artifacts: `tasks/artifacts/wave-06-taste-repair-home.png`, `activity.png`, `tasks.png`, `integrations.png`, `settings.png`, and `command-center-demo.png`.
+- Gates passed after follow-up: `npm run check`, focused home/token/shell/command-center tests, full `node --test` (202 tests), `node --check`, `git diff --check`, Electron/Playwright five-screen sweep, and final `npm test` (202 tests).
+- Reviewer gate found one blocker after follow-up: `tasks/artifacts/wave-06-taste-repair-integrations.png` clipped the `6 connected` stat. Fixed the Integrations header min-height/overflow in `src/renderer/leena.css`, added CSS regression coverage in `test/integrations-screen.test.js`, refreshed the Integrations artifact, and re-ran gates: `npm run check`, focused integration/CSS tests, full `node --test` (203 tests), `node --check`, and `git diff --check`.
+
+## 2026-06-02 — Wave 06 polish follow-up
+
+- Owner said the taste repair looked better but still needed more polish, especially the font and the orb sitting too close to the chat input.
+- Re-ran the installed GitHub taste skill and the required `kencode-search` reference pass before code.
+- Changed the display font token to Gellix, moved the Home prompt into the left command column, separated the orb into a dedicated right-side well, removed the extra top-right readiness label, and refreshed five polish artifacts.
+- Gates passed after polish: `npm run check`, focused home/token/shell tests, five-screen screenshot sweep, full `node --test` (203 tests), `npm test` (203 tests), `git diff --check`, and `node --check src/renderer/screens/home.js`.
+
+## 2026-06-02 — Wave 06 X-style premium neutral follow-up
+
+- Owner said the shell still felt vibe-coded and suspected the purple visual language; target was ultra-premium restraint associated with X-style UI taste.
+- Re-applied the installed GitHub taste skill, high-end visual design checklist, and required `kencode-search` reference pass before code.
+- Kept the existing composition but changed the default visual language: Aurora is now graphite/blue-neutral, the dark theme is near-black with neutral text, broad purple wallpaper/orb/card glow was removed, and blue is reserved for small state accents.
+- Added CSS token tests that reject the old purple default treatment/theme values and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-x-premium-*.png`.
+- Gates passed after neutral pass: `npm run check`, focused home/token/shell tests, full `node --test` (205 tests), `npm test` (205 tests), `git diff --check`, `node --check test/leena-css-tokens.test.js`, and Electron/Playwright five-screen screenshot sweep.
+
+## 2026-06-02 — Wave 06 Workspace reference-token follow-up
+
+- Owner provided a dark-teal/warm-white workspace UI reference and asked to change the entire design-token direction instead of continuing the purple/graphite pass.
+- Re-applied the installed GitHub taste skill, high-end visual design checklist, and required `kencode-search` reference pass before code.
+- Added `Workspace` as the default theme/treatment, with a deep teal outer frame, warm-white command/work surfaces, mint rows, dark teal pill controls, restrained orb material, and a quiet abstract right-side shape.
+- Added Workspace token/default tests, added the new `--r-sculpt` radius token after the design audit caught a literal decorative radius, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-workspace-mode-*.png`.
+- Gates passed after the Workspace pass: `npm run check`, focused design-audit/token tests, full `node --test` (207 tests), `git diff --check`, and `node --check` on changed JS/test files.
+
+## 2026-06-02 — Wave 06 off-white dominance follow-up
+
+- Owner clarified that the dominant Workspace color should be off-white.
+- Kept the Workspace mode but changed the visual hierarchy: off-white now owns the wallpaper, side rail, topbar, Home context, list surfaces, and orb well; teal is constrained to the logo/orb material, active nav, CTA, small markers, and faint sculptural accent.
+- Updated Workspace token tests to assert the off-white shell and refreshed five artifacts under `tasks/artifacts/wave-06-offwhite-dominant-*.png`.
+- Gates passed after the off-white pass: `npm run check`, focused design-audit/token tests, full `node --test` (207 tests), `node --check test/leena-css-tokens.test.js`, `git diff --check`, and Electron/Playwright five-screen screenshot sweep.

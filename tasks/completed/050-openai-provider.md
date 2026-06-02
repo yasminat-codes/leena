@@ -2,7 +2,7 @@
 id: "050"
 title: "OpenAI provider implementation"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 18000
@@ -14,7 +14,9 @@ context_files:
   - src/main.js
 skills: []
 tags: [phase-2, providers, openai]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T20:58:09Z"
+completed_at: "2026-06-02T21:17:18Z"
 created_at: "2026-06-01"
 ---
 
@@ -34,14 +36,14 @@ OpenAI is the primary and most feature-complete provider. Every capability Leena
 7. Register provider in `src/providers/index.js` default registry initialization. Export a factory `createOpenAIProvider(config)` that takes `{ apiKey, orgId? }`.
 
 ## Acceptance Criteria
-- [ ] `OpenAIProvider` extends `BaseProvider` and declares all 5 capabilities as true
-- [ ] `chat()` sends correct headers (Authorization, Content-Type) and handles streaming via async iterator
-- [ ] `embed()` returns correctly shaped float arrays for single and batch inputs
-- [ ] `createRealtimeSession()` produces a valid session config identical to current main.js behavior
-- [ ] `tts()` returns audio buffer in requested format
-- [ ] `stt()` returns transcription string from audio buffer
-- [ ] All methods use `withRetry` for transient errors (429, 5xx, ECONNRESET)
-- [ ] All methods throw `ProviderError` (from task 000) with provider name and original error
+- [x] `OpenAIProvider` extends `BaseProvider` and declares all 5 capabilities as true
+- [x] `chat()` sends correct headers (Authorization, Content-Type) and handles streaming via async iterator
+- [x] `embed()` returns correctly shaped float arrays for single and batch inputs
+- [x] `createRealtimeSession()` produces a valid session config identical to current main.js behavior
+- [x] `tts()` returns audio buffer in requested format
+- [x] `stt()` returns transcription string from audio buffer
+- [x] All methods use `withRetry` for transient errors (429, 5xx, ECONNRESET)
+- [x] All methods throw `ProviderError` (from task 000) with provider name and original error
 
 ## Tests Required
 - `test/provider-openai.test.js`:
@@ -63,10 +65,25 @@ OpenAI is the primary and most feature-complete provider. Every capability Leena
 - **Task 054 depends on:** `getModels()` method returning available model IDs for the settings UI dropdown
 
 ## Handoff Notes
-_Filled after completion._
+- Implemented `src/providers/openai-provider.js` with `OpenAIProvider` extending `BaseProvider` and `createOpenAIProvider(config)` factory.
+- Capabilities are enabled for chat, embeddings, realtime, TTS, and STT.
+- Chat wraps `POST /v1/chat/completions`, supports BaseProvider request objects plus `chat(messages, options)`, retries transient failures, returns normalized non-streaming messages, and returns an async iterator of unified streaming chunks shaped as `{ content, delta, model, finishReason?, usage? }`.
+- `getModels()` returns tagged OpenAI model metadata for chat, embeddings, realtime, TTS, and STT so Task 054 can populate provider model selectors without special-casing OpenAI.
+- Embeddings wrap `POST /v1/embeddings`, defaulting to `text-embedding-3-small`, with single string or batch input normalized to `embeddings: number[][]`.
+- Realtime wraps `POST /v1/realtime/client_secrets` and mirrors current `main.js` defaults: `gpt-realtime-2`, voice `marin`, PCM 24 kHz, semantic VAD, `gpt-4o-transcribe`, realtime tools, auto tool choice, and tracing.
+- TTS wraps `POST /v1/audio/speech` and returns a `Buffer`; STT wraps multipart `POST /v1/audio/transcriptions` and returns transcription text.
+- Added `tts()` and `stt()` aliases over `speak()` and `transcribe()` for compatibility.
+- Orchestrator integration registered OpenAI in `src/providers/index.js` through `registerDefaultProviders()`, with coverage in `test/provider-registry.test.js`.
+- Verification:
+  - `node --test test/provider-openai.test.js` passed, 11/11.
+  - `npm run check` passed.
+  - Orchestrator independent gate: `npm run check` passed.
+  - Orchestrator independent gate: `node --test` passed, 266/266 after advisor-fix tests were added.
+  - Advisor-fix focused gate: `node --test test/provider-openai.test.js test/provider-openrouter.test.js test/provider-ollama.test.js test/provider-registry.test.js` passed, 47/47.
 
 ## Errors Encountered
-_Filled if errors occur._
+- None in the final implementation. During verification, Biome identified formatting in the new OpenAI test; fixed within the owned test file and reran successfully.
+- Advisor found `getModels()` missing and OpenAI streaming chunks inconsistent with other providers; fixed with tagged model metadata and unified stream chunk objects.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

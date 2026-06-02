@@ -2,7 +2,7 @@
 id: "052"
 title: "Ollama provider implementation"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: L
 estimated_tokens: 22000
@@ -13,7 +13,9 @@ context_files:
   - src/providers/types.js
 skills: []
 tags: [phase-2, providers, ollama, offline]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T20:58:09Z"
+completed_at: "2026-06-02T21:17:18Z"
 created_at: "2026-06-01"
 ---
 
@@ -33,16 +35,16 @@ Ollama is the offline escape hatch. No API keys, no internet, no cost. Users wit
 7. Register in provider index with factory `createOllamaProvider(config)` taking `{ baseUrl? }`. At registration, run `healthCheck()` — if Ollama unreachable, register with all capabilities false and log warning. Re-check on `testConnection()` call from settings UI.
 
 ## Acceptance Criteria
-- [ ] `OllamaProvider` extends `BaseProvider` with dynamically determined capabilities
-- [ ] `healthCheck()` handles: running + models, running + no models, not running, timeout
-- [ ] `chat()` converts Ollama streaming format to unified async iterator shape
-- [ ] `embed()` handles single and batch inputs, falls back to sequential calls
-- [ ] `getModels()` tags models with inferred capabilities
-- [ ] `pullModel(name, onProgress)` downloads any new model, streams progress %, resolves on success (chat + embedding models alike, independently)
-- [ ] TTS/STT methods throw descriptive `ProviderError` with `MODEL_MISSING` code when models absent
-- [ ] Provider registers with capabilities=false when Ollama unreachable (no crash)
-- [ ] All network calls use `withRetry` for transient errors
-- [ ] Base URL configurable (user might run Ollama on a different port or remote machine)
+- [x] `OllamaProvider` extends `BaseProvider` with dynamically determined capabilities
+- [x] `healthCheck()` handles: running + models, running + no models, not running, timeout
+- [x] `chat()` converts Ollama streaming format to unified async iterator shape
+- [x] `embed()` handles single and batch inputs, falls back to sequential calls
+- [x] `getModels()` tags models with inferred capabilities
+- [x] `pullModel(name, onProgress)` downloads any new model, streams progress %, resolves on success (chat + embedding models alike, independently)
+- [x] TTS/STT methods throw descriptive `ProviderError` with `MODEL_MISSING` code when models absent
+- [x] Provider registers with capabilities=false when Ollama unreachable (no crash)
+- [x] All network calls use `withRetry` for transient errors
+- [x] Base URL configurable (user might run Ollama on a different port or remote machine)
 
 ## Tests Required
 - `test/provider-ollama.test.js`:
@@ -68,10 +70,24 @@ Ollama is the offline escape hatch. No API keys, no internet, no cost. Users wit
 - **R-12 mitigation:** graceful fallback when Ollama not installed — never crashes, surfaces actionable error
 
 ## Handoff Notes
-_Filled after completion._
+- 2026-06-02T21:11:39Z: Implemented `src/providers/ollama-provider.js` with `OllamaProvider` and `createOllamaProvider(config)`.
+- Default base URL is `http://localhost:11434`; configurable via `baseUrl`.
+- `healthCheck()` probes `GET /api/tags`, applies a 2s timeout, updates dynamic capabilities from discovered models, and returns structured unavailable states for ECONNREFUSED and timeout without throwing.
+- `chat()` posts streaming `/api/chat` requests and converts Ollama NDJSON chunks into unified `{ content, delta, model }` events matching OpenAI/OpenRouter streaming consumers.
+- `embed()` posts sequential `/api/embeddings` requests for single or batch input, defaulting to `nomic-embed-text` unless a model is provided or an embedding model is discovered.
+- `getModels()` tags executable chat and embedding capabilities and caches results for 5 minutes; speech models are not advertised as provider capabilities until executable Ollama speech support exists. `pullModel(name, onProgress)` parses streaming `/api/pull` progress and invalidates the model cache on success.
+- `speak()`/`transcribe()` plus `tts()`/`stt()` aliases throw `ProviderError` with `code: "MODEL_MISSING"` when required local speech models are absent.
+- Orchestrator integration registered Ollama in `src/providers/index.js` and added a registry-level dynamic-provider hook so `getForCapability("chat")` includes Ollama as a candidate before the async model probe, while `supports()` still reflects last known health/model state.
+- Verification: `npx biome check src/providers/ollama-provider.js test/provider-ollama.test.js` passed (owned files clean).
+- Verification: `node --test test/provider-ollama.test.js` passed (12 tests, 12 pass, 0 fail).
+- Verification: full orchestrator `node --test` passed (266 tests, 266 pass, 0 fail) after advisor-fix tests were added.
+- Verification: full orchestrator `npm run check` passed.
+- Advisor-fix focused gate: `node --test test/provider-openai.test.js test/provider-openrouter.test.js test/provider-ollama.test.js test/provider-registry.test.js` passed, 47/47.
 
 ## Errors Encountered
-_Filled if errors occur._
+- kencode-search returned no public snippets for the Ollama endpoint anchors (`/api/chat`, `/api/pull`, `/api/embeddings`, `nomic-embed-text`), so implementation followed the task's API contract and local provider interfaces.
+- Reviewer found Ollama was not visible in synchronous registry capability lookup before model probing. Fixed with `BaseProvider.canProvide()` plus an Ollama override for dynamic candidates; `supports()` remains tied to discovered capabilities.
+- Advisor found Ollama advertised TTS/STT before those methods can execute. Fixed by keeping Ollama speech out of `canProvide()`, `supports()`, and inferred model capabilities until executable support lands.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

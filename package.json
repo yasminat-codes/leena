@@ -55,6 +55,7 @@
     "npm-check-updates": "^22.2.1"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@nut-tree-fork/nut-js": "^4.2.6",
     "electron-updater": "^6.8.3",
     "playwright": "^1.60.0"

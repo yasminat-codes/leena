@@ -58,3 +58,11 @@ Architectural decisions with context, options, rationale, consequences. Canonica
 - **Context:** User chose responsiveness over realtime-minute savings.
 - **Decision:** Keep generous idle timeout before auto-ending a realtime session; wake/hotkey reconnect fast. Memory embeddings/extraction run locally (free) so "always-ready" cost is bounded to realtime minutes only. Optional Phase 6 cheaper text mode (non-realtime model) for typed chat.
 - **Consequences:** Document cost expectations in onboarding; expose an idle-timeout setting.
+
+## ADR-9 — API key is the primary OpenAI auth path
+
+- **Context:** Task 030 reviewed the existing ChatGPT OAuth config in `src/main.js` (`clientId: app_EMoamEEZ73f0CkXaXp7hrann`, `authorizeUrl: https://auth.openai.com/oauth/authorize`, `tokenUrl: https://auth.openai.com/oauth/token`, `scope: openid profile email offline_access api.connectors.read api.connectors.invoke`, callback `http://localhost:1455/auth/callback`). A second ChatGPT Plus account was not available to this unattended worker, so second-account authorization, token exchange, and Realtime client-secret creation remain untested.
+- **Options:** (a) keep ChatGPT OAuth primary while waiting for manual verification; (b) make OpenAI API key primary and keep OAuth as optional/fallback; (c) remove OAuth now.
+- **Decision:** (b). Auth path decision: `{primary: "api-key", fallback: "oauth"}`. OAuth is optional and not distribution-critical unless an owner later verifies it with a second account end to end.
+- **Rationale:** API keys are the documented, per-user OpenAI credential path and do not depend on the registering account's OAuth client generalizing to shared users.
+- **Consequences:** Task 031 implements API-key auth as the primary path. Task 037 presents API-key onboarding first and may expose ChatGPT OAuth as an optional/experimental fallback. Existing OAuth code can remain for owner/dev use, but downstream work must not require it.

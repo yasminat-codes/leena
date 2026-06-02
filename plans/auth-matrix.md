@@ -1,7 +1,7 @@
 # Lena — Auth Matrix
 
 _Source of truth for all credential flows, permission surfaces, and access-control decisions._
-_Last updated: 2026-06-01. Cross-ref: ADR-6, ADR-7, R-1, R-5, R-6._
+_Last updated: 2026-06-02. Cross-ref: ADR-6, ADR-7, ADR-9, R-1, R-5, R-6._
 
 ---
 
@@ -20,9 +20,25 @@ There is no admin/viewer distinction, no token delegation between installs, and 
 
 ## 2. Realtime Auth (OpenAI)
 
-### 2a. Primary path — ChatGPT-account OAuth (PKCE)
+### 2a. Primary path — OpenAI API key
 
-**Risk note (R-1):** This flow uses the undocumented `codex_cli_simplified_flow` flag. It may not generalize to all account types or may violate OpenAI ToS. The API-key path (§2b) is a first-class fallback built into onboarding for exactly this reason.
+**Task 030 outcome (R-1):** Second-account ChatGPT OAuth could not be verified unattended on 2026-06-02. Until an owner manually verifies the OAuth flow with a second ChatGPT Plus account, Lena treats OpenAI API keys as the primary Realtime auth path.
+
+**Decision (ADR-9):**
+
+| Field | Value |
+|---|---|
+| Auth path decision | `{primary: "api-key", fallback: "oauth"}` |
+| User action | Paste an OpenAI API key during onboarding |
+| Storage | Encrypted via Electron `safeStorage` with the same at-rest requirements as OAuth credentials |
+| Runtime use | `Authorization: Bearer <apiKey>` when requesting Realtime client secrets |
+| Refresh | None; API keys do not use refresh tokens |
+
+Task 031 owns the implementation details for storing and loading API-key credentials. The implementation must distinguish API-key credentials from OAuth credentials so the app does not try to refresh an API key.
+
+### 2b. Optional fallback path — ChatGPT-account OAuth (PKCE)
+
+**Risk note (R-1):** This flow uses the undocumented `codex_cli_simplified_flow` flag. It is UNTESTED for second accounts as of 2026-06-02 and must not be required for distribution unless an owner manually verifies authorization, token exchange, and Realtime client-secret creation with a second ChatGPT Plus account.
 
 **Constants (src/main.js `openAIAuthConfig`):**
 
@@ -76,10 +92,6 @@ POST tokenUrl:
 
 Refresh is called proactively before `createRealtimeClientSecret` if the access token is near expiry.
 
-### 2b. Fallback path — API key (R-1 mitigation)
-
-If OAuth is unavailable or account-type restricted, the user pastes an OpenAI API key during onboarding. It is stored via the same `safeStorage` path as OAuth tokens. At runtime, the access token field is populated with the raw API key; no refresh cycle applies.
-
 ### 2c. Credential storage (safeStorage)
 
 All OpenAI credentials are stored encrypted at `<userData>/openai-credentials.json`.
@@ -94,10 +106,10 @@ All OpenAI credentials are stored encrypted at `<userData>/openai-credentials.js
 
 | Field | Source |
 |---|---|
-| `accessToken` | OAuth `access_token` / raw API key |
+| `accessToken` | OAuth `access_token` / API-key bearer credential |
 | `idToken` | OAuth `id_token` |
 | `refreshToken` | OAuth `refresh_token` (absent on API-key path) |
-| `expiresAt` | Parsed from `expires_at` (Unix seconds → JS Date) |
+| `expiresAt` | OAuth expiry timestamp; API-key path should be treated as non-refreshing |
 
 ### 2d. Realtime client secret lifecycle
 
@@ -114,7 +126,8 @@ POST https://api.openai.com/v1/realtime/client_secrets
 - The ephemeral key is used only within that session's WebSocket connection.
 - It is not persisted to disk.
 - `expiresAt` is tracked in memory; sessions must start before expiry.
-- If the access token itself is expired, `refreshOpenAICredentials` is called first.
+- If an OAuth access token itself is expired, `refreshOpenAICredentials` is called first.
+- If the primary API-key path is used, no refresh is attempted.
 
 ---
 
@@ -243,15 +256,17 @@ MCP tools are externally defined and present three attack vectors: tool-poisonin
 
 | Token | TTL source | Refresh trigger |
 |---|---|---|
-| OpenAI `accessToken` | `expiresAt` from token response | Checked before every `createRealtimeClientSecret` call; `refreshOpenAICredentials` called if expired or near expiry |
-| OpenAI `refreshToken` | Long-lived (no explicit expiry stored) | Used to obtain new access token; itself replaced on each refresh response |
+| OpenAI API key | User-created platform key | No refresh; validate by requesting a Realtime client secret |
+| OAuth `accessToken` | `expiresAt` from token response | Checked before every `createRealtimeClientSecret` call; `refreshOpenAICredentials` called if expired or near expiry |
+| OAuth `refreshToken` | Long-lived (no explicit expiry stored) | Used to obtain new access token; itself replaced on each refresh response |
 | Realtime ephemeral secret | `expiresAt` in response (typically 60s) | Not refreshed — a new secret is created for each session start |
 
 ### 7b. Session start sequence
 
 ```
 1. Load credentials from safeStorage.
-2. If accessToken.expiresAt < now → call refreshOpenAICredentials.
+2. If credentials are OAuth and accessToken.expiresAt < now → call refreshOpenAICredentials.
+   If credentials are an API key → skip refresh.
 3. Call createRealtimeClientSecret(credentials, { model, voice, instructions }).
 4. Ephemeral secret value used to open WebSocket to OpenAI Realtime API.
 5. Secret not stored; discarded when session ends.

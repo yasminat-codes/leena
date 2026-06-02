@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 57 |
+| Pending | 49 |
 | In-Progress | 0 |
-| Completed | 15 |
+| Completed | 23 |
 | Blocked | 0 |
 
 ## Wave Map
@@ -101,7 +101,8 @@ None.
 - Wave 03 — App shell scaffold (`012`) completed 2026-06-02.
 - Wave 04 — Mock screens and command center (`013`, `014`, `015`, `016`, `017`, `018`) completed 2026-06-02.
 - Wave 05 — Live theme switching (`020`) completed 2026-06-02.
-- Wave 06 — Phase 0 integration test and polish (`021`) completed 2026-06-02; awaiting the single owner approval gate before Wave 07.
+- Wave 06 — Phase 0 integration test and polish (`021`) completed 2026-06-02; owner approval granted 2026-06-02 and Band B is underway.
+- Wave 07 — Provider implementations, subsystem interfaces, auth verification, and Tasks live-data wiring (`030`, `050`, `051`, `052`, `060`, `080`, `090`, `102`) completed 2026-06-02.
 
 ## Discovered Tasks
 

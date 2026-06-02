@@ -6,7 +6,7 @@ import {
   loadAppearancePreferences,
   renderSettings,
 } from "./screens/settings.js";
-import { renderTasks } from "./screens/tasks.js";
+import { refreshTasksScreen, renderTasks } from "./screens/tasks.js";
 
 const screens = Object.freeze(["Home", "Activity", "Tasks", "Integrations", "Settings"]);
 
@@ -71,6 +71,11 @@ export function setActiveScreen(name, root) {
   const content = doc.querySelector("#shell-content");
   if (content) {
     content.innerHTML = screenRenderers[screen]();
+    if (screen === "Tasks") {
+      void refreshTasksScreen(doc).catch(() => {
+        /* Initial render remains usable if the planner bridge is unavailable. */
+      });
+    }
     if (screen === "Settings") {
       bindSettingsControls(doc);
     }

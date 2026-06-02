@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const fontsDir = join(rootDir, "src", "renderer", "assets", "fonts");
 const cssPath = join(rootDir, "src", "renderer", "leena.css");
+const runtimeCssPaths = [cssPath, join(rootDir, "src", "renderer", "styles.css")];
 const indexPath = join(rootDir, "src", "renderer", "index.html");
 const css = readFileSync(cssPath, "utf8");
+const runtimeCss = runtimeCssPaths.map((path) => [path, readFileSync(path, "utf8")]);
 const html = readFileSync(indexPath, "utf8");
 const fontFaces = [...css.matchAll(/@font-face\s*\{[\s\S]*?\}/g)].map((match) => match[0]);
 
@@ -87,6 +89,17 @@ test("leena.css registers the local runtime font faces", () => {
 
   assert.doesNotMatch(css, /Gellix-ExtraLight/);
   assert.doesNotMatch(css, /font-weight:\s*200\b/);
+});
+
+test("runtime renderer CSS only references bundled font families", () => {
+  for (const [path, contents] of runtimeCss) {
+    assert.doesNotMatch(contents, /\b(?:Inter|Geist)\b/, `${path} uses Leena font tokens`);
+    assert.doesNotMatch(
+      contents,
+      /fonts\.(?:googleapis|gstatic)\.com/,
+      `${path} avoids remote font hosts`,
+    );
+  }
 });
 
 test("index.html uses local font loading only", () => {

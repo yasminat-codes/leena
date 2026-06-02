@@ -40,7 +40,10 @@ export async function withRetry(fn, options = {}) {
 
       const retryable = Boolean(await config.retryOn(error));
       if (!retryable) {
-        throw error;
+        throw new RetryExhaustedError("Retry attempts exhausted", {
+          attempts,
+          lastError: error,
+        });
       }
 
       if (attempts >= config.maxAttempts) {

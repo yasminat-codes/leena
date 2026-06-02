@@ -60,7 +60,7 @@ test("withRetry throws RetryExhaustedError with attempt fields after retryable f
   assert.equal(attempts, 2);
 });
 
-test("withRetry does not retry non-retryable HTTP statuses", async () => {
+test("withRetry wraps non-retryable HTTP statuses without retrying", async () => {
   let attempts = 0;
   const unauthorized = new Error("unauthorized");
   unauthorized.status = 401;
@@ -73,7 +73,13 @@ test("withRetry does not retry non-retryable HTTP statuses", async () => {
       },
       { maxAttempts: 3, baseDelay: 1, jitter: false },
     ),
-    unauthorized,
+    (error) => {
+      assert.ok(error instanceof RetryExhaustedError);
+      assert.equal(error.attempts, 1);
+      assert.equal(error.lastError, unauthorized);
+      assert.equal(error.cause, unauthorized);
+      return true;
+    },
   );
   assert.equal(attempts, 1);
 });

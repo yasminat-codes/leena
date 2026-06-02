@@ -100,6 +100,7 @@
 - Added 200ms wallpaper cross-fade coverage for both wrapper and visible wallpaper surfaces. Reviewer found `.win` could still snap; fixed by applying the same background transition to `.leena-page, .win`.
 - Independent gates after reviewer fix passed: `npm run check`, `node --test` (194 tests), `node --check` for changed JS/test files, and `git diff --check`.
 - Reviewer re-review and advisor gates passed with no blockers. Advisor bookkeeping warning was addressed by adding Wave 05 to `tasks/OVERVIEW.md`.
+- CodeRabbit advisory review was requested on PR #5. It returned a rate-limit/usage-credit warning and produced no actionable findings at merge-decision time.
 
 ### Fix — Wave 03 — 012 — Exact shell icon paths
 - **Symptom:** Parent verification found the first app-shell implementation used approximate Tasks, Settings, and bell SVG paths even though task 012 required inline design-system §3 icons.

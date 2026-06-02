@@ -106,3 +106,5 @@ _(wave execution entries appended below as the build runs)_
 - Fixed the reviewer blocker by adding the 200ms background transition to `.leena-page, .win`, adding selector coverage, and re-running gates: `npm run check`, `node --test` (194 tests), `node --check`, and `git diff --check`.
 - Reviewer re-review passed with no blockers after the visible wallpaper surface fix.
 - Advisor gate passed with no blockers. Non-blocking bookkeeping warning about the completed-wave list was addressed by adding Wave 05 to `tasks/OVERVIEW.md`.
+- GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
+- Opened PR #5 (`wave-05` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit returned a rate-limit/usage-credit warning and produced no actionable review findings; advisory status did not block the wave.

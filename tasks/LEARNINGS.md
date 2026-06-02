@@ -110,6 +110,7 @@
 - Wake-word work remains decoupled from the deliverable path. Task 092 must wait for measured wake results or use the documented Porcupine/hotkey-only fallback.
 - Reviewer blockers were fixed before merge: stale index reconciliation, unsafe MCP namespace round-trip handling, and wake harness minimum-corpus enforcement.
 - Independent gates after reviewer fixes passed: `npm run check`, full `node --test` (282 tests), `node --check`, wake harness compile/help, undersized-corpus negative probe, WAL JSON parse, and `git diff --check`.
+- CodeRabbit advisory was requested on PR #9. It selected all 19 changed files but could not start a substantive review due to review-rate and usage-credit limits, then posted no actionable code findings; local reviewer/advisor gates remained authoritative.
 
 ### Fix — Wave 06 — 021 — Desktop visual scale repair after owner rejection
 - **Symptom:** Owner rejected Phase 0 approval: fonts were too big, the design was not refined, and the UX did not feel like a mature desktop app.

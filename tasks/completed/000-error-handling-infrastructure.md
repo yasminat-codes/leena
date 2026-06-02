@@ -2,7 +2,7 @@
 id: "000"
 title: "Error handling infrastructure"
 type: infrastructure
-status: pending
+status: completed
 priority: critical
 complexity: S
 estimated_tokens: 8000
@@ -12,7 +12,9 @@ context_files:
   - src/preload.js
 skills: []
 tags: [infrastructure, error-handling]
-attempts: 0
+attempts: 4
+claim_started: "2026-06-01T23:57:11Z"
+completed_at: "2026-06-02T00:00:08Z"
 created_at: "2026-06-01"
 ---
 
@@ -68,11 +70,17 @@ Without typed errors, failures in one process (main) surface as opaque strings i
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added `src/utils/errors.js` with typed Leena errors, JSON-safe serialization, deserialization, cause-chain support, production stack stripping, and renderer-safe redaction options.
+- `src/main.js` now serializes uncaught exceptions/unhandled rejections to diagnostics and broadcasts a redacted `leena:error` payload to the renderer when the main window is available.
+- `src/preload.js` exposes read-only `onLeenaError` / `offLeenaError` listener helpers following the existing `data:changed` event pattern.
+- Verified independently with `npm run check`, `node --test` (125 tests), and `node --check` on changed JS files.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Worker-local Biome formatting/import-order issues were fixed before completion; see `tasks/LEARNINGS.md`.
+- Reviewer caught a renderer-side leak risk for stacks/custom fields; fixed with explicit serializer options and redacted renderer payloads.
+- Focused review caught embedded callback URLs inside arbitrary strings; fixed URL-substring query/fragment redaction and added a regression test.
+- Final review caught the separate diagnostics sanitizer path; fixed by reusing the shared redaction helper from `src/utils/errors.js` in `src/main.js`.
 
 ## Self-Annealing Contract
 

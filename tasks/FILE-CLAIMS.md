@@ -18,8 +18,13 @@
 
 | File | Claimed by (task) | Claimed at | Status |
 |------|-------------------|------------|--------|
-_(empty — build not started)_
+_(empty — no active Wave 01 claims)_
 
 ## Claim History
 
-_(append released claims here for the audit trail)_
+- 2026-06-01T23:37:45Z — Released Wave 01 claims for task `000`: `src/utils/errors.js`, `src/main.js`, `src/preload.js`, `test/errors.test.js`.
+- 2026-06-01T23:37:45Z — Released Wave 01 claims for task `010`: `src/renderer/leena.css`, `src/renderer/index.html`, `test/leena-css-tokens.test.js`.
+- 2026-06-01T23:37:45Z — Released Wave 01 gate claim: `biome.json`.
+- 2026-06-01T23:46:46Z — Released Wave 01 reviewer-fix claims for task `000`: `src/utils/errors.js`, `src/main.js`, `test/errors.test.js`.
+- 2026-06-01T23:53:22Z — Released Wave 01 embedded-URL redaction claims for task `000`: `src/utils/errors.js`, `test/errors.test.js`.
+- 2026-06-02T00:00:08Z — Released Wave 01 diagnostics redaction claims for task `000`: `src/utils/errors.js`, `src/main.js`, `test/errors.test.js`.

@@ -15,3 +15,14 @@
 
 ---
 _(wave execution entries appended below as the build runs)_
+
+## 2026-06-01 — Wave 01 completed
+
+- Dispatched two Wave 01 workers in parallel: `000` error handling infrastructure and `010` Leena design foundation CSS.
+- Verified task `000` outputs: `src/utils/errors.js`, `src/main.js`, `src/preload.js`, `test/errors.test.js`.
+- Verified task `010` outputs: `src/renderer/leena.css`, `src/renderer/index.html`, `test/leena-css-tokens.test.js`.
+- Added a narrow Biome gate exclusion for generated/reference artifacts: `design-system`, `plans/.wal`, `tasks/.wal`.
+- Reviewer found one blocker: raw renderer `leena:error` payloads could include stacks/custom fields. Re-dispatched task `000` owner; fixed with renderer-safe serializer options/redaction.
+- Focused reviewer found one more blocker: embedded callback URLs in longer strings were not redacted. Re-dispatched task `000` owner; fixed URL-substring scrubbing and regression coverage.
+- Final reviewer found the diagnostics path still used a separate sanitizer. Re-dispatched task `000` owner; fixed diagnostics to reuse the shared redaction helper.
+- Independent gates passed in the parent checkout after the fix: `npm run check`, `node --test` (127 tests), and `node --check` for changed JS files.

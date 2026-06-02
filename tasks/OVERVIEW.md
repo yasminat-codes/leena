@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 72 |
+| Pending | 70 |
 | In-Progress | 0 |
-| Completed | 0 |
+| Completed | 2 |
 | Blocked | 0 |
 
 ## Wave Map
@@ -93,6 +93,10 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 ## Blockers
 
 None.
+
+## Completed Waves
+
+- Wave 01 — Foundations begin (`000`, `010`) completed 2026-06-02.
 
 ## Discovered Tasks
 

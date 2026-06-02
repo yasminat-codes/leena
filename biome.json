@@ -7,7 +7,16 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!node_modules", "!dist", "!out", "!release"]
+    "includes": [
+      "**",
+      "!node_modules",
+      "!dist",
+      "!out",
+      "!release",
+      "!design-system",
+      "!plans/.wal",
+      "!tasks/.wal"
+    ]
   },
   "formatter": {
     "enabled": true,

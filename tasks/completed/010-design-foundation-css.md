@@ -2,7 +2,7 @@
 id: "010"
 title: "Design foundation CSS — create leena.css with all design tokens"
 type: ui
-status: pending
+status: completed
 priority: critical
 complexity: M
 estimated_tokens: 18000
@@ -13,7 +13,9 @@ context_files:
   - src/renderer/index.html
 skills: []
 tags: [phase-0, design-system, css, tokens]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-01T23:27:13Z"
+completed_at: "2026-06-01T23:37:45Z"
 created_at: "2026-06-01"
 ---
 
@@ -57,10 +59,14 @@ Every downstream UI task (screens, command center, orb, theme switching) depends
 - Treatment, theme, and density tokens are the ONLY way to control colors/spacing — no inline hex
 
 ## Handoff Notes
-_Filled after completion._
+- Added `src/renderer/leena.css` as the runtime Leena token layer with root brand tokens, three treatments, three themes, two densities, component classes, typography classes, orb/wave utilities, and reduced-motion handling.
+- `src/renderer/index.html` imports `leena.css` before `styles.css` and mounts the outer shell with `.leena` plus `data-theme`, `data-treatment`, and `data-density` attributes.
+- Added `test/leena-css-tokens.test.js` to validate token coverage, selector bodies, allowed hex placement, reduced motion, and import/wrapper contracts.
+- Verified independently with `npm run check`, `node --test`, and `node --check` on changed JS test files.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Reduced-motion rules initially used `!important`, which Biome rejects; fixed by removing `!important`.
+- The CSS selector test initially matched selector substrings; fixed by parsing CSS blocks and matching complete comma-separated selectors.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

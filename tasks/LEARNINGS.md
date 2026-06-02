@@ -112,4 +112,4 @@
 - Built the Leena CSS token foundation, imported it before the legacy stylesheet, mounted the `.leena` wrapper attributes, and added token completeness tests.
 - Reviewer blockers on renderer error redaction, embedded callback URL redaction, and diagnostics redaction were fixed and independently re-verified.
 - Independent gates passed: `npm run check`, `node --test` (127 tests), and `node --check` on changed JS files.
-- CodeRabbit review is advisory-only and handled after PR creation; any findings are recorded below before merge.
+- CodeRabbit advisory review was requested on PR #1. It had posted only its generated "review in progress" note with no actionable findings at merge decision time.

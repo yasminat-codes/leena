@@ -118,3 +118,5 @@ _(wave execution entries appended below as the build runs)_
 - Independent task gates passed: `npm run check`, `node --test` (202 tests), `npm test`, `node --check` on changed JS/test files, `git diff --check`, and Electron/Playwright visual sweep with 5 screens, 18 appearance combinations, Ctrl+D Command Center demo, and screenshot capture.
 - Reviewer gate passed with no blockers. Residual risk noted: synthetic DOM tests depend on the parent Electron/Playwright sweep for pixel/layout coverage.
 - Advisor gate passed with no blockers. Warning recorded: keep the Electron/Playwright visual sweep as the authority for pixel/layout review at the Wave 06 approval gate.
+- GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
+- Opened PR #6 (`wave-06` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave.

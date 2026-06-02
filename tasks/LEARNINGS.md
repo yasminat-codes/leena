@@ -62,6 +62,7 @@
 - The design audit now keeps hardcoded renderer colors centralized in `leena.css` and requires runtime CSS font/radius declarations to use tokens.
 - Electron/Playwright visual sweep verified all five screens, all 18 theme/treatment/density combinations, Ctrl+D Command Center demo mode, and saved `tasks/artifacts/wave-06-phase0-approval.png`.
 - Independent gates passed: `npm run check`, `node --test` (202 tests), `npm test` (202 tests), `node --check` on changed JS/test files, `git diff --check`, reviewer gate, and advisor gate.
+- CodeRabbit advisory review was requested on PR #6. It posted generated in-progress/triggered comments and no actionable findings were available at merge-decision time.
 - Wave 06 is ready for the single Phase 0 owner approval gate before Band B.
 
 ### Fix — Wave 05 — 020 — Visible wallpaper transition

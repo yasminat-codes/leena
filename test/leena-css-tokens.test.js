@@ -183,7 +183,7 @@ test("every density defines spacing tokens", () => {
 
 test("component class bodies include the expected design-system properties", () => {
   const expected = new Map([
-    [".card", ["background:", "backdrop-filter:", "border-radius: var(--r-card)", "box-shadow:"]],
+    [".card", ["background:", "border: 0", "border-radius: var(--r-card)", "box-shadow:"]],
     [
       ".panel-glass",
       ["overflow: hidden", "backdrop-filter:", "border-radius: var(--r-panel)", "box-shadow:"],
@@ -194,8 +194,8 @@ test("component class bodies include the expected design-system properties", () 
     [".btn--grad", ["linear-gradient(120deg, var(--grad-1), var(--grad-2))"]],
     [".chip", ["font-family: var(--font-mono)", "text-transform: uppercase"]],
     [".dot", ["width: 6px", "border-radius: var(--r-round)"]],
-    [".nav-item", ["height: 30px", "gap: 9px", "color: var(--text-dim)"]],
-    [".nav-item--active", ["background: var(--accent-soft)", "color: var(--accent)"]],
+    [".nav-item", ["height: 44px", "width: 44px", "color: var(--text-dim)"]],
+    [".nav-item--active", ["background: var(--glass)", "color: var(--text)"]],
     [".badge", ["margin-left: auto", "font-family: var(--font-mono)"]],
     [".kbd", ["font-family: var(--font-mono)", "box-shadow: 0 1px 0 var(--border)"]],
     [".tooldot", ["width: 28px", "display: grid", "place-items: center"]],

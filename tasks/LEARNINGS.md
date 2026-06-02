@@ -37,6 +37,7 @@
 - **Verify the exact worktree path, not just filenames.** A worker can produce correct-looking output in the wrong checkout. Completion verification must test the requested worktree path explicitly before marking a task complete.
 - **Verify content, not just structure.** File counts, section-header presence, and dependency-graph parity all pass even when section bodies are placeholder/hollow. Body-level verification (non-trivial content per section, numbered Steps, named test paths, atomicity cap) is mandatory for any generated artifact — a `wc -l` + `grep` pass is not enough.
 - **Approval-gate visuals must pass owner taste, not just automated audits.** For Leena's desktop shell, avoid presentation-scale type and saturated AI-gradient wallpaper: default to desktop-app density, 11-14px operational text, restrained 16-22px headings, tight rows, smaller HUDs, and subdued work-surface backgrounds.
+- **Refine composition before ornament.** For Leena approval screens, the assistant identity must live in one intentional command surface. Avoid scattering the greeting, orb, chat affordance, and command center across generic cards; use whitespace, quiet dividers, and nested hardware-like surfaces before adding decoration.
 
 ---
 
@@ -49,6 +50,13 @@
 - **Root cause:** The first Phase 0 shell used presentation-scale type, saturated purple wallpaper, large cards/radii, a wide sidebar/topbar rhythm, and oversized Command Center dimensions. Automated tests verified token usage but did not encode taste-level desktop density.
 - **Fix:** Tightened `src/renderer/leena.css` typography/control/radius/density tokens, subdued the default dark wallpaper and glass surfaces, stacked row title/detail text for scanability, changed Integrations from a huge poster metric to a calmer connection summary, reduced Command Center dimensions in `src/renderer/components/command-center.js` and `.css`, and refreshed screenshot artifacts under `tasks/artifacts/wave-06-visual-repair-*.png`.
 - **Rule added?:** yes — Approval-gate visuals must pass owner taste, not just automated audits.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Command-surface composition repair after taste rejection
+- **Symptom:** Owner still rejected the repaired shell as cheap and poorly composed; the Home screen split the greeting, orb, and chat affordance into unrelated card-like chunks.
+- **Root cause:** The visual system treated Leena like a generic sidebar dashboard. The app identity was scattered across a hero card, ordinary list cards, and a separate floating command center, so shrinking fonts alone could not make it feel premium.
+- **Fix:** Installed the GitHub taste skill from `Leonxlnx/taste-skill`, applied the taste/redesign audit, rebuilt Home as one nested command surface in `src/renderer/screens/home.js`, changed `src/renderer/leena.css` to a slim icon rail, hidden title chrome, quiet context sections, calmer markers, and a corrected Settings identity grid; refreshed five-screen screenshots and verified with `npm test`.
+- **Rule added?:** yes — Refine composition before ornament.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
 ### Fix — Wave 06 — 021 — Renderer design-token audit cleanup

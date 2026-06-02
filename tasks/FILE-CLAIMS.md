@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-02T12:36:46Z — Released Wave 06 taste-repair claims for task `021`: installed GitHub taste skill, rebuilt Home command surface, slimmed shell chrome, refined Command Center material, fixed Settings identity grid, refreshed taste-repair screenshots, and updated tests/bookkeeping.
 - 2026-06-02T12:41:00Z — Released Wave 06 visual-repair claims for task `021`: desktop shell scale, Command Center dimensions, Integrations header copy, test expectations, refreshed approval screenshots, and task bookkeeping files.
 - 2026-06-02T04:04:10Z — Opened Wave 06 claims for task `021`: Phase 0 shell, screen, component, integration/audit test, and task bookkeeping files.
 - 2026-06-02T04:12:05Z — Extended Wave 06 task `021` claims to `src/renderer/styles.css` and `src/renderer/renderer.js` after the Phase 0 hardcoded-hex audit reached legacy runtime renderer files.

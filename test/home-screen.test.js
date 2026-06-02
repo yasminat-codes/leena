@@ -33,21 +33,23 @@ test("renderHome returns mountable home screen HTML using design-system classes"
   const html = renderHome();
 
   assert.match(html, /^\s*<section class="home-screen" aria-label="Home">/);
-  assert.match(html, /class="panel-glass home-hero"/);
-  assert.match(html, /class="lx-h1">Good morning, Yasmine<\/h1>/);
-  assert.match(html, /class="lx-mono">READY<\/p>/);
-  assert.match(html, /class="orb home-hero__orb"/);
-  assert.match(html, /class="btn btn--ghost home-ask"/);
-  assert.match(html, />\s*Ask Leena anything\.\.\.\s*<\/button>/);
-  assert.match(html, /class="home-grid"/);
-  assert.match(html, /Recent Actions/);
-  assert.match(html, /Up Next/);
-  assert.match(html, /class="grad home-brief"/);
+  assert.match(html, /class="home-command"/);
+  assert.match(html, /class="home-command__surface"/);
+  assert.match(html, /class="lx-display">Good morning, Yasmine<\/h1>/);
+  assert.match(html, /class="home-status"/);
+  assert.match(html, />\s*READY\s*<\/span>/);
+  assert.match(html, /class="orb home-command__orb"/);
+  assert.match(html, /class="home-command__input"/);
+  assert.match(html, /class="home-command__input-text">Ask Leena anything\.\.\.<\/span>/);
+  assert.doesNotMatch(html, /class="home-grid"/);
+  assert.match(html, /Recent actions/);
+  assert.match(html, /Up next/);
+  assert.match(html, /class="home-brief"/);
   assert.match(html, /Brief me on my day/);
   assert.equal(
     countMatches(html, /class="row"/g),
     MOCK_HOME_DATA.recentActions.length + MOCK_HOME_DATA.upNext.length,
   );
-  assert.ok(countMatches(html, /class="tooldot"/g) >= 4);
+  assert.equal(countMatches(html, /class="home-marker"/g), MOCK_HOME_DATA.recentActions.length);
   assert.doesNotMatch(html, /#[0-9a-fA-F]{3,8}\b/);
 });

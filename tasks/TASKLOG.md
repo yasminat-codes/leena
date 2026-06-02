@@ -129,3 +129,12 @@ _(wave execution entries appended below as the build runs)_
 - Repaired the Phase 0 shell visual scale: smaller desktop-app typography, narrower sidebar/topbar rhythm, tighter buttons/nav rows, reduced radii, calmer dark wallpaper, stacked row text, two-column integration tiles, quieter Integrations summary, and smaller Command Center mini/compact/expanded dimensions.
 - Refreshed approval artifacts: `tasks/artifacts/wave-06-visual-repair-home.png`, `activity.png`, `tasks.png`, `integrations.png`, `settings.png`, and `command-center.png`.
 - Gates passed after repair: `npm run check`, focused `node --test test/command-center.test.js test/leena-css-tokens.test.js test/shell-rendering.test.js`, full `node --test` (202 tests), `node --check` on changed JS files, `git diff --check`, and Electron/Playwright screenshot sweep.
+
+## 2026-06-02 — Wave 06 taste repair follow-up
+
+- Owner rejected the first visual repair as still cheap/poorly composed and specifically called out the Home/orb/chat grouping and sidebar/topbar refinement.
+- Found and installed the requested GitHub taste skill: `Leonxlnx/taste-skill` → `/Users/yasmineseidu/.codex/skills/gpt-tasteskill`. Codex must be restarted to auto-load it as a named skill, but its `SKILL.md` was read and applied in this run.
+- Ran the required `kencode-search` reference pass before code and used polished UI references to steer away from generic dashboard/card composition.
+- Rebuilt Home around a single nested command surface containing greeting, orb, and chat input; converted the shell sidebar into a slim icon rail; removed visible title chrome; softened Command Center material; made recent/up-next quiet context sections; and fixed the Settings identity grid after the screenshot sweep exposed an awkward Edit-button row.
+- Refreshed taste-repair artifacts: `tasks/artifacts/wave-06-taste-repair-home.png`, `activity.png`, `tasks.png`, `integrations.png`, `settings.png`, and `command-center-demo.png`.
+- Gates passed after follow-up: `npm run check`, focused home/token/shell/command-center tests, full `node --test` (202 tests), `node --check`, `git diff --check`, Electron/Playwright five-screen sweep, and final `npm test` (202 tests).

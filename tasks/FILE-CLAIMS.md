@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-02T22:00:50Z — Released Wave 07 PR/CodeRabbit advisory bookkeeping claims after recording PR #8 advisory status and re-running `npm run check`, `node --test`, WAL parse, and diff whitespace validation.
 - 2026-06-02T22:16:00Z — Released Wave 07 advisor-fix-2 claims after OpenRouter `getModels()` returned chat and embedding-capable models with per-model capability tags and full gates passed.
 - 2026-06-02T22:03:00Z — Released Wave 07 advisor-fix claims after provider contract normalization passed focused provider tests, full `node --test`, Biome, WAL parse, and diff whitespace validation.
 - 2026-06-02T21:43:00Z — Released Wave 07 reviewer-fix claims after resolving the second reviewer blocker: Ollama dynamic provider candidates, MCP `callTool()` retry safety, stale completion notes, and active-claim cleanup all verified.

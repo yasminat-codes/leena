@@ -36,6 +36,7 @@ _(wave execution entries appended below as the build runs)_
 - Advisor gate found provider-contract blockers. Fixed streaming chunk normalization across OpenAI/OpenRouter/Ollama, added OpenAI `getModels()` metadata, and removed unimplemented Ollama speech from advertised capabilities.
 - Final advisor pass found OpenRouter embedding model metadata missing from `getModels()`. Fixed model normalization so chat and embedding-capable models are both returned with per-model capability tags.
 - Final advisor gate passed with warnings only: Task 056 should lock terminal streaming metadata semantics; OpenRouter cached model arrays should avoid caller mutation; MCP renderer/user-config wiring must add allowlist and encrypted secret handling; existing `@nut-tree-fork/nut-js` dependency chain still reports 7 moderate `npm audit` advisories with no direct fix available.
+- Opened PR #8 (`wave-07` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "Review triggered" / "review in progress" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
 
 ## 2026-06-01 — Wave 01 completed
 

@@ -85,6 +85,7 @@
 - Advisor warnings to carry forward: Task 056 should define terminal stream metadata semantics, OpenRouter model caches should not be mutated by consumers, and MCP user-config wiring must add allowlist/encrypted secret handling before renderer exposure.
 - Tasks live-data rendering now treats synchronous render as an empty safe state and refreshes asynchronously through the existing `window.brah.getPlannerTasks()` / `getCalendarItems()` bridge on Tasks navigation.
 - Independent gates passed: `npm run check`, focused provider/tasks/shell tests, full `node --test` (266 tests after advisor-fix coverage), `node --check` on integration files, WAL JSON parse, and `git diff --check`.
+- CodeRabbit advisory review was requested on PR #8. It posted generated "Review triggered" / "review in progress" comments and a pending advisory status at merge-decision time, with no actionable findings available; this did not block merge.
 
 ### Fix — Wave 06 — 021 — Desktop visual scale repair after owner rejection
 - **Symptom:** Owner rejected Phase 0 approval: fonts were too big, the design was not refined, and the UX did not feel like a mature desktop app.

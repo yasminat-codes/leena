@@ -2,7 +2,7 @@
 id: "017"
 title: "Settings screen with mock data and functional theme/density switcher"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -13,7 +13,11 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, screen, settings, theme]
-attempts: 0
+attempts: 3
+claim_started: "2026-06-02T02:05:14Z"
+review_fix_started: "2026-06-02T02:24:00Z"
+review_rereview_fix_started: "2026-06-02T02:37:14Z"
+completed_at: "2026-06-02T02:37:14Z"
 created_at: "2026-06-01"
 ---
 
@@ -49,6 +53,8 @@ Settings is the control center for personalization and configuration. The theme/
 ## Outputs
 - `src/renderer/screens/settings.js`
 - `test/settings-screen.test.js`
+- `src/renderer/shell.js` — integrated Settings route plus appearance preference load/bind
+- `src/renderer/leena.css` — responsive settings layout, segmented active states, avatar, and chip styles
 
 ## Interface Contracts
 - Theme/treatment/density changes apply globally via `.leena` wrapper `data-*` attributes
@@ -57,10 +63,14 @@ Settings is the control center for personalization and configuration. The theme/
 - Phase 1 will wire feature toggles to real settings store
 
 ## Handoff Notes
-_Filled after completion._
+- Appearance keys are exactly `leena-theme`, `leena-treatment`, and `leena-density`; settings controls update `#app-shell.leena` data attributes.
+- Reviewer fix tightened appearance writes to the exact `#app-shell.leena` wrapper; loose `.leena` or `#app-shell` fallbacks are intentionally rejected.
+- Parent verification after reviewer re-review fix passed `npm run check`, `node --test` (189 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Initial worker markup used an inline avatar size. Parent integration moved sizing to `.settings-avatar` in `leena.css` and updated the test.
+- Reviewer found the appearance helper could target loose fallback selectors. Fixed `resolveAppearanceRoot()` to require exact `#app-shell.leena` and added regression coverage.
+- Reviewer re-review found direct loose roots still passed because the helper accepted `id` OR class. Fixed the helper to require exact `#app-shell.leena`, changed missing-storage default theme to `dark`, and added direct-root/default regression coverage.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

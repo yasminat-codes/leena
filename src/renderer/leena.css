@@ -836,7 +836,7 @@
   font-size: 48px;
   font-weight: 700;
   line-height: 1.02;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .lx-h1 {
@@ -844,7 +844,7 @@
   font-size: 30px;
   font-weight: 700;
   line-height: 1.05;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .lx-h2 {
@@ -852,7 +852,7 @@
   font-size: 21px;
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
 }
 
 .lx-h3 {
@@ -881,6 +881,246 @@
   font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.text-dim {
+  color: var(--text-dim);
+}
+
+.text-faint {
+  color: var(--text-faint);
+}
+
+.screen-text-strong {
+  font-weight: 500;
+}
+
+.home-screen,
+.activity-screen,
+.tasks-screen,
+.integrations-screen,
+.settings-screen {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  gap: var(--gap);
+  align-content: start;
+}
+
+.home-hero,
+.settings-identity {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--gap);
+  padding: var(--pad);
+}
+
+.home-hero__copy,
+.integrations-header__copy {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.home-hero__copy > *,
+.integrations-header__copy > *,
+.integrations-tile__body > *,
+.settings-card > h2,
+.activity-screen__header > h2 {
+  margin: 0;
+}
+
+.home-hero__orb {
+  width: 64px;
+  height: 64px;
+}
+
+.home-ask {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr);
+  gap: var(--gap);
+}
+
+.home-card,
+.tasks-screen__card,
+.settings-card {
+  display: grid;
+  gap: var(--row);
+  padding: var(--pad);
+}
+
+.home-list,
+.settings-list {
+  display: grid;
+  gap: 8px;
+}
+
+.home-brief {
+  display: flex;
+  min-height: 84px;
+  align-items: end;
+  margin-top: 2px;
+  padding: 16px;
+  border: 0;
+  color: var(--on-grad);
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-screen__header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.activity-screen__search {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.activity-screen__search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  outline: none;
+}
+
+.activity-screen__search input::placeholder {
+  color: var(--text-faint);
+}
+
+.activity-screen__list {
+  display: grid;
+  max-height: 585px;
+  gap: 8px;
+  padding: var(--pad);
+  overflow-y: auto;
+}
+
+.tasks-screen {
+  grid-template-columns: minmax(0, 1.12fr) minmax(270px, 0.88fr);
+}
+
+.tasks-screen__priority {
+  text-transform: capitalize;
+}
+
+.tasks-screen__priority--high {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tasks-screen__status--done {
+  color: var(--on-grad);
+  background: var(--success);
+}
+
+.tasks-screen__status--pending {
+  color: var(--accent);
+}
+
+.integrations-header {
+  padding: var(--pad);
+}
+
+.integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+.integrations-tile {
+  display: grid;
+  min-height: 138px;
+  gap: 18px;
+  padding: var(--pad);
+}
+
+.integrations-tile__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+
+.integrations-tile__body {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.chip--green,
+.settings-chip--success {
+  color: var(--on-grad);
+  background: var(--success);
+}
+
+.chip--accent,
+.settings-chip--accent {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chip--mcp {
+  color: var(--on-grad);
+  background: linear-gradient(120deg, var(--grad-1), var(--grad-2));
+}
+
+.settings-screen {
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 0.88fr);
+}
+
+.settings-identity,
+.settings-card:first-of-type {
+  grid-column: 1 / -1;
+}
+
+.settings-avatar {
+  width: 64px;
+  height: 64px;
+}
+
+.settings-row {
+  align-items: center;
+}
+
+.settings-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.settings-segmented .btn[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.command-center-mount {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+@media (max-width: 920px) {
+  .home-grid,
+  .tasks-screen,
+  .settings-screen,
+  .integrations-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @keyframes lx-wave {

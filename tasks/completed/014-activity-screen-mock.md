@@ -2,7 +2,7 @@
 id: "014"
 title: "Activity screen with mock data"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 10000
@@ -13,7 +13,9 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, screen, activity]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T02:05:14Z"
+completed_at: "2026-06-02T02:19:22Z"
 created_at: "2026-06-01"
 ---
 
@@ -44,6 +46,8 @@ Activity is the conversation log — where users review past interactions. Valid
 ## Outputs
 - `src/renderer/screens/activity.js`
 - `test/activity-screen.test.js`
+- `src/renderer/shell.js` — integrated Activity route into `#shell-content`
+- `src/renderer/leena.css` — responsive Activity header/search/list styles
 
 ## Interface Contracts
 - `renderActivity()` returns HTML mountable in `.content`
@@ -51,10 +55,11 @@ Activity is the conversation log — where users review past interactions. Valid
 - Search box is visual-only in Phase 0; Phase 6 wires it to FTS5 search
 
 ## Handoff Notes
-_Filled after completion._
+- `renderActivity()` returns an HTML string and is routed by `setActiveScreen("Activity")`.
+- Parent verification passed `npm run check`, `node --test` (186 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Initial worker test expected inline title styling. Parent integration moved the weight to `.screen-text-strong` in `leena.css` and updated the test.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

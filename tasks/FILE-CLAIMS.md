@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-02T02:19:22Z — Released Wave 04 claims for tasks `013`-`018`: screen modules/tests, `src/renderer/components/command-center.js`, `src/renderer/components/command-center.css`, `test/command-center.test.js`, and integration files `src/renderer/shell.js`, `src/renderer/renderer.js`, `src/renderer/leena.css`.
 - 2026-06-02T01:20:00Z — Released Wave 03 claims for task `012`: `src/renderer/index.html`, `src/renderer/panel.js`, `src/renderer/shell.js`, `src/renderer/renderer.js`, `src/renderer/leena.css`, `src/renderer/assets/gradients/`, `package.json`, `test/shell-navigation.test.js`.
 - 2026-06-02T01:23:46Z — Reopened Wave 03 reviewer-fix claims for task `012`: `src/main.js`, `src/renderer/index.html`.
 - 2026-06-02T01:26:49Z — Released Wave 03 reviewer-fix claims for task `012`: `src/main.js`, `src/renderer/index.html`.

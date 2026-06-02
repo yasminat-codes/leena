@@ -79,3 +79,18 @@ _(wave execution entries appended below as the build runs)_
 - Independent gates passed: `npm run check`, `node --test` (161 tests), `node --check` for changed JS/test files, `git diff --check`, exact icon/canvas placement scans, and short `npm start` startup smoke.
 - GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
 - Opened PR #3 (`wave-03` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and remained pending with no actionable findings at merge-decision time; advisory status did not block the wave.
+
+## 2026-06-02 — Wave 04 started
+
+- Cut clean branch/worktree `wave-04` from `origin/main` after Wave 03 landed.
+- Moved tasks `013`, `014`, `015`, `016`, `017`, and `018` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Shared integration files are reserved for a post-worker integration pass: screen workers own their screen modules/tests, task `018` owns command-center component/CSS/tests, and the orchestrator owns final `shell.js`/`renderer.js` wiring to avoid concurrent edits.
+- Completed tasks `013` through `018`: Home, Activity, Tasks, Integrations, Settings, and Command Center mock surfaces are wired into the Wave 03 shell with focused tests.
+- Parent verification caught task `018` worker output in the wrong checkout and recovered only the task-owned files into `/Users/yasmineseidu/leena-wave-04`.
+- Integrated all Wave 04 routes through `src/renderer/shell.js`, moved screen styling into `src/renderer/leena.css`, and reworked stale inline-style tests to assert class/token usage.
+- Reviewer found two blockers after first completion: Command Center demo mode used renderer file URL as a production signal, and Settings appearance writes allowed loose fallback targets. Both were fixed in attempt 2.
+- Reviewer re-review found Settings still accepted direct loose roots and the missing-storage theme default was light instead of dark. Task `017` was fixed in attempt 3 with exact `#app-shell.leena` selector matching and default coverage.
+- Wave 04 gates after reviewer re-review fixes passed: `npm run check`, `node --test` (189 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and short `npm start` startup smoke.
+- Reviewer re-review passed with no blockers after the Settings direct-root/default fix.
+- Advisor gate passed with no blockers. Warnings recorded: stage `test/dev-mode-gate.test.js` with the Wave 04 commit, and preserve the shell route shape when later replacing mock screen data with live stores/providers.
+- Opened PR #4 (`wave-04` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave.

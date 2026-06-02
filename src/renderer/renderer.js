@@ -5,6 +5,7 @@ import {
   REALTIME_VOICES,
 } from "../realtime/prompts.js";
 import { initClickSound } from "./click-sound.js";
+import { demoAllStates } from "./components/command-center.js";
 import { createPanelController } from "./panel.js";
 import { createRealtimePlaybackTracker, isBenignCancelError } from "./realtime-playback.js";
 import {
@@ -95,6 +96,36 @@ const realtimeToolHandler = createRealtimeToolHandler({
   onEndCall: requestHangup,
   onToolStart: handleToolStart,
   onToolEnd: handleToolEnd,
+});
+
+let commandCenterDemo = null;
+
+function toggleCommandCenterDemo() {
+  if (commandCenterDemo) {
+    commandCenterDemo.destroy();
+    commandCenterDemo = null;
+    appShellElement.dataset.commandCenter = "idle";
+    return;
+  }
+
+  const mount = document.createElement("div");
+  mount.className = "command-center-mount";
+  appShellElement.append(mount);
+  commandCenterDemo = demoAllStates(mount, { interval: 900 });
+  appShellElement.dataset.commandCenter = "demo";
+}
+
+void window.brah.isDevelopment().then((isDevelopment) => {
+  if (!isDevelopment) {
+    return;
+  }
+
+  window.addEventListener("keydown", (event) => {
+    if (event.ctrlKey && event.key.toLowerCase() === "d") {
+      event.preventDefault();
+      toggleCommandCenterDemo();
+    }
+  });
 });
 
 // While the agent is busy in a tool call it produces no audio, so fill the

@@ -2,7 +2,7 @@
 id: "016"
 title: "Integrations screen with mock data"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 10000
@@ -13,7 +13,9 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, screen, integrations, mcp]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T02:05:14Z"
+completed_at: "2026-06-02T02:19:22Z"
 created_at: "2026-06-01"
 ---
 
@@ -47,6 +49,8 @@ The Integrations screen is where users manage MCP server connections and tool ac
 ## Outputs
 - `src/renderer/screens/integrations.js`
 - `test/integrations-screen.test.js`
+- `src/renderer/shell.js` — integrated Integrations route into `#shell-content`
+- `src/renderer/leena.css` — responsive integrations header/grid/tile styles and status chip classes
 
 ## Interface Contracts
 - `renderIntegrations()` returns HTML mountable in `.content`
@@ -54,10 +58,11 @@ The Integrations screen is where users manage MCP server connections and tool ac
 - Tile click handler is visual-only in Phase 0; Phase 5 wires to MCP connect/disconnect
 
 ## Handoff Notes
-_Filled after completion._
+- `renderIntegrations()` returns an HTML string and keeps MCP mock entries isolated for Phase 5 replacement.
+- Parent verification passed `npm run check`, `node --test` (186 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-_Filled if errors occur._
+- None.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

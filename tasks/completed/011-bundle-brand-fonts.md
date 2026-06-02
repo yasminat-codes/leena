@@ -2,7 +2,7 @@
 id: "011"
 title: "Bundle and normalize brand fonts"
 type: ui
-status: in_progress
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 8000
@@ -16,6 +16,7 @@ skills: []
 tags: [phase-0, fonts, assets]
 attempts: 1
 claim_started: "2026-06-02T00:13:31Z"
+completed_at: "2026-06-02T00:28:53Z"
 created_at: "2026-06-01"
 ---
 
@@ -56,10 +57,14 @@ The design system mandates bundled local fonts only — no Google Fonts hotlinks
 - `index.html` must import `leena.css` (done in task 010's downstream wiring)
 
 ## Handoff Notes
-_Filled after completion._
+- Added `src/renderer/assets/fonts/` with 21 bundled runtime font files: three normalized UlmGrotesk TTFs, sixteen Gellix WOFF2 files, and two Roboto Mono WOFF2 files.
+- Added local `@font-face` declarations to `src/renderer/leena.css` for UlmGrotesk 400/500/700/800, Gellix normal 100/300/400/500/600/700/800/900, Gellix italics 400/500/700, and Roboto Mono 400/500.
+- Removed Google Fonts preconnect/stylesheet links from `src/renderer/index.html` and tightened CSP to `style-src 'self'` and `font-src 'self'`.
+- Added `test/font-bundle.test.js` to assert bundled files, local font-face declarations, and no Google Fonts references.
+- Verified independently with `npm run check`, `node --test` (130 tests in the task branch), and `node --check` on changed JS test files.
 
 ## Errors Encountered
-_Filled if errors occur._
+None.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

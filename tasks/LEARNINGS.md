@@ -49,6 +49,13 @@
 - **Rule added?:** no — existing `FILE-CLAIMS.md` conflict resolution already requires serialization for shared files.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
+### Fix — Wave 02 — 001 — Non-retryable failure wrapping
+- **Symptom:** Independent verification found `withRetry` rethrew HTTP 401 directly, while the task required `RetryExhaustedError` after one attempt.
+- **Root cause:** The initial retry loop treated `retryOn(error) === false` as a passthrough instead of a completed one-attempt retry cycle.
+- **Fix:** `src/utils/retry.js` now throws `RetryExhaustedError` with `attempts` and `lastError` for non-retryable failures, and `test/retry.test.js` asserts the HTTP 401 shape.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
 ### Fix entry template
 ```
 ### Fix — Wave NN — <task id> — <one-line title>

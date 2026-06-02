@@ -2,7 +2,7 @@
 id: "001"
 title: "Retry with exponential backoff utility"
 type: infrastructure
-status: in_progress
+status: completed
 priority: critical
 complexity: S
 estimated_tokens: 7000
@@ -11,8 +11,9 @@ context_files:
   - src/utils/errors.js
 skills: []
 tags: [infrastructure, retry, resilience]
-attempts: 1
+attempts: 2
 claim_started: "2026-06-02T00:13:31Z"
+completed_at: "2026-06-02T00:28:53Z"
 created_at: "2026-06-01"
 ---
 
@@ -66,11 +67,15 @@ OpenAI, OpenRouter, and Ollama APIs all experience transient failures (network b
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added `src/utils/retry.js` with `withRetry` and `withRetryDefaults`.
+- Default retry detection covers common network error codes, fetch network `TypeError`s, HTTP 429, and HTTP 500/502/503/504 while skipping client-error statuses without retrying.
+- Non-retryable failures still resolve through the retry contract by throwing `RetryExhaustedError` with `attempts: 1` and `lastError` set; aborts continue to throw `AbortError` directly.
+- `Retry-After` is honored for HTTP 429, with numeric seconds and HTTP-date support capped by `maxDelay`.
+- Verified independently with `npm run check`, `node --test` (134 tests in the task branch), and `node --check` on changed JS files.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Independent verification found that the first implementation rethrew non-retryable HTTP 401 errors directly. Fixed by wrapping skipped retries in `RetryExhaustedError` and adding focused test coverage.
 
 ## Self-Annealing Contract
 

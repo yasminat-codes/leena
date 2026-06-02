@@ -32,4 +32,8 @@ _(wave execution entries appended below as the build runs)_
 - Cut clean branch/worktree `wave-02` from `origin/main` after PR #1 (`Wave 01 foundations`) merged.
 - Moved tasks `001`, `002`, `011`, and `019` to `in-progress` with attempt 1 and pre-run WAL entries.
 - Detected a mandatory file-claim conflict: tasks `011` and `019` both may need `src/renderer/leena.css`. Per `FILE-CLAIMS.md`, dispatching all four agents, with `019` limited to component/test files until `011` releases the stylesheet.
+- Completed task `001`: retry utility and tests. Independent verification caught and fixed the non-retryable 401 error shape before completion.
+- Completed task `002`: provider capability constants, base provider, registry, SQLite-backed provider settings, and tests.
+- Completed task `011`: bundled local brand fonts, removed Google Fonts, tightened CSP, and added font bundle tests.
+- Completed task `019`: standalone orb and waveform DOM factories plus tests, reusing the existing Leena CSS primitives.
 - CodeRabbit advisory review was requested on PR #1. At merge decision time it had posted only the generated "review in progress" comment with no actionable findings; advisory status did not block the wave.

@@ -2,7 +2,7 @@
 id: "002"
 title: "Provider abstraction layer skeleton"
 type: infrastructure
-status: in_progress
+status: completed
 priority: critical
 complexity: S
 estimated_tokens: 10000
@@ -14,6 +14,7 @@ skills: []
 tags: [infrastructure, providers, abstraction]
 attempts: 1
 claim_started: "2026-06-02T00:13:31Z"
+completed_at: "2026-06-02T00:28:53Z"
 created_at: "2026-06-01"
 ---
 
@@ -72,11 +73,15 @@ The user wants OpenAI, OpenRouter, and Ollama as interchangeable providers. With
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added provider capability constants and JSDoc contracts in `src/providers/types.js`.
+- Added `BaseProvider` with `supports()` plus abstract chat/embedding/TTS/STT/realtime methods that throw `ProviderError` code `NOT_IMPLEMENTED`.
+- Added `ProviderRegistry` with provider registration, lookup, listing, capability filtering, persisted defaults, and lazy singleton access.
+- Added SQLite-backed provider settings helpers for defaults, OpenAI/OpenRouter API keys, and Ollama base URL using the existing `settings` table.
+- Verified independently with `npm run check`, `node --test` (138 tests in the task branch), and `node --check` on changed JS files.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+None.
 
 ## Self-Annealing Contract
 

@@ -43,6 +43,13 @@
 
 > Append below. Newest wave at the bottom. Never delete entries.
 
+### Fix — Wave 05 — 020 — Visible wallpaper transition
+- **Symptom:** Reviewer found theme changes could still snap because `.win` also painted `background: var(--wall)` while only `.leena` had the 200ms background transition.
+- **Root cause:** The first task 020 fix covered the wrapper wallpaper but missed the visible shell wallpaper surface rule shared by `.leena-page` and `.win`.
+- **Fix:** Added the same `background var(--dur-base) var(--ease-out)` transition to `.leena-page, .win` and added CSS token tests for both visible wallpaper selectors.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
 ### Fix — Wave 04 — 018 — Wrong checkout output recovery
 - **Symptom:** Command Center worker reported completion but its files were absent from `/Users/yasmineseidu/leena-wave-04`; they existed under the primary checkout `/Users/yasmineseidu/leena`.
 - **Root cause:** The worker wrote to the wrong checkout despite being instructed to use the wave worktree.
@@ -86,6 +93,14 @@
 - Independent gates after reviewer re-review fixes passed: `npm run check`, `node --test` (189 tests), `node --check`, `git diff --check`, output existence checks, and short `npm start` smoke.
 - Reviewer re-review and advisor gates passed. Downstream wire-live work should keep the shell route and renderer contracts stable while replacing mock data with real stores/providers.
 - CodeRabbit advisory review was requested on PR #4. It posted generated "review in progress" / "Review triggered" comments and no actionable findings were available at merge-decision time.
+
+## Wave 05 — summary
+- Built live appearance persistence coverage for task `020`: shell startup restores theme, treatment, and density before first screen render, while settings writes continue to persist exact localStorage keys.
+- Kept the Wave 04 exact-root setting contract: appearance writes still target only `#app-shell.leena`; loose `.leena` or `#app-shell` roots remain rejected by regression tests.
+- Added 200ms wallpaper cross-fade coverage for both wrapper and visible wallpaper surfaces. Reviewer found `.win` could still snap; fixed by applying the same background transition to `.leena-page, .win`.
+- Independent gates after reviewer fix passed: `npm run check`, `node --test` (194 tests), `node --check` for changed JS/test files, and `git diff --check`.
+- Reviewer re-review and advisor gates passed with no blockers. Advisor bookkeeping warning was addressed by adding Wave 05 to `tasks/OVERVIEW.md`.
+- CodeRabbit advisory review was requested on PR #5. It returned a rate-limit/usage-credit warning and produced no actionable findings at merge-decision time.
 
 ### Fix — Wave 03 — 012 — Exact shell icon paths
 - **Symptom:** Parent verification found the first app-shell implementation used approximate Tasks, Settings, and bell SVG paths even though task 012 required inline design-system §3 icons.

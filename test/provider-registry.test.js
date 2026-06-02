@@ -9,11 +9,12 @@ import {
   loadOllamaBaseUrl,
   loadProviderApiKey,
   loadProviderDefault,
+  PROVIDER_API_KEY_KEYS,
   saveOllamaBaseUrl,
   saveProviderApiKey,
 } from "../src/providers/provider-settings.js";
 import { CHAT, EMBEDDINGS, REALTIME, STT, TTS } from "../src/providers/types.js";
-import { closeDatabase } from "../src/realtime/tools/database.js";
+import { closeDatabase, getDatabase } from "../src/realtime/tools/database.js";
 import { ProviderError } from "../src/utils/errors.js";
 
 async function withProviderDb(callback) {
@@ -41,6 +42,20 @@ function createProvider(overrides = {}) {
     ...overrides,
   });
 }
+
+function readSetting(filePath, key) {
+  const row = getDatabase(filePath).prepare("SELECT value FROM settings WHERE key = ?").get(key);
+  return row?.value ?? null;
+}
+
+const testSecretCodec = Object.freeze({
+  protect(secret) {
+    return `protected:${Buffer.from(secret, "utf8").toString("base64")}`;
+  },
+  reveal(payload) {
+    return Buffer.from(payload.replace(/^protected:/, ""), "base64").toString("utf8");
+  },
+});
 
 test("registers and retrieves a mock provider by name", () => {
   const registry = new ProviderRegistry();
@@ -191,21 +206,68 @@ test("setDefault rejects a provider that does not support the capability", async
   });
 });
 
-test("provider settings round-trip API keys and Ollama base URL", async () => {
+test("provider settings require protected API key storage by default", async () => {
   await withProviderDb((filePath) => {
-    assert.equal(saveProviderApiKey("openai", "  sk-openai  ", filePath), "sk-openai");
-    assert.equal(saveProviderApiKey("openrouter", "  sk-openrouter  ", filePath), "sk-openrouter");
+    assert.throws(
+      () => saveProviderApiKey("openai", "  sk-openai-secret-1234567890  ", filePath),
+      (error) =>
+        error instanceof ProviderError &&
+        error.code === "PROVIDER_API_KEY_STORAGE_UNAVAILABLE" &&
+        error.provider === "openai",
+    );
+    assert.equal(readSetting(filePath, PROVIDER_API_KEY_KEYS.openai), null);
+    assert.equal(loadProviderApiKey("openai", filePath), null);
+
+    assert.throws(
+      () =>
+        saveProviderApiKey("openai", "sk-openai-secret-1234567890", filePath, {
+          protect: (secret) => secret,
+        }),
+      (error) =>
+        error instanceof ProviderError &&
+        error.code === "UNSAFE_PROVIDER_API_KEY_PAYLOAD" &&
+        error.provider === "openai",
+    );
+    assert.equal(readSetting(filePath, PROVIDER_API_KEY_KEYS.openai), null);
+  });
+});
+
+test("provider settings store protected API keys and Ollama base URL", async () => {
+  await withProviderDb((filePath) => {
+    const openaiKey = "sk-openai-secret-1234567890";
+    const openrouterKey = "sk-openrouter-secret-1234567890";
+    const protectedOpenaiKey = testSecretCodec.protect(openaiKey);
+    const protectedOpenrouterKey = testSecretCodec.protect(openrouterKey);
+
+    assert.equal(
+      saveProviderApiKey("openai", `  ${openaiKey}  `, filePath, testSecretCodec),
+      protectedOpenaiKey,
+    );
+    assert.equal(
+      saveProviderApiKey("openrouter", `  ${openrouterKey}  `, filePath, testSecretCodec),
+      protectedOpenrouterKey,
+    );
     assert.equal(
       saveOllamaBaseUrl("  http://127.0.0.1:11434  ", filePath),
       "http://127.0.0.1:11434",
     );
+
+    const storedOpenaiKey = readSetting(filePath, PROVIDER_API_KEY_KEYS.openai);
+    const storedOpenrouterKey = readSetting(filePath, PROVIDER_API_KEY_KEYS.openrouter);
+    assert.equal(storedOpenaiKey, protectedOpenaiKey);
+    assert.equal(storedOpenrouterKey, protectedOpenrouterKey);
+    assert.equal(storedOpenaiKey.includes(openaiKey), false);
+    assert.equal(storedOpenrouterKey.includes(openrouterKey), false);
+
     closeDatabase(filePath);
 
-    assert.equal(loadProviderApiKey("openai", filePath), "sk-openai");
-    assert.equal(loadProviderApiKey("openrouter", filePath), "sk-openrouter");
+    assert.equal(loadProviderApiKey("openai", filePath), null);
+    assert.equal(loadProviderApiKey("openai", filePath, testSecretCodec), openaiKey);
+    assert.equal(loadProviderApiKey("openrouter", filePath, testSecretCodec), openrouterKey);
     assert.equal(loadOllamaBaseUrl(filePath), "http://127.0.0.1:11434");
 
     assert.equal(saveProviderApiKey("openai", "", filePath), null);
+    assert.equal(readSetting(filePath, PROVIDER_API_KEY_KEYS.openai), null);
     assert.equal(loadProviderApiKey("openai", filePath), null);
   });
 });

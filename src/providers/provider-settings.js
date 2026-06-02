@@ -1,4 +1,5 @@
 import { getDatabase, getDatabasePath } from "../realtime/tools/database.js";
+import { ProviderError } from "../utils/errors.js";
 import { CHAT, EMBEDDINGS, REALTIME, STT, TTS } from "./types.js";
 
 export const PROVIDER_DEFAULT_KEYS = Object.freeze({
@@ -32,17 +33,47 @@ export function saveProviderDefault(
   return saveSetting(getProviderDefaultKey(capability), providerName, storePath);
 }
 
-export function loadProviderApiKey(providerName, storePath = getProviderSettingsPath()) {
+export function loadProviderApiKey(
+  providerName,
+  storePath = getProviderSettingsPath(),
+  secretCodec,
+) {
   const key = getProviderApiKeyKey(providerName);
-  return key ? loadSetting(key, storePath) : null;
+  if (!key || typeof secretCodec?.reveal !== "function") {
+    return null;
+  }
+  const protectedValue = loadSetting(key, storePath);
+  return protectedValue ? normalizeSettingValue(secretCodec.reveal(protectedValue)) : null;
 }
 
-export function saveProviderApiKey(providerName, apiKey, storePath = getProviderSettingsPath()) {
+export function saveProviderApiKey(
+  providerName,
+  apiKey,
+  storePath = getProviderSettingsPath(),
+  secretCodec,
+) {
   const key = getProviderApiKeyKey(providerName);
   if (!key) {
     return null;
   }
-  return saveSetting(key, apiKey, storePath);
+  const normalized = normalizeSettingValue(apiKey);
+  if (normalized === null) {
+    return saveSetting(key, null, storePath);
+  }
+  if (typeof secretCodec?.protect !== "function") {
+    throw new ProviderError("Secure provider API key storage is unavailable", {
+      code: "PROVIDER_API_KEY_STORAGE_UNAVAILABLE",
+      provider: normalizeSettingValue(providerName),
+    });
+  }
+  const protectedValue = normalizeSettingValue(secretCodec.protect(normalized));
+  if (!protectedValue || protectedValue.includes(normalized)) {
+    throw new ProviderError("Provider API key codec returned an unsafe payload", {
+      code: "UNSAFE_PROVIDER_API_KEY_PAYLOAD",
+      provider: normalizeSettingValue(providerName),
+    });
+  }
+  return saveSetting(key, protectedValue, storePath);
 }
 
 export function loadOllamaBaseUrl(storePath = getProviderSettingsPath()) {

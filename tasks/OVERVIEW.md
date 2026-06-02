@@ -97,6 +97,7 @@ None.
 ## Completed Waves
 
 - Wave 01 — Foundations begin (`000`, `010`) completed 2026-06-02.
+- Wave 02 — Utilities, provider skeleton, fonts, orb/waveform primitives (`001`, `002`, `011`, `019`) completed 2026-06-02.
 
 ## Discovered Tasks
 

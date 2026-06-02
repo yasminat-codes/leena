@@ -70,6 +70,12 @@
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
+## Wave 02 — summary
+- Retry utilities should preserve the retry contract even when a failure is intentionally not retried; downstream callers can inspect `RetryExhaustedError.lastError` for the original status/code.
+- Provider API-key settings are now fail-closed: downstream settings/IPC tasks must inject Electron `safeStorage` protection rather than calling `saveProviderApiKey()` bare.
+- Font tasks must scan every runtime renderer stylesheet, not only the new design-system CSS, after removing remote font links or CSP allowances.
+- Advisor warnings for future waves: keep provider network requests in the main process unless renderer CSP is deliberately expanded; use canonical provider names in concrete providers.
+
 ### Fix entry template
 ```
 ### Fix — Wave NN — <task id> — <one-line title>

@@ -39,4 +39,17 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer found two blockers: legacy `styles.css` still referenced removed Google font families, and provider API-key helpers persisted raw secrets in SQLite. Reopened tasks `011` and `002` for focused fixes.
 - Fixed the task `002` reviewer blocker by requiring protected provider API-key payloads and adding SQLite raw-secret regression coverage.
 - Fixed the task `011` reviewer blocker by replacing legacy `Inter`/`Geist` CSS references with bundled Leena font tokens and adding a runtime CSS scan.
-- CodeRabbit advisory review was requested on PR #1. At merge decision time it had posted only the generated "review in progress" comment with no actionable findings; advisory status did not block the wave.
+- Parent-branch gates passed after reviewer fixes: `npm run check`, `node --test` (159 tests), `node --check` on changed JS, `git diff --check`, and source-only font-host/family scan.
+- Reviewer gate passed with no blockers; prior font and provider-secret blockers were verified fixed.
+- Advisor gate passed with no blockers. Warnings recorded for downstream work: keep OpenRouter/Ollama networking in main process unless CSP is expanded, wire provider key settings to Electron `safeStorage`, and use canonical concrete provider names.
+- GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
+
+## 2026-06-02 — Wave 02 summary
+
+- Built retry/backoff infrastructure with abort support, Retry-After handling, and non-retryable failure wrapping.
+- Built the provider abstraction skeleton: capability constants, `BaseProvider`, registry, singleton access, persisted defaults, protected API-key setting helpers, and tests.
+- Bundled local Leena font assets, removed Google Font loading/CSP allowances, and routed runtime CSS through local font tokens.
+- Built standalone orb and waveform DOM primitives with reduced-motion-aware tests.
+- Reviewer blockers on raw provider secret persistence and legacy remote-font fallback were fixed and independently re-verified.
+- Independent gates passed: `npm run check`, `node --test` (159 tests), `node --check` for changed JS files, and `git diff --check`.
+- Advisor gate passed with warnings for downstream provider wiring: safeStorage codec hookup, main-process provider networking unless CSP expands, and canonical provider names.

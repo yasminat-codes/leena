@@ -2,7 +2,7 @@
 id: "019"
 title: "Orb and waveform visualization components"
 type: ui
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -12,7 +12,9 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-0, orb, waveform, animation]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T00:13:31Z"
+completed_at: "2026-06-02T00:28:53Z"
 created_at: "2026-06-01"
 ---
 
@@ -57,10 +59,14 @@ The orb and waveform are used in multiple places: the Home screen hero, all 4 Co
 - Orb `breathe()` is called during listening state, `stop()` on idle
 
 ## Handoff Notes
-_Filled after completion._
+- Added `createOrb()` in `src/renderer/components/orb.js` with numeric and named design-system sizes, optional ring rendering, and `pulse()`, `breathe()`, `shake()`, and `stop()` methods.
+- Added `createWaveform()` in `src/renderer/components/waveform.js` with default bar heights, configurable bar count/height/color, and `play()`, `pause()`, and `shimmer()` methods.
+- Components reuse the existing Wave 01 `.orb`, `.orb__ring`, and `.wave` CSS, so no additional stylesheet edit was required after the task `011` claim released.
+- Added `test/orb-waveform.test.js` with a small DOM stub covering factory output, sizing, states, methods, and reduced-motion behavior.
+- Verified independently with `npm run check`, `node --test` (136 tests in the task branch), and `node --check` on changed JS files.
 
 ## Errors Encountered
-_Filled if errors occur._
+None.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

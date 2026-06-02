@@ -205,14 +205,15 @@ test("default dark theme is graphite neutral, not lavender purple", () => {
   assert.doesNotMatch(body, /#0a0912|#f1ecff|24,\s*3,\s*127|20,\s*4,\s*80/i);
 });
 
-test("workspace theme uses a dark teal frame with paper working surfaces", () => {
+test("workspace theme uses off-white as the dominant shell color with teal accents", () => {
   const body = extractRuleBody(cssWithoutComments, '.leena[data-theme="workspace"]');
 
   assertIncludesAll(
     body,
-    ["--bg: #0b3432", "--surface: #fffdfa", "--surface-2: #eff5f2", "--text: #0b2624"],
+    ["--bg: #fbf8ef", "--surface: #fffdfa", "--surface-2: #f0f5f0", "--text: #0b2624"],
     "workspace theme",
   );
+  assert.match(body, /linear-gradient\(135deg,\s*#fbf8ef,\s*#f2eee4\)/);
 });
 
 test("every density defines spacing tokens", () => {

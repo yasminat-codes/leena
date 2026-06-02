@@ -162,3 +162,10 @@ _(wave execution entries appended below as the build runs)_
 - Added `Workspace` as the default theme/treatment, with a deep teal outer frame, warm-white command/work surfaces, mint rows, dark teal pill controls, restrained orb material, and a quiet abstract right-side shape.
 - Added Workspace token/default tests, added the new `--r-sculpt` radius token after the design audit caught a literal decorative radius, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-workspace-mode-*.png`.
 - Gates passed after the Workspace pass: `npm run check`, focused design-audit/token tests, full `node --test` (207 tests), `git diff --check`, and `node --check` on changed JS/test files.
+
+## 2026-06-02 — Wave 06 off-white dominance follow-up
+
+- Owner clarified that the dominant Workspace color should be off-white.
+- Kept the Workspace mode but changed the visual hierarchy: off-white now owns the wallpaper, side rail, topbar, Home context, list surfaces, and orb well; teal is constrained to the logo/orb material, active nav, CTA, small markers, and faint sculptural accent.
+- Updated Workspace token tests to assert the off-white shell and refreshed five artifacts under `tasks/artifacts/wave-06-offwhite-dominant-*.png`.
+- Gates passed after the off-white pass: `npm run check`, focused design-audit/token tests, full `node --test` (207 tests), `node --check test/leena-css-tokens.test.js`, `git diff --check`, and Electron/Playwright five-screen screenshot sweep.

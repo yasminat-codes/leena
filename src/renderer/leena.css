@@ -277,11 +277,11 @@
 
 .leena[data-theme="workspace"] {
   color-scheme: light;
-  --bg: #0b3432;
-  --bg-2: #07302e;
+  --bg: #fbf8ef;
+  --bg-2: #f1eee3;
   --surface: #fffdfa;
-  --surface-2: #eff5f2;
-  --side-glass: #0a312f;
+  --surface-2: #f0f5f0;
+  --side-glass: #f7f4ea;
   --glass: #fffdfa;
   --glass-bd: rgba(9, 54, 51, 0.12);
   --glass-hi: rgba(255, 255, 255, 0.92);
@@ -297,9 +297,9 @@
   --on-grad-faint: rgba(255, 255, 255, 0.55);
   --shadow: 0 2px 6px rgba(8, 42, 39, 0.04), 0 30px 70px -28px rgba(8, 42, 39, 0.28);
   --wall:
-    radial-gradient(54% 68% at 86% 36%, rgba(7, 91, 85, 0.38), transparent 58%),
-    radial-gradient(44% 58% at 84% 26%, rgba(255, 255, 255, 0.045), transparent 62%),
-    linear-gradient(135deg, #0b3432, #0a302e);
+    radial-gradient(58% 70% at 86% 34%, rgba(7, 91, 85, 0.11), transparent 60%),
+    radial-gradient(62% 78% at 12% 110%, rgba(255, 255, 255, 0.92), transparent 58%),
+    linear-gradient(135deg, #fbf8ef, #f2eee4);
 }
 
 .leena[data-theme="dark"] {
@@ -431,13 +431,13 @@
 
 .leena[data-theme="workspace"] .win {
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 32px 72px -34px rgba(8, 42, 39, 0.56);
+    0 0 0 1px rgba(9, 54, 51, 0.1),
+    0 32px 72px -42px rgba(8, 42, 39, 0.36);
 }
 
 .leena[data-theme="workspace"] .win::before {
   inset: 0;
-  background: var(--wall);
+  background: linear-gradient(90deg, rgba(11, 52, 50, 0.08), transparent 96px), var(--wall);
 }
 
 .side {
@@ -458,7 +458,9 @@
 }
 
 .leena[data-theme="workspace"] .side {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 56%);
+  background:
+    linear-gradient(90deg, rgba(11, 52, 50, 0.07), transparent 74%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 253, 250, 0.34));
 }
 
 .side__brand {
@@ -533,9 +535,9 @@
   right: 42px;
   width: 246px;
   height: 246px;
-  border: 48px solid rgba(5, 86, 80, 0.34);
+  border: 48px solid rgba(5, 86, 80, 0.12);
   border-radius: var(--r-sculpt);
-  opacity: 0.62;
+  opacity: 0.58;
   pointer-events: none;
   content: "";
 }
@@ -551,7 +553,7 @@
 }
 
 .leena[data-theme="workspace"] .topbar {
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--text);
 }
 
 .topbar button,
@@ -611,7 +613,7 @@
 }
 
 .leena[data-theme="workspace"] .topbar__date {
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--text-faint);
 }
 
 .topbar__spacer {
@@ -836,7 +838,7 @@
 }
 
 .leena[data-theme="workspace"] .nav-item {
-  color: rgba(255, 255, 255, 0.64);
+  color: var(--text-faint);
 }
 
 .nav-item svg {
@@ -878,8 +880,8 @@
 }
 
 .leena[data-theme="workspace"] .nav-item--active {
-  color: var(--accent);
-  background: rgba(255, 255, 255, 0.94);
+  color: #ffffff;
+  background: var(--accent);
 }
 
 .leena[data-theme="dark"] .nav-item--active,
@@ -1052,9 +1054,9 @@
 }
 
 .leena[data-theme="workspace"] .topbar .icon-btn {
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.055);
-  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  background: rgba(255, 253, 250, 0.72);
+  border-color: var(--border);
 }
 
 .lx-display {
@@ -1262,11 +1264,11 @@
 .leena[data-theme="workspace"] .home-command__orb-well {
   min-height: 196px;
   background:
-    radial-gradient(74% 78% at 50% 44%, rgba(7, 91, 85, 0.34), transparent 62%),
-    linear-gradient(145deg, #0d3b39, #092c2a);
+    radial-gradient(74% 78% at 50% 44%, rgba(7, 91, 85, 0.12), transparent 62%),
+    linear-gradient(145deg, #f7fbf5, #e9f2ec);
   box-shadow:
-    inset 1px 0 0 rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 0 0 1px var(--border-2),
+    inset 0 1px 0 var(--glass-hi);
 }
 
 .home-command__input {
@@ -1360,18 +1362,18 @@
 }
 
 .leena[data-theme="workspace"] .home-context {
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--text);
   padding: 10px 4px 4px;
 }
 
 .leena[data-theme="workspace"] .home-context .text-dim,
 .leena[data-theme="workspace"] .home-context .lx-sm {
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--text-dim);
 }
 
 .leena[data-theme="workspace"] .home-context .text-faint,
 .leena[data-theme="workspace"] .home-context .lx-mono {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
 }
 
 .home-context--recent {
@@ -1391,7 +1393,7 @@
 }
 
 .leena[data-theme="workspace"] .home-context .row {
-  border-top-color: rgba(255, 255, 255, 0.13);
+  border-top-color: var(--border-2);
 }
 
 .home-marker {
@@ -1405,8 +1407,8 @@
 }
 
 .leena[data-theme="workspace"] .home-marker {
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.13);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(7, 91, 85, 0.09);
 }
 
 .home-list,
@@ -1490,7 +1492,7 @@
 }
 
 .leena[data-theme="workspace"] .activity-screen__header > h2 {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text);
 }
 
 .activity-screen__search {

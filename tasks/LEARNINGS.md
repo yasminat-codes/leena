@@ -42,6 +42,7 @@
 - **Default shell must not read as purple AI-template UI.** The default approval theme should feel graphite, neutral, precise, and product-grade. Keep violet/purple out of the default dark wallpaper/orb/primary surfaces; reserve color for tiny state accents and avoid broad saturated glow.
 - **Reference-derived appearance changes must become first-class token modes.** When owner feedback supplies a strong material reference, encode it as an explicit theme/treatment/default if the reference changes the product model; do not keep layering cosmetic tweaks onto the rejected mode.
 - **Decorative geometry still uses named radius tokens.** Even abstract pseudo-elements and background shapes must use `--r-*` tokens for `border-radius`; if a new shape needs a new radius, add a named token instead of a literal runtime value.
+- **Off-white dominance means paper owns the shell.** If the owner says the dominant color should be off-white, teal/dark accents must not own the wallpaper, side rail, topbar, or major orb well. Keep strong teal to selected controls, active states, small marks, and subtle sculptural accents.
 
 ---
 
@@ -96,6 +97,13 @@
 - **Root cause:** The new workspace abstract background shape used one-off decorative geometry that was not promoted into the design-token scale.
 - **Fix:** Added `--r-sculpt: 58px` to the root radius tokens, used `border-radius: var(--r-sculpt)` for the workspace pseudo-element, added token coverage in `test/leena-css-tokens.test.js`, and reran the audit.
 - **Rule added?:** yes — Decorative geometry still uses named radius tokens.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Off-white dominant Workspace hierarchy
+- **Symptom:** Owner clarified that the Workspace mode's dominant color should be off-white, not the dark teal frame.
+- **Root cause:** The first Workspace pass used off-white panels inside a dark teal wallpaper/chrome system, so teal still owned the first visual read.
+- **Fix:** Changed the Workspace wallpaper, side rail, topbar, Home context, Activity title, and orb well in `src/renderer/leena.css` to paper/off-white surfaces with teal only as accents; updated `test/leena-css-tokens.test.js` to assert the off-white dominant shell; refreshed `tasks/artifacts/wave-06-offwhite-dominant-*.png`.
+- **Rule added?:** yes — Off-white dominance means paper owns the shell.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
 ### Fix — Wave 06 — 021 — Renderer design-token audit cleanup

@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-02T14:35:27Z — Released Wave 06 off-white dominance claims for task `021`: made Workspace paper/off-white dominant, constrained teal to accents, refreshed screenshots, updated token coverage, and recorded bookkeeping.
 - 2026-06-02T14:13:52Z — Released Wave 06 workspace-token claims for task `021`: added Workspace default theme/treatment, rebuilt tokens from the dark-teal/paper reference, added radius/token/default tests, refreshed screenshots, and updated bookkeeping.
 - 2026-06-02T13:56:47Z — Released Wave 06 X-style premium neutral claims for task `021`: neutralized purple default treatment/theme, tightened orb and shell material, added anti-purple token tests, refreshed screenshots, and updated bookkeeping.
 - 2026-06-02T13:35:25Z — Released Wave 06 polish-followup claims for task `021`: swapped display font to Gellix, separated command input from orb well, refreshed polish screenshots, updated tests, and recorded bookkeeping.

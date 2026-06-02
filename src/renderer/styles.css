@@ -1,9 +1,9 @@
 :root {
   /* Surfaces — Superwhisper foundation (Midnight Eclipse / Starless Night) blended
      with Dimension's translucent HUD chrome. */
-  --bg-deep: #000000; /* Midnight Eclipse — page canvas */
-  --bg-elevated: #030719; /* Starless Night — subtle elevation */
-  --bg-overlay: #001b33; /* Deep Ocean — specialized cool surface */
+  --bg-deep: var(--black); /* Midnight Eclipse — page canvas */
+  --bg-elevated: var(--legacy-bg-elevated); /* Starless Night — subtle elevation */
+  --bg-overlay: var(--legacy-bg-overlay); /* Deep Ocean — specialized cool surface */
   --hairline: rgba(229, 229, 229, 0.1);
   --hairline-strong: rgba(229, 229, 229, 0.2);
   --raised: rgba(255, 255, 255, 0.04);
@@ -12,33 +12,33 @@
   --surface-ghost: rgba(212, 212, 212, 0.08);
 
   /* Text — Frost / Ghostly Gray ramp */
-  --text: #ffffff;
+  --text: var(--white);
   --text-2: rgba(229, 231, 235, 0.78);
   --text-3: rgba(229, 231, 235, 0.46);
 
   /* Accent — Superwhisper Electric Blue, with Sky Blue for emphasis */
-  --accent: #0088ff;
-  --accent-bright: #60a5fa;
+  --accent: var(--legacy-accent);
+  --accent-bright: var(--legacy-accent-bright);
   --accent-soft: rgba(0, 136, 255, 0.16);
   --accent-line: rgba(0, 136, 255, 0.4);
 
   /* Semantics — Vivid Green / Sunshine Yellow / Crimson Red */
-  --success: #16c253;
+  --success: var(--legacy-success);
   --success-soft: rgba(22, 194, 83, 0.16);
   --success-line: rgba(22, 194, 83, 0.4);
-  --warn: #ffdd00;
+  --warn: var(--legacy-warn);
   --warn-soft: rgba(255, 221, 0, 0.14);
   --warn-line: rgba(255, 221, 0, 0.4);
-  --danger: #ff5252;
+  --danger: var(--legacy-danger);
   --danger-soft: rgba(255, 82, 82, 0.16);
   --danger-line: rgba(255, 82, 82, 0.4);
 
   /* Nebula gradient (orb + atmospheric panels) — Dimension Gradient Aura
      combined with Superwhisper Magenta Burst + Deep Ocean. */
-  --nebula-1: #4867af;
-  --nebula-2: #6b62f2;
-  --nebula-3: #b855e7;
-  --nebula-4: #001b33;
+  --nebula-1: var(--legacy-nebula-1);
+  --nebula-2: var(--legacy-nebula-2);
+  --nebula-3: var(--legacy-nebula-3);
+  --nebula-4: var(--legacy-nebula-4);
 
   /* Radii — Dimension cards (24px) / callouts (10px) / pill (9999px) +
      Superwhisper default 9px / button 4px. */
@@ -48,6 +48,11 @@
   --radius-sm: 9px;
   --radius-xs: 4px;
   --radius-pill: 9999px;
+  --r-legacy-window: var(--radius-window);
+  --r-legacy-md: var(--radius-md);
+  --r-legacy-sm: var(--radius-sm);
+  --r-legacy-xs: var(--radius-xs);
+  --r-legacy-pill: var(--radius-pill);
 
   /* Buttons — flat ghost surfaces; no more raised plastic. Existing rules that
      compose --btn-sheen / --btn-raise pick up the new translucent language. */
@@ -112,7 +117,7 @@ button {
 .permissions-list::-webkit-scrollbar-thumb,
 .agent-form::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background-clip: padding-box;
   background-color: rgba(255, 255, 255, 0.14);
 }
@@ -172,7 +177,7 @@ button {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-window);
+  border-radius: var(--r-legacy-window);
   background:
     radial-gradient(140% 80% at 50% -12%, rgba(107, 98, 242, 0.14), transparent 58%),
     radial-gradient(120% 70% at 80% 120%, rgba(72, 103, 175, 0.1), transparent 60%),
@@ -211,7 +216,7 @@ button {
   height: 30px;
   padding: 0;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   background: var(--raised);
   cursor: pointer;
   transition:
@@ -234,7 +239,7 @@ button {
 .menu-glyph::after {
   width: 15px;
   height: 1.5px;
-  border-radius: 2px;
+  border-radius: var(--r-pixel);
   background: var(--text);
   transition: transform var(--dur) var(--ease-out);
 }
@@ -276,7 +281,7 @@ button {
   gap: 6px;
   padding: 4px 11px 4px 9px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--text-2);
   background: var(--raised);
   font-size: 0.58rem;
@@ -288,7 +293,7 @@ button {
 .openai-indicator::before {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: var(--text-3);
   box-shadow: 0 0 0 0 transparent;
   content: "";
@@ -317,9 +322,9 @@ button {
   height: 30px;
   padding: 0 14px;
   border: 0;
-  border-radius: var(--radius-pill);
-  color: #000000;
-  background: #ffffff;
+  border-radius: var(--r-legacy-pill);
+  color: var(--black);
+  background: var(--white);
   box-shadow: none;
   cursor: pointer;
   font-family: var(--font-display);
@@ -376,7 +381,7 @@ button {
   width: 210px;
   padding: 6px;
   border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--r-legacy-md);
   background: linear-gradient(180deg, rgba(10, 10, 10, 0.96), rgba(3, 7, 25, 0.97));
   backdrop-filter: blur(20px);
   box-shadow:
@@ -398,7 +403,7 @@ button {
   align-items: center;
   padding: 9px 10px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-legacy-sm);
   color: var(--text);
   background: transparent;
   cursor: pointer;
@@ -428,7 +433,7 @@ button {
   margin: 11px 13px 4px;
   padding: 3px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   background: var(--surface-translucent);
   backdrop-filter: blur(4px);
 }
@@ -437,7 +442,7 @@ button {
   flex: 1;
   padding: 6px 6px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--text-2);
   background: transparent;
   cursor: pointer;
@@ -455,7 +460,7 @@ button {
 }
 
 .panel-tab.is-active {
-  color: #000000;
+  color: var(--black);
   background: var(--text);
   box-shadow: none;
 }
@@ -519,7 +524,7 @@ button {
   margin-bottom: 4px;
   padding: 8px 11px;
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--r-legacy-md);
   transition:
     background var(--dur) var(--ease-out),
     border-color var(--dur) var(--ease-out);
@@ -528,7 +533,7 @@ button {
 .panel-row::before {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  border-radius: var(--r-legacy-md);
   background: radial-gradient(220px circle at 50% -40%, rgba(0, 136, 255, 0.12), transparent 70%);
   opacity: 0;
   transition: opacity var(--dur) var(--ease-out);
@@ -627,7 +632,7 @@ button {
   width: 12px;
   height: 12px;
   margin-top: 3px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   border: 1.5px solid var(--text-3);
 }
 
@@ -654,7 +659,7 @@ button {
   flex-shrink: 0;
   padding: 3px 10px;
   border: 1px solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   font-size: 0.55rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -741,8 +746,8 @@ button {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  color: #fff;
+  border-radius: var(--r-round);
+  color: var(--white);
   background: var(--accent);
   font-size: 0.6rem;
   font-weight: 700;
@@ -754,7 +759,7 @@ button {
   height: 98px;
   object-fit: cover;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-md);
+  border-radius: var(--r-legacy-md);
   cursor: pointer;
   transition:
     border-color var(--dur) var(--ease-out),
@@ -783,7 +788,7 @@ button {
   align-self: flex-start;
   padding: 3px 10px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--text-2);
   background: var(--raised);
   cursor: pointer;
@@ -821,7 +826,7 @@ button {
   width: 44px;
   height: 44px;
   border: 1px solid var(--hairline-strong);
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background:
     radial-gradient(circle at 38% 32%, rgba(107, 98, 242, 0.45), transparent 60%),
     radial-gradient(circle at 70% 70%, rgba(184, 85, 231, 0.32), transparent 65%);
@@ -927,8 +932,8 @@ button {
   height: 30px;
   padding: 0 13px;
   border: 0;
-  border-radius: var(--radius-sm);
-  color: #fff;
+  border-radius: var(--r-legacy-sm);
+  color: var(--white);
   cursor: pointer;
   font-family: var(--font-display);
   font-size: 0.76rem;
@@ -951,9 +956,9 @@ button {
 
 /* Superwhisper "Header Download Button" — Frost pill for primary action. */
 .selection-done {
-  color: #000000;
-  background: #ffffff;
-  border-radius: var(--radius-pill);
+  color: var(--black);
+  background: var(--white);
+  border-radius: var(--r-legacy-pill);
   box-shadow: none;
 }
 
@@ -966,7 +971,7 @@ button {
 .selection-delete {
   color: var(--danger);
   background: var(--danger-soft);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   box-shadow: inset 0 0 0 1px var(--danger-line);
 }
 
@@ -992,7 +997,7 @@ button {
   max-width: 190px;
   padding: 4px 20px 4px 8px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--text-2);
   background-color: var(--raised);
   appearance: none;
@@ -1044,7 +1049,7 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--radius-window);
+  border-radius: var(--r-legacy-window);
   background:
     radial-gradient(140% 80% at 50% -10%, rgba(107, 98, 242, 0.12), transparent 58%),
     radial-gradient(120% 70% at 85% 115%, rgba(72, 103, 175, 0.08), transparent 60%),
@@ -1085,7 +1090,7 @@ button {
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-legacy-sm);
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
   font: inherit;
@@ -1132,9 +1137,9 @@ button {
   flex: none;
   padding: 6px 16px;
   border: 0;
-  border-radius: var(--radius-pill);
-  color: #000000;
-  background: #ffffff;
+  border-radius: var(--r-legacy-pill);
+  color: var(--black);
+  background: var(--white);
   box-shadow: none;
   cursor: pointer;
   font-size: 0.66rem;
@@ -1170,7 +1175,7 @@ button {
   height: 30px;
   padding: 0;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--text-2);
   background: var(--raised);
   cursor: pointer;
@@ -1211,7 +1216,7 @@ button {
 .permission-actions button {
   padding: 5px 12px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--text-2);
   background: var(--raised);
   cursor: pointer;
@@ -1252,7 +1257,7 @@ button {
 .permission-status {
   padding: 3px 10px;
   border: 1px solid var(--warn-line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--warn);
   background: var(--warn-soft);
   font-size: 0.55rem;
@@ -1295,7 +1300,7 @@ button {
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   color: var(--text);
   background: transparent;
   cursor: pointer;
@@ -1324,7 +1329,7 @@ button {
   left: 50%;
   width: 124px;
   height: 124px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: rgba(0, 0, 0, 0.3);
   filter: blur(calc(18px + var(--orb-level) * 10px));
   transform: translate(-50%, -50%) scale(calc(0.82 + var(--orb-level) * 0.08));
@@ -1340,7 +1345,7 @@ button {
   width: 132px;
   height: 132px;
   overflow: hidden;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   filter: brightness(var(--orb-brightness)) saturate(var(--orb-saturation));
   isolation: isolate;
   transform: scale(var(--orb-scale));
@@ -1362,7 +1367,7 @@ button {
 .orb-sheen {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: var(--r-round);
 }
 
 /* Superwhisper "Nebula Horizon" bloom — blue indigo glow, Magenta Burst,
@@ -1397,12 +1402,12 @@ button {
     radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.55), transparent 20%),
     conic-gradient(
       from calc(var(--orb-level) * 70deg),
-      #6b62f2,
-      #b855e7,
-      #60a5fa,
-      #4867af,
-      #b855e7,
-      #6b62f2
+      var(--nebula-2),
+      var(--nebula-3),
+      var(--accent-bright),
+      var(--nebula-1),
+      var(--nebula-3),
+      var(--nebula-2)
     );
   filter: saturate(1.5) brightness(0.96);
   transform: rotate(calc(var(--orb-level) * 38deg)) scale(calc(1.1 + var(--orb-level) * 0.1));
@@ -1457,7 +1462,7 @@ button {
   height: 100%;
   padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: var(--radius-window);
+  border-radius: var(--r-legacy-window);
   transition:
     border-color 180ms var(--ease-out),
     background 180ms var(--ease-out),
@@ -1469,7 +1474,7 @@ button {
   position: absolute;
   inset: 0;
   z-index: 0;
-  border-radius: inherit;
+  border-radius: var(--r-legacy-window);
   background:
     radial-gradient(180px circle at 50% 24%, rgba(107, 98, 242, 0.2), transparent 62%),
     radial-gradient(160px circle at 78% 62%, rgba(184, 85, 231, 0.14), transparent 64%);
@@ -1527,7 +1532,7 @@ button {
   gap: 7px;
   padding: 7px;
   border-color: transparent;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   background:
     radial-gradient(120% 200% at 0% 50%, rgba(107, 98, 242, 0.18), transparent 55%),
     radial-gradient(120% 200% at 100% 50%, rgba(184, 85, 231, 0.12), transparent 55%),
@@ -1565,7 +1570,7 @@ button {
 .call-live {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: var(--danger);
   box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.55);
   animation: call-live-pulse 1.6s var(--ease-out) infinite;
@@ -1616,7 +1621,7 @@ button {
   margin-top: 4px;
   padding: 0 14px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--danger);
   background: var(--danger-soft);
   box-shadow: inset 0 0 0 1px var(--danger-line);
@@ -1639,7 +1644,7 @@ button {
 .call-end-glyph {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--r-micro);
   background: var(--danger);
 }
 
@@ -1692,7 +1697,7 @@ button {
   width: 16px;
   height: 12px;
   border: 1.5px solid var(--accent);
-  border-radius: var(--radius-xs);
+  border-radius: var(--r-legacy-xs);
   box-shadow: 0 0 10px rgba(0, 136, 255, 0.35);
 }
 
@@ -1708,7 +1713,7 @@ button {
 .cu-target {
   padding: 3px 10px;
   border: 1px solid var(--accent-line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--accent-bright);
   background: var(--accent-soft);
   font-size: 0.54rem;
@@ -1757,7 +1762,7 @@ button {
   left: 0;
   width: 40%;
   height: 100%;
-  border-radius: inherit;
+  border-radius: var(--r-legacy-pill);
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
   animation: cu-track-slide 1.6s var(--ease-out) infinite;
 }
@@ -1780,7 +1785,7 @@ button {
   margin: 0;
   padding: 0 12px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-legacy-pill);
   color: var(--danger);
   background: var(--danger-soft);
   box-shadow: inset 0 0 0 1px var(--danger-line);

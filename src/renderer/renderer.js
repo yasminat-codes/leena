@@ -1180,6 +1180,10 @@ const waveBarHeights = new Array(WAVE_BAR_COUNT).fill(0);
 let waveContext = null;
 let waveGradient = null;
 
+function readRendererColorToken(tokenName) {
+  return getComputedStyle(appShellElement).getPropertyValue(tokenName).trim() || "rgb(255 255 255)";
+}
+
 function setupWaveCanvas() {
   if (!callWaveCanvas) {
     return;
@@ -1193,9 +1197,9 @@ function setupWaveCanvas() {
   }
   waveContext.setTransform(ratio, 0, 0, ratio, 0, 0);
   waveGradient = waveContext.createLinearGradient(0, 0, WAVE_CSS_WIDTH, 0);
-  waveGradient.addColorStop(0, "#6b62f2");
-  waveGradient.addColorStop(0.5, "#b855e7");
-  waveGradient.addColorStop(1, "#60a5fa");
+  waveGradient.addColorStop(0, readRendererColorToken("--legacy-nebula-2"));
+  waveGradient.addColorStop(0.5, readRendererColorToken("--legacy-nebula-3"));
+  waveGradient.addColorStop(1, readRendererColorToken("--legacy-accent-bright"));
 }
 
 function clearWaveform() {

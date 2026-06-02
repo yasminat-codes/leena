@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 58 |
+| Pending | 57 |
 | In-Progress | 0 |
-| Completed | 14 |
+| Completed | 15 |
 | Blocked | 0 |
 
 ## Wave Map
@@ -101,6 +101,7 @@ None.
 - Wave 03 — App shell scaffold (`012`) completed 2026-06-02.
 - Wave 04 — Mock screens and command center (`013`, `014`, `015`, `016`, `017`, `018`) completed 2026-06-02.
 - Wave 05 — Live theme switching (`020`) completed 2026-06-02.
+- Wave 06 — Phase 0 integration test and polish (`021`) completed 2026-06-02; awaiting the single owner approval gate before Wave 07.
 
 ## Discovered Tasks
 

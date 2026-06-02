@@ -43,6 +43,7 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate passed with no blockers; prior font and provider-secret blockers were verified fixed.
 - Advisor gate passed with no blockers. Warnings recorded for downstream work: keep OpenRouter/Ollama networking in main process unless CSP is expanded, wire provider key settings to Electron `safeStorage`, and use canonical concrete provider names.
 - GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
+- Opened PR #2 (`wave-02` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit responded with a rate-limit/usage-credit warning and produced no actionable review findings; advisory status did not block the wave.
 
 ## 2026-06-02 — Wave 02 summary
 
@@ -53,3 +54,4 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer blockers on raw provider secret persistence and legacy remote-font fallback were fixed and independently re-verified.
 - Independent gates passed: `npm run check`, `node --test` (159 tests), `node --check` for changed JS files, and `git diff --check`.
 - Advisor gate passed with warnings for downstream provider wiring: safeStorage codec hookup, main-process provider networking unless CSP expands, and canonical provider names.
+- CodeRabbit advisory review was requested on PR #2. It was rate-limited before review start and produced no actionable findings at merge decision time.

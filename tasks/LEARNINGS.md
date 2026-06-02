@@ -63,6 +63,14 @@
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
+## Wave 03 — summary
+- Built the visible Leena app shell scaffold, sidebar/topbar navigation, shell state module, bundled gradient wallpapers, and DOM-free shell navigation tests.
+- Shell layout tasks must update both renderer markup/CSS and Electron window mode constraints; otherwise a correct 1060x712 `.win` can still be clipped by the old 440x600 `panel` BrowserWindow.
+- Existing realtime/call DOM IDs are runtime contracts, not disposable compatibility markup. Hidden legacy controls are acceptable only for elements that are not visible runtime surfaces; `#call-wave` must remain in the visible call stage.
+- Independent gates passed: `npm run check`, `node --test` (161 tests), `node --check` for changed JS/test files, `git diff --check`, exact icon/canvas placement scans, and short `npm start` startup smoke.
+- Advisor gate passed with downstream notes: Wave 04 should mount screen content into `#shell-content`, `panelController.isOpen()` no longer means the panel is visually open, theme switching should use `#app-shell[data-theme]`, and the bundled gradient PNGs are available even though current CSS uses token gradients.
+- CodeRabbit advisory review was requested on PR #3. It posted only generated "review in progress" / "Review triggered" comments and a pending status at merge-decision time, with no actionable findings available.
+
 ### Wave 02 — pre-run file-claim note
 - **Symptom:** Wave 02 decomposition lists tasks `011` and `019` as parallel, but both may require `src/renderer/leena.css`.
 - **Root cause:** Font-face bundling and orb/waveform visual states share the central design-system stylesheet.

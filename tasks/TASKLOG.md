@@ -69,3 +69,13 @@ _(wave execution entries appended below as the build runs)_
 - Re-verified after the reviewer fix with `npm run check`, `node --test` (161 tests), `node --check` on changed JS/test files, exact grid icon scan, `git diff --check`, and short `npm start` startup smoke.
 - Reviewer re-review found an active-call regression: `#call-wave` was inside the hidden `legacy-controls` container, so the waveform canvas could not render during calls. Reopened task `012` for a focused HTML placement fix.
 - Fixed the active-call waveform regression by moving the single `#call-wave` canvas into visible `#call-stage`; re-verified with placement scans, `npm run check`, `node --test` (161 tests), `node --check`, `git diff --check`, and short `npm start` startup smoke.
+
+## 2026-06-02 — Wave 03 summary
+
+- Built the visible Leena `.win` shell scaffold with sidebar/topbar navigation, shell screen state, bundled gradient wallpaper assets, and DOM-free shell navigation coverage.
+- Task `012` completed after three verified attempts: initial scaffold, exact icon/window-size reviewer fix, and active-call waveform placement fix.
+- Reviewer gate passed after confirming Electron `panel` mode now uses the 1060x712 app-shell size, the Integrations icon uses the exact grid path, and `#call-wave` is visible inside `#call-stage`.
+- Advisor gate passed with downstream warnings recorded: mount Wave 04 screen content into `#shell-content`, treat `panelController.isOpen()` as legacy state only, use `#app-shell[data-theme]` for shell theme changes, and keep bundled gradient PNGs available for future styling.
+- Independent gates passed: `npm run check`, `node --test` (161 tests), `node --check` for changed JS/test files, `git diff --check`, exact icon/canvas placement scans, and short `npm start` startup smoke.
+- GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
+- Opened PR #3 (`wave-03` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and remained pending with no actionable findings at merge-decision time; advisory status did not block the wave.

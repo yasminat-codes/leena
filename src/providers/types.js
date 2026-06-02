@@ -43,9 +43,20 @@ export const PROVIDER_CAPABILITIES = Object.freeze([CHAT, EMBEDDINGS, REALTIME, 
 /**
  * @typedef {{
  *   content: string;
+ *   role?: string;
  *   model: string;
+ *   finishReason?: string;
  *   usage?: ProviderUsage;
+ *   raw?: unknown;
  * }} ChatResponse
+ *
+ * @typedef {{
+ *   content: string;
+ *   delta: string;
+ *   model: string;
+ *   finishReason?: string;
+ *   usage?: ProviderUsage;
+ * }} ChatStreamChunk
  */
 
 /**

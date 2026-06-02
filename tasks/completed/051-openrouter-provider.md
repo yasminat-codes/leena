@@ -2,7 +2,7 @@
 id: "051"
 title: "OpenRouter provider implementation"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 16000
@@ -13,7 +13,9 @@ context_files:
   - src/providers/types.js
 skills: []
 tags: [phase-2, providers, openrouter]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T20:58:09Z"
+completed_at: "2026-06-02T21:17:18Z"
 created_at: "2026-06-01"
 ---
 
@@ -33,14 +35,14 @@ OpenRouter is the universal model gateway — one API key unlocks every major mo
 7. Register in provider index with factory `createOpenRouterProvider(config)` taking `{ apiKey, siteUrl?, siteName? }`. siteUrl defaults to `https://leena.app`, siteName to `Leena`.
 
 ## Acceptance Criteria
-- [ ] `OpenRouterProvider` extends `BaseProvider` with chat and embeddings capabilities
-- [ ] Chat requests include all 3 required headers (Authorization, HTTP-Referer, X-Title)
-- [ ] Streaming chat works identically to OpenAI format (SSE with `data: {...}` lines)
-- [ ] `getModels()` fetches and caches the model list for 1 hour
-- [ ] `testConnection()` returns structured ok/error result
-- [ ] `embed()` works with OpenRouter-supported embedding models
-- [ ] All methods use `withRetry` for transient failures
-- [ ] All methods throw `ProviderError` on auth failure (402 = insufficient credits, 401 = bad key)
+- [x] `OpenRouterProvider` extends `BaseProvider` with chat and embeddings capabilities
+- [x] Chat requests include all 3 required headers (Authorization, HTTP-Referer, X-Title)
+- [x] Streaming chat works identically to OpenAI format (SSE with `data: {...}` lines)
+- [x] `getModels()` fetches and caches the model list for 1 hour
+- [x] `testConnection()` returns structured ok/error result
+- [x] `embed()` works with OpenRouter-supported embedding models
+- [x] All methods use `withRetry` for transient failures
+- [x] All methods throw `ProviderError` on auth failure (402 = insufficient credits, 401 = bad key)
 
 ## Tests Required
 - `test/provider-openrouter.test.js`:
@@ -63,10 +65,18 @@ OpenRouter is the universal model gateway — one API key unlocks every major mo
 - **Chat consumers depend on:** `chat()` returning the same async iterator / message shape as OpenAI provider (unified interface)
 
 ## Handoff Notes
-_Filled after completion._
+- Added `src/providers/openrouter-provider.js` with `OpenRouterProvider` and `createOpenRouterProvider(config)`.
+- `src/providers/index.js` was intentionally not edited because Wave 07 orchestration reserved shared integration for another worker.
+- Chat uses `POST https://openrouter.ai/api/v1/chat/completions` with `Authorization`, `HTTP-Referer`, and `X-Title`; non-streaming responses normalize content/model/usage and streaming responses return an async iterator over unified SSE chunks shaped as `{ content, delta, model, finishReason?, usage? }`.
+- Embeddings use `POST https://openrouter.ai/api/v1/embeddings` with default model `qwen/qwen3-embedding-0.6b`.
+- Models use `GET https://openrouter.ai/api/v1/models`, filter text-output chat models, normalize pricing/context/capabilities, and cache in memory for 1 hour.
+- `testConnection()` returns `{ ok: true, modelCount }` or `{ ok: false, error, code }`; `getModelInfo(modelId)` returns pricing/context/capabilities or `null`.
+- Verification: `node --test test/provider-openrouter.test.js` passed 9/9; owned-file Biome check `npx biome check src/providers/openrouter-provider.js test/provider-openrouter.test.js` passed; full orchestrator `node --test` passed 266/266 after advisor-fix tests were added.
+- Advisor-fix focused gate: `node --test test/provider-openai.test.js test/provider-openrouter.test.js test/provider-ollama.test.js test/provider-registry.test.js` passed, 47/47.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Concurrent formatting drift in `test/provider-openai.test.js` was fixed before completion; final orchestrator `npm run check` passed.
+- Advisor flagged provider streaming-shape drift across OpenAI/OpenRouter/Ollama; OpenRouter already used the target shape, and tests now assert both `content` and `delta` strings.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

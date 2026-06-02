@@ -13,6 +13,10 @@ export class BaseProvider {
     return this.capabilities[capability] === true;
   }
 
+  canProvide(capability) {
+    return this.supports(capability);
+  }
+
   async chat(request = {}) {
     throwNotImplemented(this, CHAT, request.model);
   }

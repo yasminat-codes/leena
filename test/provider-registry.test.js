@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { BaseProvider } from "../src/providers/base-provider.js";
-import { getRegistry, ProviderRegistry } from "../src/providers/index.js";
+import { getRegistry, ProviderRegistry, registerDefaultProviders } from "../src/providers/index.js";
 import {
   loadOllamaBaseUrl,
   loadProviderApiKey,
@@ -275,4 +275,27 @@ test("provider settings store protected API keys and Ollama base URL", async () 
 test("getRegistry returns a singleton ProviderRegistry instance", () => {
   assert.equal(getRegistry(), getRegistry());
   assert.ok(getRegistry() instanceof ProviderRegistry);
+});
+
+test("default provider registration includes concrete Wave 07 providers", () => {
+  const registry = registerDefaultProviders(new ProviderRegistry());
+  const providerNames = registry.list().map((provider) => provider.name);
+
+  assert.deepEqual(providerNames, ["openai", "openrouter", "ollama"]);
+  assert.deepEqual(
+    registry.getForCapability(CHAT).map((provider) => provider.name),
+    ["openai", "openrouter", "ollama"],
+  );
+  assert.deepEqual(
+    registry.getForCapability(REALTIME).map((provider) => provider.name),
+    ["openai"],
+  );
+  assert.deepEqual(
+    registry.getForCapability(TTS).map((provider) => provider.name),
+    ["openai"],
+  );
+  assert.deepEqual(
+    registry.getForCapability(STT).map((provider) => provider.name),
+    ["openai"],
+  );
 });

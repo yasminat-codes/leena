@@ -5,7 +5,7 @@
 - Decomposed the Leena revamp plan into **72 atomic tasks across 16 waves**, split into two bands with a single approval gate.
 - **Band A (waves 1–6)** = Phase 0 visual shell; **wave-06 = the only human gate** (owner reviews `npm start` before functional work).
 - **Band B (waves 7–16)** = functional phases 1–7, fully autonomous.
-- **Provider abstraction** added (new vs. original plan): OpenAI **subscription primary / API key backup** for voice + chat; OpenRouter + Ollama as selectable providers; **Ollama models downloadable on demand** (any model from dropdown; embedding model independent) — tasks 052/053/054.
+- **Provider abstraction** added (new vs. original plan): OpenAI **API key primary / OAuth optional fallback** for voice + chat; OpenRouter + Ollama as selectable providers; **Ollama models downloadable on demand** (any model from dropdown; embedding model independent) — tasks 052/053/054.
 - **MCP client** (streamable HTTP + stdio) — Phase 5.
 - **Two `.dmg` builds:** MVP (046, guaranteed) + Final (111). Both verified **decoupled from wake (090-096) and MCP (080-087)** so the deliverable always ships.
 - **Advisor gate (Phase 3.5) fixes applied:** decoupled `.dmg` critical path from the wake-word Colab spike; settings screen (104) degrades gracefully instead of hard-depending on wake/MCP; `.env` preserved (wrote `.env.example`, not a clobber); `SETUP-UNBLOCK.md` written.
@@ -15,6 +15,28 @@
 
 ---
 _(wave execution entries appended below as the build runs)_
+
+## 2026-06-02 — Wave 07 started
+
+- Owner approved moving past the Wave 06 Phase 0 gate, with visual polish deferred to later iterations.
+- Cut clean branch/worktree `wave-07` from `origin/main` at `c2f1a05`; primary checkout remains dirty/diverged and was not touched.
+- Moved tasks `030`, `050`, `051`, `052`, `060`, `080`, `090`, and `102` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Ran the required initial `kencode-search` pass before code; curated MCP/provider references and several literal searches returned no tight hits, so workers must search narrower implementation anchors before editing their files.
+- Reserved shared provider registry file `src/providers/index.js` for orchestrator integration after provider workers finish, avoiding parallel writes by tasks `050`, `051`, and `052`.
+
+## 2026-06-02 — Wave 07 summary
+
+- Completed tasks `030`, `050`, `051`, `052`, `060`, `080`, `090`, and `102`.
+- Documented R-1 as UNTESTED and made OpenAI API key the primary auth path with OAuth as optional fallback.
+- Added concrete OpenAI, OpenRouter, and Ollama providers with mocked endpoint tests, retry/error wrapping, streaming support, model helpers, and default provider registry integration.
+- Added the `MemoryStore` interface, MCP client manager core with `@modelcontextprotocol/sdk@1.29.0`, and wake-engine interface/factory.
+- Replaced Tasks screen fixtures with live planner bridge loading, grouped calendar rendering, empty state, and shell refresh on Tasks tab activation.
+- Independent gates passed after integration: `npm run check`, focused provider/tasks/shell tests, `node --test` (266 tests after advisor-fix coverage), `node --check` on integration files, WAL JSON parse, and `git diff --check`.
+- Reviewer gate found blockers in Ollama registry visibility, MCP side-effect retry defaults, and stale task bookkeeping. Fixed with `BaseProvider.canProvide()`, Ollama dynamic-candidate routing, one-attempt default MCP `callTool()`, focused regression tests, and corrected completed-task criteria.
+- Advisor gate found provider-contract blockers. Fixed streaming chunk normalization across OpenAI/OpenRouter/Ollama, added OpenAI `getModels()` metadata, and removed unimplemented Ollama speech from advertised capabilities.
+- Final advisor pass found OpenRouter embedding model metadata missing from `getModels()`. Fixed model normalization so chat and embedding-capable models are both returned with per-model capability tags.
+- Final advisor gate passed with warnings only: Task 056 should lock terminal streaming metadata semantics; OpenRouter cached model arrays should avoid caller mutation; MCP renderer/user-config wiring must add allowlist and encrypted secret handling; existing `@nut-tree-fork/nut-js` dependency chain still reports 7 moderate `npm audit` advisories with no direct fix available.
+- Opened PR #8 (`wave-07` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "Review triggered" / "review in progress" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
 
 ## 2026-06-01 — Wave 01 completed
 

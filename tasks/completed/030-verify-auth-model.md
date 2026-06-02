@@ -2,7 +2,7 @@
 id: "030"
 title: "R-1 BLOCKER: Verify auth model for second accounts"
 type: research
-status: pending
+status: completed
 priority: critical
 complexity: S
 estimated_tokens: 5000
@@ -13,7 +13,9 @@ context_files:
   - plans/auth-matrix.md
 skills: []
 tags: [phase-1, auth, blocker, r-1]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T20:58:09Z"
+completed_at: "2026-06-02T21:17:18Z"
 created_at: "2026-06-01"
 ---
 
@@ -32,9 +34,9 @@ Every auth-related task (031, 037) depends on knowing whether OAuth is viable fo
 6. If FAILED or UNTESTED: update `plans/decision-log.md` with a new ADR noting API-key is now the primary auth path, OAuth is optional/deprecated.
 
 ## Acceptance Criteria
-- [ ] R-1 entry in `plans/risk-register.md` updated with test outcome and date
-- [ ] Decision on primary auth path documented (OAuth primary or API-key primary)
-- [ ] If FAILED/UNTESTED: ADR added to `plans/decision-log.md`
+- [x] R-1 entry in `plans/risk-register.md` updated with test outcome and date
+- [x] Decision on primary auth path documented (OAuth primary or API-key primary)
+- [x] If FAILED/UNTESTED: ADR added to `plans/decision-log.md`
 
 ## Tests Required
 - No automated tests — this is a manual verification task
@@ -50,10 +52,14 @@ Every auth-related task (031, 037) depends on knowing whether OAuth is viable fo
 - Task 037 (onboarding) reads the decision to know which auth step to present first
 
 ## Handoff Notes
-<!-- Filled after completion -->
+- Read `src/main.js` OAuth config: `clientId: app_EMoamEEZ73f0CkXaXp7hrann`, `authorizeUrl: https://auth.openai.com/oauth/authorize`, `tokenUrl: https://auth.openai.com/oauth/token`, `scope: openid profile email offline_access api.connectors.read api.connectors.invoke`, callback `http://localhost:1455/auth/callback`.
+- kencode-search was called before edits, per mandate. It found public Codex-style OAuth examples using the same authorize host/client shape, but that does not verify this app's second-account distribution behavior.
+- Could not complete manual second-account verification unattended because no second ChatGPT Plus account/session was available. Per task contract, documented R-1 as `UNTESTED` on 2026-06-02.
+- Auth path decision is `{primary: "api-key", fallback: "oauth"}`.
+- Updated `plans/risk-register.md` R-1, added ADR-9 to `plans/decision-log.md`, and updated `plans/auth-matrix.md` so Task 031 implements API-key auth as primary and Task 037 presents API-key onboarding first.
 
 ## Errors Encountered
-<!-- Filled if errors occur -->
+- Manual OAuth verification could not be performed unattended without a second ChatGPT Plus account. This is recorded as `UNTESTED`, not `VERIFIED`.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

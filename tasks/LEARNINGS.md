@@ -29,7 +29,7 @@
 - **Never break current functionality.** The app already works as "Brah." Run the existing test suite (`node --test`) before and after every task. A passing-before / failing-after test = regression = the task is not done.
 - **Simplest thing that works.** No over-engineering. If a simpler approach yields the same result, take it. Complexity is only acceptable when genuinely required. But it must *work* — never compromise correctness for brevity or vice-versa.
 - **Match existing conventions.** Read neighboring files, `CLAUDE.md`, `biome.json`. Comment density, naming, and idiom must match surrounding code.
-- **Provider primacy.** OpenAI subscription (OAuth) is the primary voice + chat path; the OpenAI API key is the backup. OpenRouter and Ollama are additional selectable providers. Ollama models are user-downloadable on demand.
+- **Provider primacy.** OpenAI API key is the primary voice + chat path for distribution; OAuth/subscription is an optional fallback only. OpenRouter and Ollama are additional selectable providers. Ollama models are user-downloadable on demand.
 - **`node:sqlite` only** for storage (no better-sqlite3). Use the existing `database.js` patterns and `withTempDir` + `closeDatabase` test helpers.
 - **Native addons stay in `asarUnpack`** (`@nut-tree-fork/**`, onnxruntime native bits).
 - **Tests are mandatory, not optional.** No task is complete without the tests named in its `## Tests Required`, and they must pass. E2E coverage for any user-facing flow.
@@ -49,6 +49,43 @@
 ## Wave Log
 
 > Append below. Newest wave at the bottom. Never delete entries.
+
+### Fix — Wave 07 — integration — Provider registry and Tasks live-refresh completion
+- **Symptom:** Individual workers completed their slices, but the provider registry remained unintegrated and the Tasks worker left tab-refresh wiring as a follow-up because `shell.js` was outside its ownership.
+- **Root cause:** Wave 07 intentionally serialized shared files (`src/providers/index.js`, shell integration tests) to avoid provider-worker conflicts, so acceptance criteria depending on shared integration could not be satisfied inside the isolated workers.
+- **Fix:** Orchestrator integration added `registerDefaultProviders()` coverage for OpenAI/OpenRouter/Ollama, wired `refreshTasksScreen()` from `src/renderer/shell.js`, removed production Tasks fixture exports, updated renderer tests, and re-ran focused plus full gates.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 07 — reviewer — Dynamic provider candidates and MCP side-effect retries
+- **Symptom:** Reviewer found Ollama could be registered yet excluded from synchronous `getForCapability("chat")` before a health/model probe, and MCP `callTool()` retried by default even though MCP tools can perform side effects.
+- **Root cause:** Provider routing used `supports()` only, which is a last-known-health flag for dynamic providers, and MCP retry defaults treated tool invocation like connection setup.
+- **Fix:** Added `BaseProvider.canProvide()` and an Ollama override so registry lookups can include dynamic-capability candidates without changing the health-derived `supports()` summary; changed MCP `callTool` default retry attempts to 1 with explicit opt-in retry coverage for idempotent calls.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 07 — advisor — Provider contract unification
+- **Symptom:** Advisor blocked Wave 07 because provider chat streaming shapes diverged, OpenAI lacked the downstream `getModels()` contract, and Ollama advertised TTS/STT even though speech execution is not implemented.
+- **Root cause:** Provider workers implemented endpoint-specific behavior without one final pass over the downstream selector/router contracts.
+- **Fix:** Normalized streaming chunks to `{ content, delta, model, finishReason?, usage? }`, added tagged OpenAI model metadata via `getModels()`, and kept Ollama speech out of `canProvide()`/`supports()`/model capabilities until executable support exists.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 07 — advisor — OpenRouter embedding model metadata
+- **Symptom:** Advisor blocked Wave 07 because OpenRouter advertised embeddings but `getModels()` filtered out embedding-only models, leaving downstream embedding selectors empty.
+- **Root cause:** The OpenRouter model catalog normalization filtered for chat-capable text-output models only.
+- **Fix:** `getModels()` now returns both chat and embedding-capable models with per-model capability tags; embedding-only models are marked `chat: false, embeddings: true`. Updated the OpenRouter model-list test and aligned stale auth-governance prose with ADR-9.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 07 — summary
+- Completed Band B Wave 07 after owner approval: auth decision documentation, OpenAI/OpenRouter/Ollama providers, memory/MCP/wake interfaces, and Tasks live-data wiring.
+- Provider default registration is now centralized in `src/providers/index.js`; future provider work should integrate shared registry changes after concrete provider workers finish, not during parallel worker edits.
+- Provider stream consumers can depend on unified streaming chunks across OpenAI, OpenRouter, and Ollama; provider model selectors can call `getModels()` on all three concrete providers.
+- Advisor warnings to carry forward: Task 056 should define terminal stream metadata semantics, OpenRouter model caches should not be mutated by consumers, and MCP user-config wiring must add allowlist/encrypted secret handling before renderer exposure.
+- Tasks live-data rendering now treats synchronous render as an empty safe state and refreshes asynchronously through the existing `window.brah.getPlannerTasks()` / `getCalendarItems()` bridge on Tasks navigation.
+- Independent gates passed: `npm run check`, focused provider/tasks/shell tests, full `node --test` (266 tests after advisor-fix coverage), `node --check` on integration files, WAL JSON parse, and `git diff --check`.
+- CodeRabbit advisory review was requested on PR #8. It posted generated "Review triggered" / "review in progress" comments and a pending advisory status at merge-decision time, with no actionable findings available; this did not block merge.
 
 ### Fix — Wave 06 — 021 — Desktop visual scale repair after owner rejection
 - **Symptom:** Owner rejected Phase 0 approval: fonts were too big, the design was not refined, and the UX did not feel like a mature desktop app.

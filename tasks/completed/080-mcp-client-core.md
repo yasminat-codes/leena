@@ -2,7 +2,7 @@
 id: "080"
 title: "MCP client manager core"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: L
 estimated_tokens: 22000
@@ -13,7 +13,9 @@ context_files:
   - plans/data-model.md
 skills: []
 tags: [phase-5, mcp, transport]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T20:58:09Z"
+completed_at: "2026-06-02T21:17:18Z"
 created_at: "2026-06-01"
 ---
 
@@ -33,13 +35,13 @@ MCP is the universal tool integration layer — it lets Leena connect to any MCP
 7. Implement `getStatus()` returning map of serverId → `{ name, transport, connected, toolCount }`. Add `disconnectAll()` for app shutdown cleanup.
 
 ## Acceptance Criteria
-- [ ] `MCPClientManager` connects to a streamable HTTP MCP server and lists its tools
-- [ ] `MCPClientManager` connects to a stdio MCP server (spawns process) and lists its tools
-- [ ] `callTool` successfully invokes a tool on a connected server and returns results
-- [ ] `disconnect` cleanly closes connection and kills stdio child process
-- [ ] Connection failures throw `MCPError` (from task 000) with descriptive message
-- [ ] Retry logic applies to `connect` and `callTool` (from task 001)
-- [ ] `disconnectAll` cleans up all connections (called on app quit)
+- [x] `MCPClientManager` connects to a streamable HTTP MCP server and lists its tools
+- [x] `MCPClientManager` connects to a stdio MCP server (spawns process) and lists its tools
+- [x] `callTool` successfully invokes a tool on a connected server and returns results
+- [x] `disconnect` cleanly closes connection and kills stdio child process
+- [x] Connection failures throw `MCPError` (from task 000) with descriptive message
+- [x] Retry logic applies to `connect`; `callTool` supports explicit opt-in retry but defaults to one attempt to avoid duplicating side-effecting MCP tools
+- [x] `disconnectAll` cleans up all connections (called on app quit)
 
 ## Tests Required
 - `test/mcp-client.test.js` — mock MCP server using SDK's test utilities; test connect, listTools, callTool, disconnect for both transports; test retry on transient failure; test MCPError on permanent failure; test disconnectAll cleanup
@@ -56,10 +58,22 @@ MCP is the universal tool integration layer — it lets Leena connect to any MCP
 - **Task 086** depends on `connect()` for auto-connect on app launch
 
 ## Handoff Notes
-[Filled after completion]
+- 2026-06-02T21:10:43Z: Implemented `MCPClientManager` in `src/mcp/client-manager.js`.
+- Added `@modelcontextprotocol/sdk` dependency at `^1.29.0`; local installed package reports `1.29.0`.
+- Manager supports `http` via `StreamableHTTPClientTransport(new URL(url), options)` and `stdio` via `StdioClientTransport({ command, args })`.
+- Connections are stored by `serverId`; existing connections are disconnected before replacement.
+- `connect()` uses `withRetry` with 3 max attempts and wraps failures in `MCPError`.
+- `listTools()` normalizes SDK `tools` to `{ name, description, inputSchema }` and updates status `toolCount`.
+- `callTool()` invokes `client.callTool({ name, arguments })` and returns the response `content` array. It defaults to one attempt because MCP tools may have side effects; callers can opt into retry through `retryOptions.callTool` for known-idempotent tools.
+- `disconnect()` closes the client and calls stdio transport close for child-process cleanup; `disconnectAll()` attempts every active connection.
+- Added `test/mcp-client.test.js` with deterministic SDK-class mocks for HTTP/stdio lifecycle, list/call behavior, retry success, permanent `MCPError` failures, disconnected errors, and `disconnectAll` cleanup.
+- Focused verification passed: `node --check src/mcp/client-manager.js && node --check test/mcp-client.test.js`; `node --test test/mcp-client.test.js` passed.
+- Required full verification passed after integration: `npm run check` passed; `node --test` passed 266/266 after advisor-fix tests were added.
 
 ## Errors Encountered
-[Filled if errors occur]
+- npm install reported 7 moderate audit findings after adding `@modelcontextprotocol/sdk`; not changed because dependency-audit remediation is outside task 080.
+- Reviewer found default `callTool` retry could duplicate side effects. Fixed by changing the default to one attempt and adding explicit opt-in retry coverage.
+- Accidentally created the new manager/test files in the primary `/Users/yasmineseidu/leena` checkout first; immediately deleted those untracked files and recreated them under `/Users/yasmineseidu/leena-wave-07`. Primary checkout now has no tracked/untracked changes for those two paths.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

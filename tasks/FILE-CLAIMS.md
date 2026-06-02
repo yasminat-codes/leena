@@ -21,6 +21,12 @@
 
 ## Claim History
 
+- 2026-06-02T22:00:50Z — Released Wave 07 PR/CodeRabbit advisory bookkeeping claims after recording PR #8 advisory status and re-running `npm run check`, `node --test`, WAL parse, and diff whitespace validation.
+- 2026-06-02T22:16:00Z — Released Wave 07 advisor-fix-2 claims after OpenRouter `getModels()` returned chat and embedding-capable models with per-model capability tags and full gates passed.
+- 2026-06-02T22:03:00Z — Released Wave 07 advisor-fix claims after provider contract normalization passed focused provider tests, full `node --test`, Biome, WAL parse, and diff whitespace validation.
+- 2026-06-02T21:43:00Z — Released Wave 07 reviewer-fix claims after resolving the second reviewer blocker: Ollama dynamic provider candidates, MCP `callTool()` retry safety, stale completion notes, and active-claim cleanup all verified.
+- 2026-06-02T21:17:18Z — Released Wave 07 claims for tasks `030`, `050`, `051`, `052`, `060`, `080`, `090`, and `102`; orchestrator integration also touched `src/providers/index.js`, `src/renderer/shell.js`, `test/provider-registry.test.js`, and `test/tasks-screen.test.js` before full gates passed.
+- 2026-06-02T20:58:09Z — Opened Wave 07 claims for tasks `030`, `050`, `051`, `052`, `060`, `080`, `090`, and `102`; `src/providers/index.js` reserved for orchestrator integration after provider workers finish.
 - 2026-06-02T15:12:56Z — Released Wave 06 reviewer privacy-sweep claims for task `021`: sanitized remaining task bookkeeping paths in LEARNINGS/WAL, widened scans, and passed required gates.
 - 2026-06-02T15:07:17Z — Released Wave 06 CodeRabbit hygiene claims for task `021`: modernized visually-hidden CSS helpers, sanitized local task-log paths, added LEARNINGS/WAL records, and passed required gates.
 - 2026-06-02T14:35:27Z — Released Wave 06 off-white dominance claims for task `021`: made Workspace paper/off-white dominant, constrained teal to accents, refreshed screenshots, updated token coverage, and recorded bookkeeping.

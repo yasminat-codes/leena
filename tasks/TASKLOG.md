@@ -37,4 +37,6 @@ _(wave execution entries appended below as the build runs)_
 - Completed task `011`: bundled local brand fonts, removed Google Fonts, tightened CSP, and added font bundle tests.
 - Completed task `019`: standalone orb and waveform DOM factories plus tests, reusing the existing Leena CSS primitives.
 - Reviewer found two blockers: legacy `styles.css` still referenced removed Google font families, and provider API-key helpers persisted raw secrets in SQLite. Reopened tasks `011` and `002` for focused fixes.
+- Fixed the task `002` reviewer blocker by requiring protected provider API-key payloads and adding SQLite raw-secret regression coverage.
+- Fixed the task `011` reviewer blocker by replacing legacy `Inter`/`Geist` CSS references with bundled Leena font tokens and adding a runtime CSS scan.
 - CodeRabbit advisory review was requested on PR #1. At merge decision time it had posted only the generated "review in progress" comment with no actionable findings; advisory status did not block the wave.

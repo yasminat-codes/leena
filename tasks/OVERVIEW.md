@@ -9,8 +9,8 @@
 | State | Count |
 |-------|-------|
 | Pending | 66 |
-| In-Progress | 2 |
-| Completed | 4 |
+| In-Progress | 0 |
+| Completed | 6 |
 | Blocked | 0 |
 
 ## Wave Map

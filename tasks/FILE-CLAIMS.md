@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-02T13:35:25Z — Released Wave 06 polish-followup claims for task `021`: swapped display font to Gellix, separated command input from orb well, refreshed polish screenshots, updated tests, and recorded bookkeeping.
 - 2026-06-02T12:36:46Z — Released Wave 06 taste-repair claims for task `021`: installed GitHub taste skill, rebuilt Home command surface, slimmed shell chrome, refined Command Center material, fixed Settings identity grid, refreshed taste-repair screenshots, and updated tests/bookkeeping.
 - 2026-06-02T12:41:00Z — Released Wave 06 visual-repair claims for task `021`: desktop shell scale, Command Center dimensions, Integrations header copy, test expectations, refreshed approval screenshots, and task bookkeeping files.
 - 2026-06-02T13:10:15Z — Released Wave 06 reviewer-fix claims for task `021`: fixed Integrations header clipping, added CSS regression coverage, refreshed `wave-06-taste-repair-integrations.png`, and updated task bookkeeping.

@@ -38,9 +38,15 @@ test("renderHome returns mountable home screen HTML using design-system classes"
   assert.match(html, /class="lx-display">Good morning, Yasmine<\/h1>/);
   assert.match(html, /class="home-status"/);
   assert.match(html, />\s*READY\s*<\/span>/);
+  assert.doesNotMatch(html, /Voice and text ready/);
+  assert.match(html, /class="home-command__orb-well"/);
   assert.match(html, /class="orb home-command__orb"/);
   assert.match(html, /class="home-command__input"/);
   assert.match(html, /class="home-command__input-text">Ask Leena anything\.\.\.<\/span>/);
+  assert.ok(
+    html.indexOf('class="home-command__input"') < html.indexOf('class="home-command__orb-well"'),
+    "command input should live in the text column before the orb well",
+  );
   assert.doesNotMatch(html, /class="home-grid"/);
   assert.match(html, /Recent actions/);
   assert.match(html, /Up next/);

@@ -139,3 +139,10 @@ _(wave execution entries appended below as the build runs)_
 - Refreshed taste-repair artifacts: `tasks/artifacts/wave-06-taste-repair-home.png`, `activity.png`, `tasks.png`, `integrations.png`, `settings.png`, and `command-center-demo.png`.
 - Gates passed after follow-up: `npm run check`, focused home/token/shell/command-center tests, full `node --test` (202 tests), `node --check`, `git diff --check`, Electron/Playwright five-screen sweep, and final `npm test` (202 tests).
 - Reviewer gate found one blocker after follow-up: `tasks/artifacts/wave-06-taste-repair-integrations.png` clipped the `6 connected` stat. Fixed the Integrations header min-height/overflow in `src/renderer/leena.css`, added CSS regression coverage in `test/integrations-screen.test.js`, refreshed the Integrations artifact, and re-ran gates: `npm run check`, focused integration/CSS tests, full `node --test` (203 tests), `node --check`, and `git diff --check`.
+
+## 2026-06-02 — Wave 06 polish follow-up
+
+- Owner said the taste repair looked better but still needed more polish, especially the font and the orb sitting too close to the chat input.
+- Re-ran the installed GitHub taste skill and the required `kencode-search` reference pass before code.
+- Changed the display font token to Gellix, moved the Home prompt into the left command column, separated the orb into a dedicated right-side well, removed the extra top-right readiness label, and refreshed five polish artifacts.
+- Gates passed after polish: `npm run check`, focused home/token/shell tests, five-screen screenshot sweep, full `node --test` (203 tests), `npm test` (203 tests), `git diff --check`, and `node --check src/renderer/screens/home.js`.

@@ -160,7 +160,7 @@
   --legacy-nebula-4: #001b33;
 
   /* Typography */
-  --font-display: "UlmGrotesk", system-ui, sans-serif;
+  --font-display: "Gellix", system-ui, sans-serif;
   --font-body: "Gellix", system-ui, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, monospace;
 
@@ -908,9 +908,9 @@
 
 .lx-display {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 25px;
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1.04;
   letter-spacing: 0;
 }
 
@@ -996,38 +996,34 @@
 .home-command {
   position: relative;
   grid-column: 1 / -1;
-  padding: 6px;
+  padding: 0;
   border-radius: var(--r-panel);
-  background:
-    linear-gradient(135deg, var(--glass-hi), transparent 38%),
-    color-mix(in srgb, var(--glass) 76%, transparent);
-  box-shadow:
-    0 0 0 1px var(--glass-bd),
-    0 24px 58px rgba(20, 4, 80, 0.18),
-    inset 0 1px 0 var(--glass-hi);
+  background: transparent;
+  box-shadow: none;
 }
 
 .home-command__surface {
   display: grid;
-  min-height: 286px;
-  align-content: space-between;
+  min-height: 274px;
+  align-content: start;
   gap: 18px;
-  padding: 22px;
-  border-radius: var(--r-card);
+  padding: 22px 24px 24px;
+  border-radius: var(--r-panel);
   background:
     radial-gradient(
-      78% 95% at 78% 18%,
-      color-mix(in srgb, var(--grad-1) 20%, transparent),
-      transparent 62%
+      72% 98% at 88% 50%,
+      color-mix(in srgb, var(--grad-1) 18%, transparent),
+      transparent 64%
     ),
     radial-gradient(
       58% 82% at 8% 104%,
-      color-mix(in srgb, var(--grad-hi) 18%, transparent),
+      color-mix(in srgb, var(--grad-hi) 10%, transparent),
       transparent 66%
     ),
     color-mix(in srgb, var(--surface) 86%, transparent);
   box-shadow:
-    0 0 0 1px var(--border-2),
+    0 0 0 1px var(--glass-bd),
+    0 18px 50px rgba(20, 4, 80, 0.14),
     inset 0 1px 0 var(--glass-hi);
 }
 
@@ -1035,7 +1031,7 @@
 .home-context__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--gap);
   min-width: 0;
 }
@@ -1063,15 +1059,16 @@
 
 .home-command__center {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 160px;
-  align-items: center;
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) 214px;
+  align-items: stretch;
+  gap: 30px;
 }
 
 .home-command__copy {
   display: grid;
-  max-width: 520px;
-  gap: 10px;
+  max-width: 620px;
+  align-content: center;
+  gap: 11px;
 }
 
 .home-command__copy > *,
@@ -1084,13 +1081,29 @@
 }
 
 .home-command__orb {
-  width: 136px;
-  height: 136px;
-  justify-self: end;
+  width: 118px;
+  height: 118px;
 }
 
 .home-command__orb .orb__ring {
-  inset: -18px;
+  inset: -16px;
+}
+
+.home-command__orb-well {
+  display: grid;
+  min-height: 178px;
+  place-items: center;
+  border-radius: var(--r-card);
+  background:
+    radial-gradient(
+      72% 82% at 50% 44%,
+      color-mix(in srgb, var(--grad-1) 18%, transparent),
+      transparent 64%
+    ),
+    color-mix(in srgb, var(--glass) 38%, transparent);
+  box-shadow:
+    inset 1px 0 0 var(--border-2),
+    inset 0 1px 0 var(--glass-hi);
 }
 
 .home-command__input {
@@ -1098,14 +1111,16 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 58px;
-  padding: 0 14px;
+  min-height: 60px;
+  margin-top: 16px;
+  padding: 0 16px;
   border: 0;
-  border-radius: var(--r-panel);
+  border-radius: var(--r-card);
   color: var(--text);
-  background: color-mix(in srgb, var(--glass) 92%, transparent);
+  background: color-mix(in srgb, var(--glass) 66%, transparent);
   box-shadow:
     0 0 0 1px var(--glass-bd),
+    0 12px 28px rgba(20, 4, 80, 0.1),
     inset 0 1px 0 var(--glass-hi);
   cursor: pointer;
   font-family: var(--font-body);
@@ -1117,7 +1132,7 @@
 }
 
 .home-command__input:hover {
-  background: color-mix(in srgb, var(--glass) 72%, var(--accent-soft));
+  background: color-mix(in srgb, var(--glass) 58%, var(--accent-soft));
   transform: translateY(-1px);
 }
 

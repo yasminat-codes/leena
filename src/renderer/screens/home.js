@@ -86,24 +86,24 @@ export function renderHome() {
               <span class="home-status__dot" aria-hidden="true"></span>
               ${escapeHtml(MOCK_HOME_DATA.status)}
             </span>
-            <span class="lx-mono text-faint">Voice and text ready</span>
           </div>
 
           <div class="home-command__center">
             <div class="home-command__copy">
               <h1 id="home-greeting" class="lx-display">${escapeHtml(MOCK_HOME_DATA.greeting)}</h1>
               <p class="lx-body text-dim">Start with voice, type a command, or let Leena prepare the next move.</p>
+              <button class="home-command__input" type="button">
+                <span class="home-command__input-mark" aria-hidden="true"></span>
+                <span class="home-command__input-text">${escapeHtml(MOCK_HOME_DATA.askPlaceholder)}</span>
+                <span class="home-command__input-hint">Return</span>
+              </button>
             </div>
-            <div class="orb home-command__orb" aria-hidden="true">
-              <span class="orb__ring" aria-hidden="true"></span>
+            <div class="home-command__orb-well" aria-hidden="true">
+              <div class="orb home-command__orb">
+                <span class="orb__ring" aria-hidden="true"></span>
+              </div>
             </div>
           </div>
-
-          <button class="home-command__input" type="button">
-            <span class="home-command__input-mark" aria-hidden="true"></span>
-            <span class="home-command__input-text">${escapeHtml(MOCK_HOME_DATA.askPlaceholder)}</span>
-            <span class="home-command__input-hint">Return</span>
-          </button>
         </div>
       </section>
 

@@ -122,7 +122,7 @@ test("leena.css defines all root design tokens", () => {
   assertIncludesAll(
     rootBody,
     [
-      '--font-display: "UlmGrotesk", system-ui, sans-serif',
+      '--font-display: "Gellix", system-ui, sans-serif',
       '--font-body: "Gellix", system-ui, sans-serif',
       '--font-mono: "Roboto Mono", ui-monospace, monospace',
       "--dur-base: 200ms",
@@ -216,7 +216,7 @@ test("component class bodies include the expected design-system properties", () 
 
 test("type scale classes are present with their font contracts", () => {
   const expected = new Map([
-    [".lx-display", ["font-family: var(--font-display)", "font-size: 24px"]],
+    [".lx-display", ["font-family: var(--font-display)", "font-size: 25px"]],
     [".lx-h1", ["font-family: var(--font-display)", "font-size: 22px"]],
     [".lx-h2", ["font-family: var(--font-display)", "font-size: 16.5px"]],
     [".lx-h3", ["font-family: var(--font-display)", "font-size: 13.5px"]],

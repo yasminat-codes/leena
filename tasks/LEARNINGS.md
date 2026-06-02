@@ -38,6 +38,7 @@
 - **Verify content, not just structure.** File counts, section-header presence, and dependency-graph parity all pass even when section bodies are placeholder/hollow. Body-level verification (non-trivial content per section, numbered Steps, named test paths, atomicity cap) is mandatory for any generated artifact — a `wc -l` + `grep` pass is not enough.
 - **Approval-gate visuals must pass owner taste, not just automated audits.** For Leena's desktop shell, avoid presentation-scale type and saturated AI-gradient wallpaper: default to desktop-app density, 11-14px operational text, restrained 16-22px headings, tight rows, smaller HUDs, and subdued work-surface backgrounds.
 - **Refine composition before ornament.** For Leena approval screens, the assistant identity must live in one intentional command surface. Avoid scattering the greeting, orb, chat affordance, and command center across generic cards; use whitespace, quiet dividers, and nested hardware-like surfaces before adding decoration.
+- **Keep orb and prompt in separate visual lanes.** On approval surfaces, the orb may be adjacent or ambient, but it must not sit directly above or over the command input. Use a dedicated orb well or integrated control composition so the prompt remains the primary action.
 
 ---
 
@@ -64,6 +65,13 @@
 - **Root cause:** The compact glass header reused `.panel-glass` hidden overflow with only token padding, which left the three-line header without a stable visual height after the shell density repair.
 - **Fix:** Made `.integrations-header` a non-clipping centered flex surface with a stable `min-height`, added copy padding in `src/renderer/leena.css`, added CSS regression coverage in `test/integrations-screen.test.js`, and refreshed `tasks/artifacts/wave-06-taste-repair-integrations.png`.
 - **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 06 — 021 — Orb/prompt lane and display font polish
+- **Symptom:** Owner said the repair looked better but still needed much more polish, calling out the font and the top orb sitting on the chat window.
+- **Root cause:** The Home command surface still placed the prompt below the full command stage, making the orb read as perched over the input, and the UlmGrotesk display token kept the greeting too rounded and toy-like for a premium desktop app.
+- **Fix:** Changed the display token to Gellix in `src/renderer/leena.css`, moved the command input into the left copy column in `src/renderer/screens/home.js`, added a dedicated right-side orb well, removed the cheap top-right readiness label, updated home/CSS tests, and refreshed five screenshot artifacts under `tasks/artifacts/wave-06-polish-followup-*.png`.
+- **Rule added?:** yes — Keep orb and prompt in separate visual lanes.
 - **WAL ref:** tasks/.wal/wal.jsonl
 
 ### Fix — Wave 06 — 021 — Renderer design-token audit cleanup

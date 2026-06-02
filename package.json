@@ -29,6 +29,7 @@
     ],
     "files": [
       "src/**/*",
+      "src/renderer/assets/**",
       "package.json"
     ],
     "mac": {

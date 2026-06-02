@@ -55,3 +55,27 @@ _(wave execution entries appended below as the build runs)_
 - Independent gates passed: `npm run check`, `node --test` (159 tests), `node --check` for changed JS files, and `git diff --check`.
 - Advisor gate passed with warnings for downstream provider wiring: safeStorage codec hookup, main-process provider networking unless CSP expands, and canonical provider names.
 - CodeRabbit advisory review was requested on PR #2. It was rate-limited before review start and produced no actionable findings at merge decision time.
+
+## 2026-06-02 — Wave 03 started
+
+- Cut clean branch/worktree `wave-03` from `origin/main` after PR #2 (`Wave 02 utilities and visual primitives`) merged.
+- Moved task `012` to `in-progress` with attempt 1, active claims, and a pre-run WAL entry.
+- Clean worktree does not include the untracked `design-system/` reference directory; Wave 03 uses `/Users/yasmineseidu/leena/design-system/Leena Design System.md` and its gradient PNGs as external source references while committing only runtime outputs.
+- Completed task `012`: visible Leena window shell, sidebar/topbar navigation, shell state module, bundled gradient wallpapers, package asset include, and DOM-free shell navigation tests.
+- Parent verification caught approximate shell icon paths; re-dispatched task `012` owner for a focused exact-path fix, then re-ran all gates successfully.
+- Independent task gates passed: `npm run check`, `node --test` (161 tests), `node --check` on renderer JS/test files, exact icon path scan, `git diff --check`, and short `npm start` startup smoke.
+- Reviewer gate blocked Wave 03 on Electron still locking `panel` mode to the old 440x600 window and on the Integrations grid icon still drifting from the exact design-system path. Reopened task `012` for focused reviewer fixes.
+- Fixed the reviewer blockers by resizing Electron `panel` mode to 1060x712 in `src/main.js` and replacing the Integrations icon with the exact design-system grid rects.
+- Re-verified after the reviewer fix with `npm run check`, `node --test` (161 tests), `node --check` on changed JS/test files, exact grid icon scan, `git diff --check`, and short `npm start` startup smoke.
+- Reviewer re-review found an active-call regression: `#call-wave` was inside the hidden `legacy-controls` container, so the waveform canvas could not render during calls. Reopened task `012` for a focused HTML placement fix.
+- Fixed the active-call waveform regression by moving the single `#call-wave` canvas into visible `#call-stage`; re-verified with placement scans, `npm run check`, `node --test` (161 tests), `node --check`, `git diff --check`, and short `npm start` startup smoke.
+
+## 2026-06-02 — Wave 03 summary
+
+- Built the visible Leena `.win` shell scaffold with sidebar/topbar navigation, shell screen state, bundled gradient wallpaper assets, and DOM-free shell navigation coverage.
+- Task `012` completed after three verified attempts: initial scaffold, exact icon/window-size reviewer fix, and active-call waveform placement fix.
+- Reviewer gate passed after confirming Electron `panel` mode now uses the 1060x712 app-shell size, the Integrations icon uses the exact grid path, and `#call-wave` is visible inside `#call-stage`.
+- Advisor gate passed with downstream warnings recorded: mount Wave 04 screen content into `#shell-content`, treat `panelController.isOpen()` as legacy state only, use `#app-shell[data-theme]` for shell theme changes, and keep bundled gradient PNGs available for future styling.
+- Independent gates passed: `npm run check`, `node --test` (161 tests), `node --check` for changed JS/test files, `git diff --check`, exact icon/canvas placement scans, and short `npm start` startup smoke.
+- GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
+- Opened PR #3 (`wave-03` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and remained pending with no actionable findings at merge-decision time; advisory status did not block the wave.

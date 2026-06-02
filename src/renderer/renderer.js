@@ -12,6 +12,7 @@ import {
   isActiveResponseConflictError,
 } from "./realtime-response-queue.js";
 import { createRealtimeToolHandler } from "./realtime-tool-handler.js";
+import { initShell } from "./shell.js";
 import { createWaitingSound } from "./waiting-sound.js";
 
 const appShellElement = document.querySelector("#app-shell");
@@ -138,7 +139,8 @@ function hideToolActivity(name) {
   toolActivityElement.hidden = true;
   appShellElement.dataset.toolActivity = "idle";
   if (!isCallActive && !panelController.isOpen()) {
-    void panelController.open();
+    appShellElement.dataset.panel = "open";
+    void setWindowMode("panel");
   }
 }
 
@@ -689,7 +691,7 @@ async function stopCall() {
   hideToolActivity();
   remoteAudioElement.srcObject = null;
   setCallActive(false, { inactiveWindowMode: "panel" });
-  await panelController.open();
+  appShellElement.dataset.panel = "open";
   setMode("idle");
   setStatus(isOpenAIConnected ? "Ready" : "Connect OpenAI");
   // Re-prime a secret so the next call starts without the client_secret wait.
@@ -1288,7 +1290,8 @@ const panelController = createPanelController({
     appShellElement.dataset.panel = mode === "panel" ? "open" : "closed";
   },
 });
-panelController.init({ openByDefault: true });
+panelController.init({ openByDefault: false });
+initShell();
 
 initClickSound();
 

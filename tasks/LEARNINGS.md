@@ -42,6 +42,35 @@
 
 > Append below. Newest wave at the bottom. Never delete entries.
 
+### Fix — Wave 03 — 012 — Exact shell icon paths
+- **Symptom:** Parent verification found the first app-shell implementation used approximate Tasks, Settings, and bell SVG paths even though task 012 required inline design-system §3 icons.
+- **Root cause:** The worker followed the shell layout contract but substituted visually similar icon paths instead of copying the exact source path data.
+- **Fix:** Updated `src/renderer/index.html` so Tasks, Settings, and bell use the exact design-system paths, then re-ran `npm run check`, `node --test`, `node --check`, exact path scan, and `git diff --check`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 03 — 012 — App shell window sizing
+- **Symptom:** Reviewer found the 1060x712 `.win` shell was still clamped inside Electron's old 440x600 locked `panel` mode, and the Integrations grid icon still used approximate rect data.
+- **Root cause:** The renderer shell was updated without updating `src/main.js` `windowModes.panel`, and the first exact-icon correction missed the `grid` icon.
+- **Fix:** Changed `src/main.js` `windowModes.panel` to 1060x712 so BrowserWindow creation, min/max constraints, mode switching, and resize guard use the app-shell size; updated `src/renderer/index.html` to use the exact design-system grid rects.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 03 — 012 — Active-call waveform visibility
+- **Symptom:** Reviewer re-review found `#call-wave` was inside the hidden `.legacy-controls` container, so active-call waveform drawing would not render even though `renderer.js` still writes to that canvas.
+- **Root cause:** The shell preserved runtime-required legacy IDs by grouping several controls in a hidden container, but `#call-wave` is not merely a hidden compatibility control; existing `styles.css` expects it in the visible call HUD.
+- **Fix:** Moved the single `#call-wave.call-wave` canvas into visible `#call-stage`, before `#call-end`, while leaving hidden compatibility controls that are not rendered in the active-call HUD.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 03 — summary
+- Built the visible Leena app shell scaffold, sidebar/topbar navigation, shell state module, bundled gradient wallpapers, and DOM-free shell navigation tests.
+- Shell layout tasks must update both renderer markup/CSS and Electron window mode constraints; otherwise a correct 1060x712 `.win` can still be clipped by the old 440x600 `panel` BrowserWindow.
+- Existing realtime/call DOM IDs are runtime contracts, not disposable compatibility markup. Hidden legacy controls are acceptable only for elements that are not visible runtime surfaces; `#call-wave` must remain in the visible call stage.
+- Independent gates passed: `npm run check`, `node --test` (161 tests), `node --check` for changed JS/test files, `git diff --check`, exact icon/canvas placement scans, and short `npm start` startup smoke.
+- Advisor gate passed with downstream notes: Wave 04 should mount screen content into `#shell-content`, `panelController.isOpen()` no longer means the panel is visually open, theme switching should use `#app-shell[data-theme]`, and the bundled gradient PNGs are available even though current CSS uses token gradients.
+- CodeRabbit advisory review was requested on PR #3. It posted only generated "review in progress" / "Review triggered" comments and a pending status at merge-decision time, with no actionable findings available.
+
 ### Wave 02 — pre-run file-claim note
 - **Symptom:** Wave 02 decomposition lists tasks `011` and `019` as parallel, but both may require `src/renderer/leena.css`.
 - **Root cause:** Font-face bundling and orb/waveform visual states share the central design-system stylesheet.

@@ -120,3 +120,12 @@ _(wave execution entries appended below as the build runs)_
 - Advisor gate passed with no blockers. Warning recorded: keep the Electron/Playwright visual sweep as the authority for pixel/layout review at the Wave 06 approval gate.
 - GitHub labels `codex` and `codex-automation` are not present in this repo, so PR labeling was unavailable without creating new labels.
 - Opened PR #6 (`wave-06` → `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated "review in progress" / "Review triggered" comments and had a pending advisory status with no actionable findings at merge-decision time; advisory status did not block the wave.
+
+## 2026-06-02 — Wave 06 visual repair started
+
+- Owner rejected the Phase 0 approval gate: fonts were too big, design was not refined, and the UX did not feel like a mature desktop app.
+- Created branch `wave-06-visual-repair` from `origin/main` in `/Users/yasmineseidu/leena-wave-06`; primary checkout remains dirty/diverged and was not used.
+- Checked GitHub/OpenAI skill sources for a literal `taste` skill. The curated OpenAI skill list and GitHub searches did not surface an installable exact match; local available taste/design skills were applied instead: `design-taste-frontend`, `gpt-taste`, `stitch-design-taste`, and `redesign-existing-projects`.
+- Repaired the Phase 0 shell visual scale: smaller desktop-app typography, narrower sidebar/topbar rhythm, tighter buttons/nav rows, reduced radii, calmer dark wallpaper, stacked row text, two-column integration tiles, quieter Integrations summary, and smaller Command Center mini/compact/expanded dimensions.
+- Refreshed approval artifacts: `tasks/artifacts/wave-06-visual-repair-home.png`, `activity.png`, `tasks.png`, `integrations.png`, `settings.png`, and `command-center.png`.
+- Gates passed after repair: `npm run check`, focused `node --test test/command-center.test.js test/leena-css-tokens.test.js test/shell-rendering.test.js`, full `node --test` (202 tests), `node --check` on changed JS files, `git diff --check`, and Electron/Playwright screenshot sweep.

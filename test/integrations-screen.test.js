@@ -38,9 +38,9 @@ test("renderIntegrations returns mountable integrations HTML with header stats",
 
   assert.match(html, /^\s*<section class="integrations-screen" aria-label="Integrations">/);
   assert.match(html, /class="panel-glass integrations-header"/);
-  assert.match(html, /class="lx-mono">\/ connect your tools<\/p>/);
-  assert.match(html, /class="lx-display">6 \/ 9<\/p>/);
-  assert.match(html, /Available integrations and MCP servers/);
+  assert.match(html, /class="lx-mono">Connections<\/p>/);
+  assert.match(html, /class="lx-h1">6 connected<\/p>/);
+  assert.match(html, /9 available integrations and MCP servers/);
   assert.match(html, /class="integrations-grid"/);
   assert.equal(countMatches(html, /class="card integrations-tile"/g), 9);
   assert.equal(countMatches(html, /class="tooldot integrations-tile__icon"/g), 9);

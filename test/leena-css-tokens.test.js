@@ -188,24 +188,24 @@ test("component class bodies include the expected design-system properties", () 
       ".panel-glass",
       ["overflow: hidden", "backdrop-filter:", "border-radius: var(--r-panel)", "box-shadow:"],
     ],
-    [".btn", ["display: inline-flex", "height: 38px", "border-radius: var(--r-pill)"]],
+    [".btn", ["display: inline-flex", "height: 30px", "border-radius: var(--r-pill)"]],
     [".btn--primary", ["background: var(--accent)", "color: var(--white)"]],
     [".btn--ghost", ["background: var(--surface-2)", "border-color: var(--border)"]],
     [".btn--grad", ["linear-gradient(120deg, var(--grad-1), var(--grad-2))"]],
     [".chip", ["font-family: var(--font-mono)", "text-transform: uppercase"]],
     [".dot", ["width: 6px", "border-radius: var(--r-round)"]],
-    [".nav-item", ["height: 34px", "gap: 11px", "color: var(--text-dim)"]],
+    [".nav-item", ["height: 30px", "gap: 9px", "color: var(--text-dim)"]],
     [".nav-item--active", ["background: var(--accent-soft)", "color: var(--accent)"]],
     [".badge", ["margin-left: auto", "font-family: var(--font-mono)"]],
     [".kbd", ["font-family: var(--font-mono)", "box-shadow: 0 1px 0 var(--border)"]],
-    [".tooldot", ["width: 34px", "display: grid", "place-items: center"]],
-    [".row", ["gap: 12px", "border-radius: var(--r-inner)", "background: var(--surface-2)"]],
+    [".tooldot", ["width: 28px", "display: grid", "place-items: center"]],
+    [".row", ["gap: 9px", "border-radius: var(--r-inner)", "background: var(--surface-2)"]],
     [".row__txt", ["min-width: 0"]],
     [".orb", ["border-radius: var(--r-round)", "var(--orb-a)", "var(--orb-b)", "var(--orb-c)"]],
     [".orb__ring", ["inset: -10px", "border: 1.5px solid var(--orb-b)"]],
     [".wave", ["display: flex", "color: var(--accent)"]],
     [".grad", ["linear-gradient(157deg, var(--grad-1) -8%, var(--grad-2) 86%)"]],
-    [".icon-btn", ["width: 32px", "height: 32px", "background: var(--surface-2)"]],
+    [".icon-btn", ["width: 28px", "height: 28px", "background: var(--surface-2)"]],
   ]);
 
   for (const [selector, needles] of expected) {
@@ -216,15 +216,15 @@ test("component class bodies include the expected design-system properties", () 
 
 test("type scale classes are present with their font contracts", () => {
   const expected = new Map([
-    [".lx-display", ["font-family: var(--font-display)", "font-size: 48px"]],
-    [".lx-h1", ["font-family: var(--font-display)", "font-size: 30px"]],
-    [".lx-h2", ["font-family: var(--font-display)", "font-size: 21px"]],
-    [".lx-h3", ["font-family: var(--font-display)", "font-size: 16px"]],
-    [".lx-body", ["font-family: var(--font-body)", "font-size: 14px"]],
-    [".lx-sm", ["font-family: var(--font-body)", "font-size: 12.5px"]],
+    [".lx-display", ["font-family: var(--font-display)", "font-size: 24px"]],
+    [".lx-h1", ["font-family: var(--font-display)", "font-size: 22px"]],
+    [".lx-h2", ["font-family: var(--font-display)", "font-size: 16.5px"]],
+    [".lx-h3", ["font-family: var(--font-display)", "font-size: 13.5px"]],
+    [".lx-body", ["font-family: var(--font-body)", "font-size: 13px"]],
+    [".lx-sm", ["font-family: var(--font-body)", "font-size: 11.5px"]],
     [
       ".lx-mono",
-      ["font-family: var(--font-mono)", "font-size: 10.5px", "text-transform: uppercase"],
+      ["font-family: var(--font-mono)", "font-size: 9.5px", "text-transform: uppercase"],
     ],
   ]);
 

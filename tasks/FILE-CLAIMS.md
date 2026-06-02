@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-02T12:41:00Z — Released Wave 06 visual-repair claims for task `021`: desktop shell scale, Command Center dimensions, Integrations header copy, test expectations, refreshed approval screenshots, and task bookkeeping files.
 - 2026-06-02T04:04:10Z — Opened Wave 06 claims for task `021`: Phase 0 shell, screen, component, integration/audit test, and task bookkeeping files.
 - 2026-06-02T04:12:05Z — Extended Wave 06 task `021` claims to `src/renderer/styles.css` and `src/renderer/renderer.js` after the Phase 0 hardcoded-hex audit reached legacy runtime renderer files.
 - 2026-06-02T04:27:07Z — Extended Wave 06 task `021` claim to `test/leena-css-tokens.test.js` after tokenized circular radii required updating the existing token-foundation regression expectations.

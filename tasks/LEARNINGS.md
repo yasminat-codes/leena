@@ -920,3 +920,9 @@
 - Final pre-PR gates passed after the reviewer/advisor sequence: `npm run check`, full `node --test` (565/565), `git diff --check`, WAL JSON parse, count/active-claim audit, and task-artifact privacy scan.
 - The only cleanup needed after gates was removing a literal Composio API key env-var assignment string from a task note so the privacy scanner stays signal-only.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 18 — PR advisory notes
+- PR #22 was opened for `wave-18` and CodeRabbit was requested with `@coderabbitai review`.
+- CodeRabbit acknowledged the request and began processing run `43490940-5a8e-4cff-a84e-8c784b4f7fd4`; no actionable findings were available at merge-decision time.
+- The repo still has no `codex` or `codex-automation` labels available, so the wave could not apply automation labels.
+- **WAL ref:** tasks/.wal/wal.jsonl

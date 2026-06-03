@@ -578,3 +578,10 @@ _(wave execution entries appended below as the build runs)_
 - Final gates passed before staging: `npm run check`, `node --test` (565/565), `git diff --check`, WAL JSON parse, overview count audit, active-claim audit, and task-artifact privacy scan.
 - Overview count audit matched filesystem truth: `pending=16`, `in-progress=0`, `completed=77`, `blocked=6`.
 - Active claims are empty; Wave 18 is ready for PR creation and advisory CodeRabbit request.
+
+## 2026-06-03 — Wave 18 PR and CodeRabbit
+
+- Opened PR #22 (`wave-18` -> `main`) after reviewer and advisor gates passed.
+- Requested CodeRabbit review with `@coderabbitai review`; CodeRabbit acknowledged the command and started processing run `43490940-5a8e-4cff-a84e-8c784b4f7fd4`.
+- No actionable CodeRabbit findings were available at merge-decision time. Per wave protocol, CodeRabbit is advisory-only and does not block merge.
+- The repo does not have `codex` or `codex-automation` labels, so no automation labels were applied.

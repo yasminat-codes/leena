@@ -75,7 +75,7 @@ test("list/add handlers validate input before storage and auto-connect when requ
       name: "Missing URL",
       transport: "http",
     }),
-    /MCP HTTP servers require a url/,
+    /MCP Streamable HTTP servers require a url/,
   );
   await assert.rejects(
     handlers.addServer(null, {
@@ -89,7 +89,7 @@ test("list/add handlers validate input before storage and auto-connect when requ
       name: "Bad Transport",
       transport: "websocket",
     }),
-    /transport must be http or stdio/,
+    /transport must be streamable HTTP or stdio/,
   );
   assert.deepEqual(store.calls.addServer, []);
 
@@ -112,6 +112,33 @@ test("list/add handlers validate input before storage and auto-connect when requ
     },
   ]);
   assert.deepEqual(manager.calls.listTools, [server.id]);
+});
+
+test("add handler accepts Streamable HTTP transport aliases", async () => {
+  const store = createMockStore();
+  const handlers = createMCPHandlers({
+    serverStore: store,
+    mcpClientManager: createMockClientManager(),
+  });
+
+  const server = await handlers.addServer(null, {
+    name: "Streamable MCP",
+    transport: "streamable",
+    url: "https://streamable.example.test/mcp",
+  });
+
+  assert.equal(server.transport, "http");
+  assert.deepEqual(store.calls.addServer, [
+    {
+      args: [],
+      auto_connect: false,
+      enabled: true,
+      name: "Streamable MCP",
+      permission_level: "confirm",
+      transport: "http",
+      url: "https://streamable.example.test/mcp",
+    },
+  ]);
 });
 
 test("remove disconnects before deleting and tolerates stale client cleanup", async () => {
@@ -155,7 +182,7 @@ test("update validates merged server configs before persisting", async () => {
 
   await assert.rejects(
     handlers.updateServer(null, "remote", { url: null }),
-    /MCP HTTP servers require a url/,
+    /MCP Streamable HTTP servers require a url/,
   );
   await assert.rejects(
     handlers.updateServer(null, "remote", { transport: "stdio" }),

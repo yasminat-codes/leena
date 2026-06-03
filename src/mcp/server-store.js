@@ -4,6 +4,12 @@ import { LeenaError } from "../utils/errors.js";
 
 const MCP_PERMISSION_LEVELS = new Set(["auto", "confirm", "trust"]);
 const MCP_TRANSPORTS = new Set(["http", "stdio"]);
+const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
+  "http",
+  "streamable-http",
+  "streamable_http",
+  "streamable",
+]);
 const UPDATE_FIELDS = Object.freeze([
   "name",
   "transport",
@@ -261,8 +267,11 @@ function normalizeName(value) {
 
 function normalizeTransport(value) {
   const transport = normalizeOptionalString(value).toLowerCase();
+  if (STREAMABLE_HTTP_TRANSPORT_ALIASES.has(transport)) {
+    return "http";
+  }
   if (!MCP_TRANSPORTS.has(transport)) {
-    throwInvalidConfig("MCP server transport must be http or stdio.");
+    throwInvalidConfig("MCP server transport must be streamable HTTP or stdio.");
   }
   return transport;
 }
@@ -270,7 +279,7 @@ function normalizeTransport(value) {
 function normalizeRequiredHttpUrl(value) {
   const url = normalizeOptionalString(value);
   if (!url) {
-    throwInvalidConfig("MCP HTTP servers require a url.");
+    throwInvalidConfig("MCP Streamable HTTP servers require a url.");
   }
   try {
     const parsed = new URL(url);
@@ -279,7 +288,7 @@ function normalizeRequiredHttpUrl(value) {
     }
     return parsed.href;
   } catch {
-    throwInvalidConfig("MCP HTTP server url must be a valid http(s) URL.");
+    throwInvalidConfig("MCP Streamable HTTP server url must be a valid http(s) URL.");
   }
 }
 

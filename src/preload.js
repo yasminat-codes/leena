@@ -19,6 +19,15 @@ contextBridge.exposeInMainWorld("leena", {
   createRealtimeSession: (options) => ipcRenderer.invoke("realtime:create-session", options),
   createRealtimeSecret: (options) => ipcRenderer.invoke("openai:create-realtime-secret", options),
   createPersonaSessionUpdate: () => ipcRenderer.invoke("realtime:create-persona-session-update"),
+  getAppVersion: () => ipcRenderer.invoke("app:get-version"),
+  updates: {
+    getStatus: () => ipcRenderer.invoke("update:get-status"),
+    check: () => ipcRenderer.invoke("update:check"),
+    download: () => ipcRenderer.invoke("update:download"),
+    install: () => ipcRenderer.invoke("update:install"),
+    onStatus: (callback) => onIpc("update:status", callback),
+    offStatus: (listener) => offIpc("update:status", listener),
+  },
   getAgentProfile: () => ipcRenderer.invoke("agent:get-profile"),
   setAgentProfile: (profile) => ipcRenderer.invoke("agent:set-profile", profile),
   identity: {

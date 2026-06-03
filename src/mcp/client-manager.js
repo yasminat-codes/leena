@@ -13,6 +13,12 @@ const DEFAULT_RETRY_OPTIONS = Object.freeze({
   connect: Object.freeze({ maxAttempts: 3, baseDelay: 100, maxDelay: 1000 }),
   callTool: Object.freeze({ maxAttempts: 1, baseDelay: 100, maxDelay: 1000 }),
 });
+const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
+  "http",
+  "streamable-http",
+  "streamable_http",
+  "streamable",
+]);
 
 export class MCPClientManager {
   constructor(options = {}) {
@@ -174,7 +180,7 @@ function normalizeServerConfig(serverConfig) {
   }
 
   const serverId = normalizeString(serverConfig.serverId ?? serverConfig.id);
-  const transport = normalizeString(serverConfig.transport);
+  const transport = normalizeTransport(serverConfig.transport);
   if (!serverId) {
     throw new MCPError("MCP server config must include serverId or id.");
   }
@@ -214,6 +220,14 @@ function normalizeServerConfig(serverConfig) {
   }
 
   return normalized;
+}
+
+function normalizeTransport(value) {
+  const transport = normalizeString(value).toLowerCase();
+  if (STREAMABLE_HTTP_TRANSPORT_ALIASES.has(transport)) {
+    return "http";
+  }
+  return transport;
 }
 
 function normalizeTools(result) {

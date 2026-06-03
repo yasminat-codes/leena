@@ -17,6 +17,12 @@ export const MCP_IPC_CHANNELS = Object.freeze({
 export const DEFAULT_MCP_TEST_TIMEOUT_MS = 10_000;
 
 const MCP_TRANSPORTS = new Set(["http", "stdio"]);
+const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
+  "http",
+  "streamable-http",
+  "streamable_http",
+  "streamable",
+]);
 const MCP_PERMISSION_LEVELS = new Set(["auto", "confirm", "trust"]);
 const MCP_UPDATE_FIELDS = Object.freeze([
   "name",
@@ -375,8 +381,11 @@ function toClientConfig(server) {
 
 function normalizeTransport(value) {
   const transport = normalizeString(value).toLowerCase();
+  if (STREAMABLE_HTTP_TRANSPORT_ALIASES.has(transport)) {
+    return "http";
+  }
   if (!MCP_TRANSPORTS.has(transport)) {
-    throw new MCPError("MCP server transport must be http or stdio.", { transport });
+    throw new MCPError("MCP server transport must be streamable HTTP or stdio.", { transport });
   }
   return transport;
 }
@@ -389,7 +398,7 @@ function normalizeTransportOrUnknown(value) {
 function normalizeHttpUrl(value) {
   const url = normalizeString(value);
   if (!url) {
-    throw new MCPError("MCP HTTP servers require a url.", { transport: "http" });
+    throw new MCPError("MCP Streamable HTTP servers require a url.", { transport: "http" });
   }
   try {
     const parsed = new URL(url);
@@ -398,7 +407,7 @@ function normalizeHttpUrl(value) {
     }
     return parsed.href;
   } catch {
-    throw new MCPError("MCP HTTP server url must be a valid http(s) URL.", {
+    throw new MCPError("MCP Streamable HTTP server url must be a valid http(s) URL.", {
       transport: "http",
     });
   }

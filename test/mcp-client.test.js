@@ -71,6 +71,20 @@ test("connects, lists tools, calls tools, and disconnects HTTP transports", asyn
   assert.equal(state.httpTransports[0].closeCount, 1);
 });
 
+test("accepts Streamable HTTP transport aliases for remote MCP servers", async () => {
+  const { manager, state } = createMockManager();
+
+  const status = await manager.connect({
+    id: "streamable",
+    name: "Streamable tools",
+    transport: "streamable-http",
+    url: "https://mcp.example.test/mcp",
+  });
+
+  assert.equal(status.transport, "http");
+  assert.equal(state.httpTransports[0].url.href, "https://mcp.example.test/mcp");
+});
+
 test("connects, lists tools, calls tools, and disconnects stdio transports", async () => {
   const { manager, state } = createMockManager();
 

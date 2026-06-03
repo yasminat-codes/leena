@@ -166,6 +166,7 @@ const agentProfileIdentityHandlers = createAgentProfileIdentityAdapters({
 });
 let memoryStore = null;
 let memoryMiddleware = null;
+let latestUpdateStatus = createUpdateStatus("idle", "Updates have not been checked yet.");
 
 process.on("uncaughtException", (error) => {
   reportGlobalError("process.uncaughtException", error);
@@ -412,36 +413,104 @@ function wireUpdateEvents() {
   autoUpdater.autoDownload = false;
 
   autoUpdater.on("checking-for-update", () => {
-    mainWindow?.webContents.send("update:status", "Checking for updates…");
+    emitUpdateStatus("checking", "Checking GitHub for updates.");
   });
 
-  autoUpdater.on("update-available", () => {
-    mainWindow?.webContents.send("update:status", "Update available. Downloading…");
-    autoUpdater.downloadUpdate();
+  autoUpdater.on("update-available", (info) => {
+    emitUpdateStatus("available", `Leena ${info?.version ?? "update"} is available.`, {
+      updateInfo: sanitizeUpdateInfo(info),
+    });
   });
 
   autoUpdater.on("update-not-available", () => {
-    mainWindow?.webContents.send("update:status", "You are running the latest version.");
+    emitUpdateStatus("current", "You are running the latest version.");
   });
 
   autoUpdater.on("error", (error) => {
-    mainWindow?.webContents.send("update:status", `Update error: ${error.message}`);
+    emitUpdateStatus("error", `Update error: ${error.message}`);
   });
 
-  autoUpdater.on("update-downloaded", () => {
-    mainWindow?.webContents.send("update:status", "Update downloaded. It will install on restart.");
+  autoUpdater.on("download-progress", (progress) => {
+    emitUpdateStatus("downloading", formatUpdateDownloadProgress(progress), {
+      percent: normalizePercent(progress?.percent),
+    });
   });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    emitUpdateStatus("downloaded", "Update downloaded. Restart Leena to install it.", {
+      updateInfo: sanitizeUpdateInfo(info),
+    });
+  });
+}
+
+function createUpdateStatus(state, message, extra = {}) {
+  return {
+    state,
+    message,
+    version: app.getVersion(),
+    ...extra,
+  };
+}
+
+function emitUpdateStatus(state, message, extra = {}) {
+  latestUpdateStatus = createUpdateStatus(state, message, extra);
+  mainWindow?.webContents.send("update:status", latestUpdateStatus);
+  return latestUpdateStatus;
+}
+
+function sanitizeUpdateInfo(info) {
+  if (!info || typeof info !== "object") {
+    return null;
+  }
+  return {
+    files: Array.isArray(info.files)
+      ? info.files.map((file) => ({ url: file?.url, size: file?.size })).filter((file) => file.url)
+      : [],
+    releaseDate: typeof info.releaseDate === "string" ? info.releaseDate : null,
+    version: typeof info.version === "string" ? info.version : null,
+  };
+}
+
+function formatUpdateDownloadProgress(progress) {
+  const percent = normalizePercent(progress?.percent);
+  if (percent === null) {
+    return "Downloading update from GitHub.";
+  }
+  return `Downloading update from GitHub (${percent}%).`;
+}
+
+function normalizePercent(value) {
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : null;
 }
 
 ipcMain.handle("app:get-version", () => app.getVersion());
 ipcMain.handle("app:is-development", () => isDevelopment);
+ipcMain.handle("update:get-status", () => latestUpdateStatus);
 ipcMain.handle("update:check", async () => {
   if (isDevelopment) {
-    return "Updates are checked only in packaged builds.";
+    return emitUpdateStatus("development", "Updates are checked only in packaged builds.");
   }
 
   await autoUpdater.checkForUpdates();
-  return "Update check started.";
+  return latestUpdateStatus;
+});
+ipcMain.handle("update:download", async () => {
+  if (isDevelopment) {
+    return emitUpdateStatus("development", "Updates are downloaded only in packaged builds.");
+  }
+
+  const status = emitUpdateStatus("downloading", "Starting update download from GitHub.");
+  await autoUpdater.downloadUpdate();
+  return status;
+});
+ipcMain.handle("update:install", () => {
+  if (isDevelopment) {
+    return emitUpdateStatus("development", "Updates install only in packaged builds.");
+  }
+
+  const status = emitUpdateStatus("installing", "Restarting Leena to install the update.");
+  autoUpdater.quitAndInstall(false, true);
+  return status;
 });
 
 ipcMain.handle("openai:get-status", async () => {
@@ -745,7 +814,9 @@ app.whenReady().then(() => {
   initializeNudgeScheduler();
 
   if (!isDevelopment) {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates().catch((error) => {
+      emitUpdateStatus("error", `Update error: ${error.message}`);
+    });
   }
 
   app.on("activate", () => {

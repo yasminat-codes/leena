@@ -91,7 +91,7 @@ test("loadIntegrations renders mock IPC server tiles with transport, status, and
   assert.match(html, /data-integrations-server-id="remote-search"/);
   assert.match(html, /Remote Search/);
   assert.match(html, /https:\/\/mcp\.example\.com\/sse/);
-  assert.match(html, /data-integrations-transport="http">HTTP/);
+  assert.match(html, /data-integrations-transport="http">Streamable HTTP/);
   assert.match(html, /data-integrations-status="connected">Connected/);
   assert.match(html, />5 tools<\/span>/);
   assert.match(html, /data-integrations-server-id="local-files"/);
@@ -102,16 +102,16 @@ test("loadIntegrations renders mock IPC server tiles with transport, status, and
   assert.match(html, />0 tools<\/span>/);
 });
 
-test("validateMCPServerDraft enforces HTTP URL and stdio command requirements", () => {
+test("validateMCPServerDraft enforces Streamable HTTP URL and stdio command requirements", () => {
   assert.deepEqual(validateMCPServerDraft({ name: "", transport: "http" }), {
     error: "MCP server name is required.",
   });
   assert.deepEqual(validateMCPServerDraft({ name: "Remote", transport: "http" }), {
-    error: "HTTP MCP servers require a URL.",
+    error: "Streamable HTTP MCP servers require a URL.",
   });
   assert.deepEqual(
     validateMCPServerDraft({ name: "Remote", transport: "http", url: "ftp://example.com" }),
-    { error: "HTTP MCP server URL must use http or https." },
+    { error: "Streamable HTTP MCP server URL must use http or https." },
   );
   assert.deepEqual(validateMCPServerDraft({ name: "Local", transport: "stdio" }), {
     error: "Stdio MCP servers require a command.",
@@ -135,7 +135,7 @@ test("validateMCPServerDraft enforces HTTP URL and stdio command requirements", 
   assert.deepEqual(
     validateMCPServerDraft({
       name: "Remote",
-      transport: "http",
+      transport: "streamable-http",
       url: "https://mcp.example.com/sse",
     }),
     {

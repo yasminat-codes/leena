@@ -12,10 +12,16 @@ const STATUS_META = Object.freeze({
 });
 
 const TRANSPORT_LABELS = Object.freeze({
-  http: "HTTP",
+  http: "Streamable HTTP",
   stdio: "STDIO",
   unknown: "MCP",
 });
+const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
+  "http",
+  "streamable-http",
+  "streamable_http",
+  "streamable",
+]);
 
 let activeBinding = null;
 
@@ -51,6 +57,9 @@ function firstString(...values) {
 
 function normalizeTransport(value) {
   const transport = firstString(value).toLowerCase();
+  if (STREAMABLE_HTTP_TRANSPORT_ALIASES.has(transport)) {
+    return "http";
+  }
   return transport === "http" || transport === "stdio" ? transport : "unknown";
 }
 
@@ -234,14 +243,14 @@ function renderAddServerDialog() {
           <label class="row__txt">
             <strong class="lx-body">Transport</strong>
             <select name="transport" data-integrations-transport-select>
-              <option value="http">HTTP URL</option>
+              <option value="http">Streamable HTTP URL</option>
               <option value="stdio">Stdio command</option>
             </select>
           </label>
         </div>
         <div class="row settings-row" data-integrations-field="url">
           <label class="row__txt">
-            <strong class="lx-body">URL</strong>
+            <strong class="lx-body">MCP endpoint URL</strong>
             <input name="url" autocomplete="off" placeholder="https://example.com/mcp" />
           </label>
         </div>
@@ -393,7 +402,7 @@ export async function refreshIntegrationsScreen(
 
 export function validateMCPServerDraft(draft = {}) {
   const name = firstString(draft.name);
-  const transport = firstString(draft.transport).toLowerCase();
+  const transport = normalizeTransport(draft.transport);
   const args = firstString(draft.args)
     .split(/\s+/)
     .map((arg) => arg.trim())
@@ -403,18 +412,18 @@ export function validateMCPServerDraft(draft = {}) {
     return { error: "MCP server name is required." };
   }
   if (transport !== "http" && transport !== "stdio") {
-    return { error: "Choose HTTP URL or stdio command." };
+    return { error: "Choose Streamable HTTP URL or stdio command." };
   }
 
   if (transport === "http") {
     const url = firstString(draft.url);
     if (!url) {
-      return { error: "HTTP MCP servers require a URL." };
+      return { error: "Streamable HTTP MCP servers require a URL." };
     }
     try {
       const parsed = new URL(url);
       if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-        return { error: "HTTP MCP server URL must use http or https." };
+        return { error: "Streamable HTTP MCP server URL must use http or https." };
       }
       return {
         config: {
@@ -424,7 +433,7 @@ export function validateMCPServerDraft(draft = {}) {
         },
       };
     } catch {
-      return { error: "HTTP MCP server URL must be valid." };
+      return { error: "Streamable HTTP MCP server URL must be valid." };
     }
   }
 
@@ -566,7 +575,7 @@ function getAddServerDraft(form) {
 }
 
 function syncAddServerFields(form) {
-  const transport = readFormValue(form, "transport") || "http";
+  const transport = normalizeTransport(readFormValue(form, "transport")) || "http";
   const urlField = form?.querySelector?.('[data-integrations-field="url"]');
   const commandField = form?.querySelector?.('[data-integrations-field="command"]');
   const argsField = form?.querySelector?.('[data-integrations-field="args"]');

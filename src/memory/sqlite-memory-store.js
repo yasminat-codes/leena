@@ -6,6 +6,7 @@ const DEFAULT_CONVERSATION_ID = "default";
 const DEFAULT_ROLE = "user";
 const VALID_ROLES = new Set(["system", "user", "assistant", "tool"]);
 const VECTOR_PREFILTER_LIMIT = 1000;
+const MAX_RECALL_LIMIT = 50;
 const MAX_EPISODES_LIMIT = 50;
 const MAX_EPISODES_PAGE = 500;
 const MAX_EPISODES_QUERY_LENGTH = 200;
@@ -606,7 +607,7 @@ function normalizeLimit(limit) {
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return 0;
   }
-  return Math.floor(parsed);
+  return Math.min(Math.floor(parsed), MAX_RECALL_LIMIT);
 }
 
 function normalizeBoundedPositiveInteger(value, maxValue, label) {

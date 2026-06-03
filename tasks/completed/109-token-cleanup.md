@@ -2,7 +2,7 @@
 id: "109"
 title: "CSS token cleanup audit"
 type: chore
-status: pending
+status: completed
 priority: medium
 complexity: S
 estimated_tokens: 8000
@@ -12,7 +12,8 @@ context_files:
   - src/renderer/leena.css
 skills: []
 tags: [phase-7, css, cleanup, design-system]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T08:05:33Z"
 created_at: "2026-06-01"
 ---
 
@@ -30,10 +31,10 @@ Functional phases may have added inline styles or hardcoded values that bypass t
 5. Run `npm run check` to confirm no Biome formatting issues introduced.
 
 ## Acceptance Criteria
-- [ ] Zero hardcoded color values in renderer CSS (outside leena.css)
-- [ ] Zero hardcoded border-radius/shadow/blur values
-- [ ] Theme switching renders correctly across all 9 theme × treatment combinations
-- [ ] `npm run check` passes
+- [x] Zero hardcoded color values in renderer CSS (outside leena.css)
+- [x] Zero hardcoded border-radius/shadow/blur values
+- [x] Theme switching renders correctly across all 9 theme × treatment combinations
+- [x] `npm run check` passes
 
 ## Tests Required
 - No new test file — this is a static analysis + manual verification task. The existing shell-rendering test (task 021) validates no JS errors.
@@ -47,10 +48,16 @@ Functional phases may have added inline styles or hardcoded values that bypass t
 - Prerequisite for task 111 (final DMG build) to ensure the packaged app looks correct
 
 ## Handoff Notes
-[Filled after completion]
+- 2026-06-03T08:20:54Z — Ran required kencode-search queries before editing: `border-radius: var(--` and `box-shadow: var(--`.
+- Extended task 109's active claim to `src/renderer/components/command-center.css` after the renderer-wide grep found an unclaimed hardcoded command-center shadow/blur violation; no design-system audit test edits were needed.
+- Centralized legacy color/effect literals in `src/renderer/leena.css`, then replaced scattered `rgba(...)`, data-URI hex colors, transparent literals, radius fallbacks, raw blur values, and direct shadow/reset declarations in `src/renderer/styles.css` and `src/renderer/components/command-center.css`.
+- Post-fix grep scans are clean for hardcoded hex/rgb/url colors outside `leena.css`, radius/shadow/backdrop declarations without `var(--...)`, and raw blur arguments. The named-color scan only reports comment text.
+- Theme/treatment verification used `node --test test/shell-rendering.test.js`; the matrix test passed. Focused CSS/token gates also passed.
+- No task-owned JavaScript changed. `node --check` across currently changed worktree JS files completed without output.
+- Final combined Wave 14 gates passed after all workers completed: `npm run check`, `node --test` (515/515), `npm test`, WAL parse, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Concurrent task 107 edits briefly blocked full gates while Activity files were still mid-patch. No task 109 code changes were required; combined Wave 14 gates passed after task 107 completed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

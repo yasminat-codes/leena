@@ -21,6 +21,9 @@
 
 ## Claim History
 
+- 2026-06-03T09:29:02Z — Released Wave 14 reviewer-fix-5 claims after generation-guarded persona session updates, refreshed realtime tools in active `session.update`, Biome assertion formatting, full `npm test` (525/525), changed-file syntax checks, `git diff --check`, WAL parse, checklist scan, privacy scan, and count audit passed.
+- 2026-06-03T09:27:31Z — Released Wave 14 reviewer-fix-4 claims after identity/profile data-change invalidation, bounded memory recall, and stale Home refresh generation guards passed focused tests (41/41), full `npm test` (524/524), changed-file syntax checks, WAL parse, and `git diff --check`.
+- 2026-06-03T08:31:59Z — Released Wave 14 claims for tasks `065`, `071`, `107`, `108`, `109`, and `112` after independent verification passed output checks, changed-file syntax checks, `npm run check`, full `node --test` (515/515), `npm test`, WAL parse, and `git diff --check`.
 - 2026-06-03T07:36:10Z — Released Wave 13 WAL tail repair claims after appending the physical-tail terminal checkpoint and re-running focused hardening gates (45/45), `npm run check`, full `node --test` (488/488), WAL/count/claim/privacy audits, and `git diff --check`.
 - 2026-06-03T07:18:49Z — Released Wave 13 reviewer-fix-2 claims: chat IPC history/tool hardening, audited chat-triggered tool execution, OpenRouter `[DONE]` tool-call flush, and bounded/escaped `memory:get-episodes`; focused gates and full `node --test` (487/487) passed.
 - 2026-06-03T07:03:23Z — Released Wave 13 advisor-fix claims for task `106`: Command Center text chat now leaves provider/model unset until explicit user selection so `chat:send` honors the configured main-process chat default; focused text-chat gate passed.

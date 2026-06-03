@@ -45,6 +45,9 @@
 - **Off-white dominance means paper owns the shell.** If the owner says the dominant color should be off-white, teal/dark accents must not own the wallpaper, side rail, topbar, or major orb well. Keep strong teal to selected controls, active states, small marks, and subtle sculptural accents.
 - **Measurement spikes must not invent metrics.** For wake-word, model, audio, latency, or accuracy spikes, block with a usable harness and exact missing assets instead of reporting synthetic FA/FR/latency numbers.
 - **Packaged runtime assets outside `src/` must be explicitly included.** If main-process code loads assets from `build/` or another non-source directory, add that path to electron-builder `build.files` and verify it inside `app.asar` after packaging.
+- **Renderer-exposed memory reads must be bounded at every layer.** Clamp recall/history limits in IPC handlers and in the store itself; do not rely on renderer callers to pass safe pagination values.
+- **Async renderer refreshes must reject stale results.** Backend generation guards are not enough if older renderer promises can still publish late UI state; guard each publish path that can overlap.
+- **Identity/profile mutations must broadcast runtime invalidation.** Persona/profile changes need a durable `data:changed` path so prefetched realtime secrets and active session updates cannot keep using stale persona instructions.
 
 ---
 
@@ -656,3 +659,102 @@
 ### Wave 13 reviewer-fix-2 — verification
 - Independent gates after the hardening fixes passed: changed-file `node --check`, focused Biome, focused `node --test` (45/45), full `npm run check`, full `node --test` (488/488), active-claims audit, WAL JSON parse, task-count audit, `git diff --check`, and task-artifact privacy scan.
 - Reviewer found the WAL physical tail was stale after a late advisory checkpoint. Appending a fresh terminal checkpoint at the physical tail is the correct repair; do not leave older advisory/bookkeeping entries after the latest gate entry.
+
+### Fix — Wave 14 — 108 — Patch default worktree hygiene
+- **Symptom:** The nudge worker's first patch attempt wrote an untracked task file in `<primary-checkout>` instead of the clean Wave 14 worktree.
+- **Root cause:** The patch tool defaulted to the parent checkout path unless the worker used absolute Wave 14 file paths.
+- **Fix:** Removed the stray primary-checkout file immediately, re-applied the patch using absolute Wave 14 paths, and verified the primary checkout had no nudge source file contamination before terminal bookkeeping.
+- **Rule added?:** no — reinforces the existing exact-worktree-path rule.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 14 — summary
+- Completed tasks `065`, `071`, `107`, `108`, `109`, and `112`: memory comprehensive tests, persona-aware prompt composition, conversation history/search, opt-in proactive nudges, CSS token cleanup, and final e2e integration tests.
+- Prompt composition now orders persona, memory, tools, base instructions, profile context, and runtime context, with backward-compatible legacy wrappers and the recalled-memory untrusted-data boundary preserved.
+- Activity now supports lazy full transcripts, hybrid keyword/semantic rerank search, relevance indicators, de-duplication, bounded queries, and date grouping without adding shared IPC/preload edits.
+- Nudges are opt-in and in-shell only. Main process exposes nudge list/refresh/dismiss IPC, generates on launch and every 30 minutes, and Home renders max-three Suggested cards with dismissal support.
+- CSS cleanup centralized legacy renderer literals behind tokens and added grep proof; Workspace/off-white dominance, radius tokens, font tokens, and shell appearance matrix tests remain green.
+- Final e2e coverage validates provider switching through chat IPC, cross-session memory recall, MCP HTTP connect/list/disconnect/tool merging, and settings/protected-secret persistence with temp dirs and mocks.
+- Independent gates passed: output existence checks, changed-file `node --check`, `npm run check`, full `node --test` (515/515), `npm test`, WAL JSON parse, and `git diff --check`.
+
+### Fix — Wave 14 — reviewer-fix-1 — Realtime persona contract
+- **Symptom:** Reviewer found live realtime sessions still used the legacy normalized profile, so custom/switched PersonaEngine personas and persona voice preference did not reach voice sessions.
+- **Root cause:** `createRealtimeProviderSession()` loaded `loadAgentProfile()` and called `buildRealtimeInstructions({ profile, memories })` without attaching `PersonaEngine.getActive()`, then selected `profile.voice`.
+- **Fix:** Realtime session creation now reads the active PersonaEngine persona, passes the live realtime tool definitions into prompt Tool Context, and selects voice through persona `voicePreference` with the legacy profile voice as fallback.
+- **Rule added?:** yes — realtime session creation must route active PersonaEngine state and live tool definitions through prompt composition, and must route active PersonaEngine state through voice selection.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-1 — Persona switch session safety
+- **Symptom:** Reviewer found `buildPersonaSwitchDelta().session.instructions` could be used as a realtime `session.update` payload while containing only the `# Persona` section.
+- **Root cause:** The persona delta exposed full instructions only under `fallbackSession`, leaving the primary `session` contract easy to misuse.
+- **Fix:** Persona switch deltas now keep the persona-only text in `sections.persona` but put the full realtime instruction contract in `session.instructions` and `fallbackSession.instructions`.
+- **Rule added?:** yes — any realtime session update payload carrying instructions must contain the full instruction contract, including memory/tool/base/runtime boundaries.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-1 — Nudge refresh staleness
+- **Symptom:** Reviewer found disabling nudges or dismissing a nudge during an in-flight refresh could leave an older enabled payload visible until the next refresh.
+- **Root cause:** Settings and dismissal refreshes reused a shared in-flight refresh promise whose enabled state had been read before the opt-out/dismissal.
+- **Fix:** Settings and dismissal refreshes now force a new refresh generation, and stale generation results return a disabled empty payload without updating or broadcasting.
+- **Rule added?:** yes — opt-out and dismissal refreshes must invalidate stale async UI payloads before publishing.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-2 — Nudge opt-out source of truth
+- **Symptom:** Reviewer re-check found disabling the Settings `proactiveNudges` toggle could still leave nudges enabled when a legacy `nudgesEnabled=true` value existed.
+- **Root cause:** The nudge engine read `nudgesEnabled` before the visible Settings key, so legacy state overrode the UI control.
+- **Fix:** `proactiveNudges` is now authoritative whenever present, with `nudgesEnabled` used only as a legacy fallback. Added focused key-precedence coverage.
+- **Rule added?:** yes — visible Settings controls must be the source of truth over legacy setting aliases.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-2 — Nudge list cache during forced refresh
+- **Symptom:** Reviewer re-check found `nudges:list` could return cached enabled nudges while an opt-out/dismiss forced refresh was still running.
+- **Root cause:** `getLatestNudges()` preferred `latestNudgePayload` even when `refreshNudges(..., { force: true })` had already invalidated the old generation.
+- **Fix:** Forced refreshes now clear the cached payload to a disabled empty result and mark the refresh as forced; `nudges:list` waits for that forced refresh promise instead of serving stale enabled data.
+- **Rule added?:** yes — renderer list calls must not serve stale cached enabled UI state while a forced opt-out/dismiss refresh is pending.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-3 — Live persona session update
+- **Symptom:** Reviewer final re-check found Settings persona switches persisted state but did not update an active realtime data channel or invalidate prefetched client secrets.
+- **Root cause:** The Settings screen was isolated from the runtime renderer profile-change path, and realtime client secrets were cached without a generation guard for in-flight prefetches.
+- **Fix:** Settings now emits a persona-changed runtime event; renderer invalidates/reprimes prefetched secrets, guards stale prefetch promises with a generation token, and sends a main-built full `session.update` when a data channel is open.
+- **Rule added?:** yes — persona/profile changes must invalidate any prefetched realtime secret and update the active realtime session when connected.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-3 — Voice selector precedence
+- **Symptom:** Reviewer final re-check found seeded/default persona `voicePreference: DEFAULT_VOICE` could override a user-selected legacy/profile voice.
+- **Root cause:** Main-process realtime session creation always preferred persona voice preference whenever the persona record had the field, and PersonaEngine normalizes seeded personas with the default voice field.
+- **Fix:** Added `resolveRealtimeVoicePreference(profile, persona)` so an explicit non-default profile voice wins over seeded persona defaults, while custom persona voice preference still applies when the profile voice remains default.
+- **Rule added?:** yes — explicit user voice settings must not be shadowed by seeded default persona voice values.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-1 — Completed checklist hygiene
+- **Symptom:** Reviewer found several completed Wave 14 task files still had unchecked acceptance criteria despite terminal WAL and overview state.
+- **Root cause:** Handoff/output sections were updated during terminal bookkeeping, but acceptance checklist state was not audited before completion.
+- **Fix:** Completed task files for `065`, `071`, `107`, `108`, `109`, and `112` now have acceptance criteria aligned with completed outputs, with checklist and privacy audits clean.
+- **Rule added?:** yes — completed task files should be scanned for stale unchecked acceptance criteria before merge.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-4 — Identity broadcast, bounded recall, and Home refresh generation
+- **Symptom:** Independent reviewer found Settings persona switches could still rely on a renderer-only invalidation event, `memory:recall` accepted unbounded renderer limits, and older Home refresh promises could overwrite newer opt-out/dismiss results.
+- **Root cause:** Identity/profile mutation did not have a main-process `data:changed` invalidation path, recall bounds were only implemented for history pagination, and Home accepted every late `loadHomeData()` result.
+- **Fix:** Identity/profile IPC now broadcasts `identity` changes and renderer data-change handling routes them through the existing realtime secret/session refresh helper; `memory:recall` clamps limits in both IPC and `SQLiteMemoryStore`; `refreshHomeScreen()` uses a generation guard before publishing UI state.
+- **Rule added?:** yes — renderer-exposed memory reads must be bounded at every layer; async renderer refreshes must reject stale results; identity/profile mutations must broadcast runtime invalidation.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-5 — Persona session update ordering and tools
+- **Symptom:** Final reviewer warning found rapid persona/profile changes could send an older realtime `session.update`, and active sessions did not receive refreshed tool definitions.
+- **Root cause:** Renderer session updates were not guarded by the same invalidation generation used for prefetched secrets, and the main-process persona update IPC returned only `audio` and `instructions`.
+- **Fix:** Renderer active-session updates now capture the invalidation generation and drop stale IPC responses; main-process persona session updates include refreshed realtime `tools` with the full session payload.
+- **Rule added?:** yes — active realtime session updates must be generation-guarded and must refresh tools alongside instructions when runtime context changes.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 14 — reviewer-fix-5 — Biome assertion formatting
+- **Symptom:** The first full `npm test` rerun stopped in `npm run check` because the new Wave 14 integration assertion exceeded Biome's preferred single-line shape.
+- **Root cause:** A long regex assertion was added manually after focused tests, and focused `node --test` did not exercise formatting.
+- **Fix:** Split the assertion across Biome's formatted multi-line `assert.match()` shape, then reran the full gate successfully.
+- **Rule added?:** yes — after adding test assertions during reviewer cleanup, run or preserve Biome formatting before calling the full parent gate final.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Wave 14 Final Gate Notes
+- Reviewer and advisor cleared Wave 14 after reviewer-fix-5. Redundant persona refreshes are acceptable for now because active realtime session updates and Home refreshes are generation-guarded.
+- Keep `tasks/OVERVIEW.md` proof counts synchronized with the latest full parent gate before PR creation; Wave 14 ended at `npm test` 525/525.
+- CodeRabbit remains advisory-only. For PR #15 it posted review-in-progress/trigger comments with a pending status and no actionable findings available at merge-decision time.
+- **WAL ref:** tasks/.wal/wal.jsonl

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { loadHomeData, normalizeHomeData, renderHomeData } from "../src/renderer/screens/home.js";
+import {
+  loadHomeData,
+  normalizeHomeData,
+  refreshHomeScreen,
+  renderHomeData,
+} from "../src/renderer/screens/home.js";
 
 const fixedNow = new Date("2026-06-03T14:30:00.000Z");
 
@@ -224,4 +229,71 @@ test("live render path escapes data and does not render legacy fixture rows", ()
   assert.doesNotMatch(html, /<script>/);
   assert.doesNotMatch(html, /Drafted follow-up tasks/);
   assert.doesNotMatch(html, /Product sync/);
+});
+
+test("refreshHomeScreen ignores stale results from older refreshes", async () => {
+  const pendingNudges = [];
+  const suggestedSlot = {
+    innerHTML: "",
+  };
+  const screen = {
+    querySelector(selector) {
+      if (selector === "[data-home-suggested-slot]") {
+        return suggestedSlot;
+      }
+      return {
+        removeAttribute() {},
+        textContent: "",
+        innerHTML: "",
+      };
+    },
+    querySelectorAll() {
+      return [];
+    },
+  };
+  const root = {
+    querySelector(selector) {
+      return selector === ".home-screen" ? screen : null;
+    },
+  };
+  const bridge = {
+    async getActivity() {
+      return [];
+    },
+    async getCalendarItems() {
+      return [];
+    },
+    async getSetting(_key, fallback) {
+      return fallback;
+    },
+    memory: {
+      async recall() {
+        return [];
+      },
+    },
+    nudges: {
+      list() {
+        return new Promise((resolve) => pendingNudges.push(resolve));
+      },
+    },
+  };
+
+  const oldRefresh = refreshHomeScreen(root, bridge);
+  const latestRefresh = refreshHomeScreen(root, bridge);
+  assert.equal(pendingNudges.length, 2);
+
+  pendingNudges[1]({
+    enabled: true,
+    nudges: [{ id: "new", title: "New nudge", detail: "Latest state", type: "suggested" }],
+  });
+  assert.equal((await latestRefresh).nudges.nudges[0].title, "New nudge");
+  assert.match(suggestedSlot.innerHTML, /New nudge/);
+
+  pendingNudges[0]({
+    enabled: true,
+    nudges: [{ id: "old", title: "Old nudge", detail: "Stale state", type: "suggested" }],
+  });
+  assert.equal(await oldRefresh, null);
+  assert.match(suggestedSlot.innerHTML, /New nudge/);
+  assert.doesNotMatch(suggestedSlot.innerHTML, /Old nudge/);
 });

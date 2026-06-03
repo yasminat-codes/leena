@@ -22,7 +22,14 @@ test("Wave 13 main process wires chat and memory-aware realtime sessions", () =>
     mainSource,
     /const memories = await getMemoryMiddleware\(\)\.onSessionStart\(profile\);/,
   );
-  assert.match(mainSource, /buildRealtimeInstructions\(\{ profile, memories \}\)/);
+  assert.match(mainSource, /const activePersona = personaEngine\.getActive\(\);/);
+  assert.match(mainSource, /const tools = await getRealtimeToolDefinitions\(mcpClientManager\);/);
+  assert.match(
+    mainSource,
+    /buildRealtimeInstructions\(\{ profile, memories, persona: activePersona, tools \}\)/,
+  );
+  assert.match(mainSource, /ipcMain\.handle\("realtime:create-persona-session-update"/);
+  assert.match(mainSource, /resolveRealtimeVoicePreference\(profile, activePersona\)/);
   assert.match(mainSource, /registerMemoryHandlers\(\{ ipcMain, store: getMemoryStore\(\) \}\);/);
   assert.match(mainSource, /registerChatHandlers\(\{\s*ipcMain,\s*registry: getRegistry\(\),/s);
   assert.match(mainSource, /executeTool: \(name, args\) => executeRealtimeToolWithAudit/);
@@ -56,6 +63,8 @@ test("Wave 13 renderer enables live text chat and records realtime memories", ()
   assert.ok(rendererSource.includes("void rememberRealtimeExchange(event);"));
   assert.ok(rendererSource.includes("await window.leena.memory.remember(exchange.content"));
   assert.ok(rendererSource.includes("maybeConsolidateRealtimeMemory(conversationId)"));
+  assert.ok(rendererSource.includes("window.leena.onDataChanged?.(handleDataChanged);"));
+  assert.ok(rendererSource.includes("void handleAgentRuntimeConfigChanged(null);"));
   assert.match(
     rendererSource,
     /Array\.isArray\(episodes\) && episodes\.length <= 10[\s\S]*return null;/,

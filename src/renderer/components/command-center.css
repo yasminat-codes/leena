@@ -9,20 +9,20 @@
   min-height: 44px;
   overflow: hidden;
   border: 0;
-  border-radius: var(--r-pill, var(--radius-pill));
+  border-radius: var(--r-pill);
   color: var(--text);
   background:
     radial-gradient(
       115% 170% at 4% 24%,
-      color-mix(in srgb, var(--accent, var(--accent-bright)) 14%, transparent),
-      transparent 58%
+      color-mix(in srgb, var(--accent, var(--accent-bright)) 14%, var(--transparent)),
+      var(--transparent) 58%
     ),
     linear-gradient(180deg, var(--glass-hi, var(--raised)), var(--glass, var(--surface-ghost)));
   box-shadow:
     0 0 0 1px var(--glass-bd, var(--hairline)),
-    0 18px 46px rgba(20, 4, 80, 0.18),
+    0 18px 46px color-mix(in srgb, var(--legacy-command-shadow) 18%, var(--transparent)),
     inset 0 1px 0 var(--glass-hi, var(--raised-hover));
-  backdrop-filter: blur(18px) saturate(1.12);
+  backdrop-filter: blur(var(--blur-command)) saturate(1.12);
   font-family: var(--font-body);
   isolation: isolate;
   transition:
@@ -37,10 +37,10 @@
 .cc::before {
   position: absolute;
   inset: 2px;
-  border-radius: var(--r-pill, var(--radius-pill));
+  border-radius: var(--r-pill);
   background:
-    linear-gradient(180deg, var(--glass-sheen, var(--raised-hover)), transparent),
-    color-mix(in srgb, var(--surface, transparent) 44%, transparent);
+    linear-gradient(180deg, var(--glass-sheen, var(--raised-hover)), var(--transparent)),
+    color-mix(in srgb, var(--surface, var(--transparent)) 44%, var(--transparent));
   pointer-events: none;
   content: "";
 }
@@ -66,7 +66,7 @@
   width: 28px;
   height: 28px;
   overflow: hidden;
-  border-radius: var(--r-round, 50%);
+  border-radius: var(--r-round);
   filter: saturate(1.15) brightness(1.04);
   transform-origin: center;
   transition:
@@ -80,21 +80,21 @@
 .cc__orb-check {
   position: absolute;
   inset: 0;
-  border-radius: var(--r-round, 50%);
+  border-radius: var(--r-round);
 }
 
 .cc__orb-aurora {
   background:
-    radial-gradient(circle at 28% 22%, var(--orb-a, var(--accent-bright)), transparent 48%),
-    radial-gradient(circle at 74% 70%, var(--orb-b, var(--nebula-3)), transparent 54%),
-    radial-gradient(circle at 50% 52%, var(--orb-c, var(--nebula-2)), transparent 68%);
-  filter: blur(4px);
+    radial-gradient(circle at 28% 22%, var(--orb-a, var(--accent-bright)), var(--transparent) 48%),
+    radial-gradient(circle at 74% 70%, var(--orb-b, var(--nebula-3)), var(--transparent) 54%),
+    radial-gradient(circle at 50% 52%, var(--orb-c, var(--nebula-2)), var(--transparent) 68%);
+  filter: blur(var(--blur-tab));
   transform: scale(1.18);
 }
 
 .cc__orb-surface {
   background:
-    radial-gradient(circle at 48% 34%, var(--white, var(--text)), transparent 14%),
+    radial-gradient(circle at 48% 34%, var(--white, var(--text)), var(--transparent) 14%),
     conic-gradient(
       from 40deg,
       var(--orb-a, var(--nebula-1)),
@@ -109,7 +109,7 @@
 .cc__orb-core {
   inset: 21%;
   background: var(--white, var(--text));
-  filter: blur(5px);
+  filter: blur(var(--blur-command-core));
   opacity: 0.6;
 }
 
@@ -172,7 +172,7 @@
 .cc__live-dot {
   width: 6px;
   height: 6px;
-  border-radius: var(--r-round, 50%);
+  border-radius: var(--r-round);
   background: var(--text-faint, var(--text-3));
   transition: background var(--cc-fade);
 }
@@ -203,7 +203,7 @@
   display: block;
   width: 3px;
   max-height: 22px;
-  border-radius: var(--r-pill, var(--radius-pill));
+  border-radius: var(--r-pill);
   background: currentColor;
   opacity: 0.45;
   transform: scaleY(0.45);
@@ -230,7 +230,7 @@
   gap: 7px;
   padding: 7px 8px;
   border: 1px solid var(--border, var(--hairline));
-  border-radius: var(--r-inner, var(--radius-md));
+  border-radius: var(--r-inner);
   background: var(--chip, var(--raised));
 }
 
@@ -279,7 +279,7 @@
   height: 30px;
   padding: 0 8px;
   border: 1px solid var(--border, var(--hairline));
-  border-radius: var(--r-inner, var(--radius-md));
+  border-radius: var(--r-inner);
   color: var(--text);
   background: var(--chip, var(--raised));
   font: 600 11px / 1 var(--font-body);
@@ -317,7 +317,7 @@
   min-width: 0;
   padding: 7px 9px;
   border: 1px solid var(--border, var(--hairline));
-  border-radius: var(--r-inner, var(--radius-md));
+  border-radius: var(--r-inner);
   color: var(--text);
   background: var(--chip, var(--raised));
   font-size: 12px;
@@ -358,8 +358,8 @@
   margin: 0;
   overflow-x: auto;
   padding: 8px;
-  border-radius: var(--r-inner, var(--radius-md));
-  background: color-mix(in srgb, var(--black) 86%, transparent);
+  border-radius: var(--r-inner);
+  background: color-mix(in srgb, var(--black) 86%, var(--transparent));
   color: var(--white);
   font: 500 11px / 1.45 var(--font-mono);
 }
@@ -367,7 +367,7 @@
 .chat-bubble__inline-code {
   padding: 1px 4px;
   border-radius: var(--r-kbd);
-  background: color-mix(in srgb, var(--accent-soft) 64%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 64%, var(--transparent));
   font-family: var(--font-mono);
   font-size: 0.92em;
 }
@@ -393,9 +393,9 @@
   resize: vertical;
   padding: 8px 9px;
   border: 1px solid var(--border, var(--hairline));
-  border-radius: var(--r-inner, var(--radius-md));
+  border-radius: var(--r-inner);
   color: var(--text);
-  background: color-mix(in srgb, var(--surface, transparent) 72%, var(--raised));
+  background: color-mix(in srgb, var(--surface, var(--transparent)) 72%, var(--raised));
   font: 500 12px / 1.35 var(--font-body);
 }
 
@@ -409,7 +409,7 @@
   height: 34px;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--accent, var(--accent-bright)) 44%, var(--border));
-  border-radius: var(--r-inner, var(--radius-md));
+  border-radius: var(--r-inner);
   color: var(--text);
   background: var(--accent-soft);
   cursor: pointer;
@@ -426,11 +426,11 @@
   height: 44px;
   justify-content: center;
   padding: 5px;
-  border-radius: var(--r-round, 50%);
+  border-radius: var(--r-round);
 }
 
 .cc--mini-orb::before {
-  border-radius: var(--r-round, 50%);
+  border-radius: var(--r-round);
 }
 
 .cc--mini-orb .cc__content,
@@ -464,12 +464,12 @@
   width: 480px;
   height: 60px;
   padding: 9px 12px;
-  border-radius: var(--r-panel, var(--radius-window));
+  border-radius: var(--r-panel);
 }
 
 .cc--compact::before,
 .cc--expanded::before {
-  border-radius: var(--r-panel, var(--radius-window));
+  border-radius: var(--r-panel);
 }
 
 .cc--compact .cc__orb-wrap {
@@ -492,7 +492,7 @@
   min-height: 112px;
   align-items: start;
   padding: 12px;
-  border-radius: var(--r-panel, var(--radius-window));
+  border-radius: var(--r-panel);
 }
 
 .cc--expanded .cc__orb-wrap {
@@ -581,13 +581,13 @@
 
 @keyframes ccpulse {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 24%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 24%, var(--transparent));
   }
   70% {
-    box-shadow: 0 0 0 7px transparent;
+    box-shadow: 0 0 0 7px var(--transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 transparent;
+    box-shadow: 0 0 0 0 var(--transparent);
   }
 }
 

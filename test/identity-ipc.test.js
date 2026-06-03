@@ -108,7 +108,11 @@ test("registerIdentityHandlers wires every identity channel", () => {
 
 test("identity handlers delegate to PersonaEngine methods", async () => {
   const personaEngine = createMockPersonaEngine();
-  const handlers = createIdentityIpcHandlers({ personaEngine });
+  const changes = [];
+  const handlers = createIdentityIpcHandlers({
+    onChanged: (change) => changes.push(change),
+    personaEngine,
+  });
 
   assert.deepEqual(await handlers.listPersonas(), [DEFAULT_PERSONA, COACH_PERSONA]);
   assert.equal(personaEngine.calls.getAll, 1);
@@ -152,6 +156,12 @@ test("identity handlers delegate to PersonaEngine methods", async () => {
     deleted: true,
   });
   assert.deepEqual(personaEngine.calls.delete, ["researcher"]);
+  assert.deepEqual(changes, [
+    { action: "switch-persona", personaId: "coach", type: "identity" },
+    { action: "create-persona", personaId: "researcher", type: "identity" },
+    { action: "update-persona", personaId: "researcher", type: "identity" },
+    { action: "delete-persona", personaId: "researcher", type: "identity" },
+  ]);
 });
 
 test("delete default persona returns structured identity error", async () => {
@@ -170,7 +180,9 @@ test("delete default persona returns structured identity error", async () => {
 test("agent profile adapters preserve legacy profile shape and expose active persona", async () => {
   const personaEngine = createMockPersonaEngine();
   const savedProfiles = [];
+  const changes = [];
   const adapters = createAgentProfileIdentityAdapters({
+    onChanged: (change) => changes.push(change),
     personaEngine,
     loadAgentProfile() {
       return {
@@ -222,6 +234,7 @@ test("agent profile adapters preserve legacy profile shape and expose active per
   assert.equal(saved.persona, "coach");
   assert.equal(saved.personaId, "coach");
   assert.deepEqual(saved.activePersona, COACH_PERSONA);
+  assert.deepEqual(changes, [{ action: "set-profile", personaId: "coach", type: "identity" }]);
 });
 
 test("profile compatibility helpers strip identity-only fields before legacy persistence", () => {

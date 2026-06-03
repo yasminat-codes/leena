@@ -35,24 +35,35 @@ export function registerIdentityHandlers({ ipcMain, ...options } = {}) {
 }
 
 export function createIdentityIpcHandlers(options = {}) {
-  const { personaEngine } = normalizeIdentityDependencies(options);
+  const { onChanged, personaEngine } = normalizeIdentityDependencies(options);
 
   return {
     listPersonas: () => personaEngine.getAll(),
-    switchPersona: (_event, payload) =>
-      personaEngine.setActive(readPersonaId(payload, "personaId")),
-    createPersona: (_event, personaData) => personaEngine.create(personaData),
+    switchPersona: (_event, payload) => {
+      const persona = personaEngine.setActive(readPersonaId(payload, "personaId"));
+      notifyIdentityChanged(onChanged, "switch-persona", persona);
+      return persona;
+    },
+    createPersona: (_event, personaData) => {
+      const persona = personaEngine.create(personaData);
+      notifyIdentityChanged(onChanged, "create-persona", persona);
+      return persona;
+    },
     updatePersona: (_event, idOrPayload, changes) => {
       const payload = parseUpdatePayload(idOrPayload, changes);
-      return personaEngine.update(payload.id, payload.changes);
+      const persona = personaEngine.update(payload.id, payload.changes);
+      notifyIdentityChanged(onChanged, "update-persona", persona);
+      return persona;
     },
     deletePersona: (_event, payload) => {
       const id = readPersonaId(payload, "id");
       try {
+        const deleted = Boolean(personaEngine.delete(id));
+        notifyIdentityChanged(onChanged, "delete-persona", { id, deleted });
         return {
           ok: true,
           id,
-          deleted: Boolean(personaEngine.delete(id)),
+          deleted,
         };
       } catch (error) {
         return {
@@ -67,6 +78,7 @@ export function createIdentityIpcHandlers(options = {}) {
 
 export function createAgentProfileIdentityAdapters(options = {}) {
   const {
+    onChanged,
     personaEngine,
     loadAgentProfile = defaultLoadAgentProfile,
     saveAgentProfile = defaultSaveAgentProfile,
@@ -82,7 +94,12 @@ export function createAgentProfileIdentityAdapters(options = {}) {
       }
 
       const savedProfile = saveAgentProfile(stripIdentityProfileFields(profile));
-      return extendAgentProfileWithActivePersona(savedProfile, personaEngine.getActive());
+      const extendedProfile = extendAgentProfileWithActivePersona(
+        savedProfile,
+        personaEngine.getActive(),
+      );
+      notifyIdentityChanged(onChanged, "set-profile", extendedProfile.activePersona ?? {});
+      return extendedProfile;
     },
   };
 }
@@ -138,7 +155,10 @@ export const createAgentProfileAdapters = createAgentProfileIdentityAdapters;
 function normalizeIdentityDependencies(options) {
   const personaEngine = options.personaEngine ?? new PersonaEngine(options);
   assertPersonaEngineShape(personaEngine);
-  return { personaEngine };
+  return {
+    onChanged: typeof options.onChanged === "function" ? options.onChanged : null,
+    personaEngine,
+  };
 }
 
 function normalizeProfileDependencies(options) {
@@ -159,10 +179,31 @@ function normalizeProfileDependencies(options) {
   }
 
   return {
+    onChanged: typeof options.onChanged === "function" ? options.onChanged : null,
     personaEngine,
     loadAgentProfile: options.loadAgentProfile,
     saveAgentProfile: options.saveAgentProfile,
   };
+}
+
+function notifyIdentityChanged(onChanged, action, persona) {
+  if (typeof onChanged !== "function") {
+    return;
+  }
+  try {
+    onChanged({
+      action,
+      personaId:
+        typeof persona?.id === "string"
+          ? persona.id
+          : typeof persona?.personaId === "string"
+            ? persona.personaId
+            : undefined,
+      type: "identity",
+    });
+  } catch {
+    // Identity changes should persist even if the renderer notification path is unavailable.
+  }
 }
 
 function assertPersonaEngineShape(personaEngine) {

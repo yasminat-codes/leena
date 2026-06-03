@@ -400,3 +400,9 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer re-check passed with no blockers after reviewer-fix-5. The only carried warning is redundant persona/profile refresh through both the custom renderer event and `data:changed`; it is non-blocking because active session updates and Home refreshes are generation-guarded.
 - Advisor gate cleared. Carried warnings for the next wave: avoid redundant persona refresh churn if it becomes noisy, and keep overview proof counts aligned with the latest full gate.
 - Final parent gates passed against the current worktree: `npm test` (525/525), changed-file `node --check`, `git diff --check`, WAL JSON parse (`260` entries), task-count audit (`pending=3`, `in-progress=0`, `completed=63`, `blocked=6`), active-claims audit (`0`), and changed-task privacy scan.
+
+## 2026-06-03 — Wave 14 PR and CodeRabbit advisory
+
+- Opened PR #15 (`wave-14` -> `main`) after reviewer and advisor gates cleared; branch head `f89cc47`.
+- Requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated review-in-progress/trigger comments and a pending advisory status at merge-decision time; no actionable findings were available, so the advisory-only status did not block merge.
+- The repo still lacks `codex` and `codex-automation` labels, so no automation labels were applied.

@@ -756,4 +756,5 @@
 ### Wave 14 Final Gate Notes
 - Reviewer and advisor cleared Wave 14 after reviewer-fix-5. Redundant persona refreshes are acceptable for now because active realtime session updates and Home refreshes are generation-guarded.
 - Keep `tasks/OVERVIEW.md` proof counts synchronized with the latest full parent gate before PR creation; Wave 14 ended at `npm test` 525/525.
+- CodeRabbit remains advisory-only. For PR #15 it posted review-in-progress/trigger comments with a pending status and no actionable findings available at merge-decision time.
 - **WAL ref:** tasks/.wal/wal.jsonl

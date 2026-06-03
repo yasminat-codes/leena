@@ -16,6 +16,7 @@ export const PROVIDER_API_KEY_KEYS = Object.freeze({
 });
 
 export const OLLAMA_BASE_URL_KEY = "provider:ollama:baseUrl";
+export const COMPOSIO_CREDENTIAL_KEY = "composio:credential:apiKey";
 
 export function getProviderSettingsPath() {
   return getDatabasePath();
@@ -74,6 +75,43 @@ export function saveProviderApiKey(
     });
   }
   return saveSetting(key, protectedValue, storePath);
+}
+
+export function loadComposioCredential(storePath = getProviderSettingsPath(), secretCodec) {
+  if (typeof secretCodec?.reveal !== "function") {
+    return null;
+  }
+  const protectedValue = loadSetting(COMPOSIO_CREDENTIAL_KEY, storePath);
+  return protectedValue ? normalizeSettingValue(secretCodec.reveal(protectedValue)) : null;
+}
+
+export function saveComposioCredential(
+  credential,
+  storePath = getProviderSettingsPath(),
+  secretCodec,
+) {
+  const normalized = normalizeSettingValue(credential);
+  if (normalized === null) {
+    return saveSetting(COMPOSIO_CREDENTIAL_KEY, null, storePath);
+  }
+  if (typeof secretCodec?.protect !== "function") {
+    throw new ProviderError("Secure Composio credential storage is unavailable", {
+      code: "COMPOSIO_CREDENTIAL_STORAGE_UNAVAILABLE",
+      provider: "composio",
+    });
+  }
+  const protectedValue = normalizeSettingValue(secretCodec.protect(normalized));
+  if (!protectedValue || protectedValue.includes(normalized)) {
+    throw new ProviderError("Composio credential codec returned an unsafe payload", {
+      code: "UNSAFE_COMPOSIO_CREDENTIAL_PAYLOAD",
+      provider: "composio",
+    });
+  }
+  return saveSetting(COMPOSIO_CREDENTIAL_KEY, protectedValue, storePath);
+}
+
+export function clearComposioCredential(storePath = getProviderSettingsPath()) {
+  return saveSetting(COMPOSIO_CREDENTIAL_KEY, null, storePath);
 }
 
 export function loadOllamaBaseUrl(storePath = getProviderSettingsPath()) {

@@ -21,6 +21,14 @@
 
 ## Claim History
 
+- 2026-06-03T23:12:24Z — Released Wave 18 reviewer-fix claims after Settings identity controls were made fully visible, Settings baseline refreshed, and changed-file syntax checks, `npm run check`, focused Settings tests (16/16), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565) passed.
+- 2026-06-03T23:10:32Z — Opened Wave 18 reviewer-fix claims for the clipped Settings identity panel: Settings renderer, CSS, focused Settings/UI-baseline tests, and refreshed Settings baseline artifacts.
+- 2026-06-03T23:00:43Z — Released Wave 18 task `135` claims after parent verification passed changed-file syntax checks, `npm run check`, focused integration/onboarding/permission tests (28/28), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565). Parent fixed the initial UI baseline height failure by making the marketplace a horizontal strip.
+- 2026-06-03T22:45:12Z — Opened Wave 18 follow-on claim for task `135`: Mac access integration card definitions, renderer/details, status/actions CSS, and focused permission/integration tests.
+- 2026-06-03T22:42:25Z — Released Wave 18 task `131` claims after parent verification passed `npm run check`, focused integration tests (10/10), UI baseline harness (1/1), full `node --test` (561/561), and `git diff --check`.
+- 2026-06-03T22:05:26Z — Opened Wave 18 initial claims for tasks `124`, `125`, `126`, `133`, and `142`. Shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` integration remains serialized; task `131` waits on terminal `126`, and task `135` waits on terminal `131`.
+- 2026-06-03T22:27:04Z — Released Wave 18 initial claims for tasks `124`, `125`, `126`, `133`, and `142` after independent output checks, parent serialized Composio preload integration, focused gates, UI baseline harness, `npm run check`, full `node --test` (559/559), changed-file syntax checks, and `git diff --check` passed.
+- 2026-06-03T22:27:04Z — Opened Wave 18 follow-on claim for task `131`: Integrations detail shell files and tests. Task `135` remains pending until `131` is terminal.
 - 2026-06-03T21:08:47Z — Opened Wave 17 claims for tasks `120`, `121`, `122`, and `123`: reference brief, UI baseline proof harness/artifacts, Mac access trust contract, Settings IA contract, and owned task files.
 - 2026-06-03T21:27:08Z — Released Wave 17 claims for tasks `120`, `121`, `122`, and `123` after reference brief, UI baseline screenshot harness/artifacts, Mac access trust contract, Settings IA contract, independent artifact/content checks, focused UI harness, `npm run check`, full `node --test` (542/542), WAL parse, privacy scan, and `git diff --check` passed.
 

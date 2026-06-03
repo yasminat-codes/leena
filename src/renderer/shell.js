@@ -1,4 +1,5 @@
 import { renderActivity } from "./screens/activity.js";
+import { renderChat } from "./screens/chat.js";
 import { renderHome } from "./screens/home.js";
 import { renderIntegrations } from "./screens/integrations.js";
 import {
@@ -8,10 +9,11 @@ import {
 } from "./screens/settings.js";
 import { refreshTasksScreen, renderTasks } from "./screens/tasks.js";
 
-const screens = Object.freeze(["Home", "Activity", "Tasks", "Integrations", "Settings"]);
+const screens = Object.freeze(["Home", "Chat", "Activity", "Tasks", "Integrations", "Settings"]);
 
 const screenRenderers = Object.freeze({
   Activity: renderActivity,
+  Chat: renderChat,
   Home: renderHome,
   Integrations: renderIntegrations,
   Settings: renderSettings,

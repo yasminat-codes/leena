@@ -16,6 +16,13 @@ import {
 import { createRealtimeToolHandler } from "./realtime-tool-handler.js";
 import { SESSION_STATE_EVENTS, SessionStateManager } from "./session-state.js";
 import { initShell } from "./shell.js";
+import {
+  classifyVoiceStartupError,
+  runVoiceStartupPreflight,
+  VOICE_STARTUP_ACTIONS,
+  VOICE_STARTUP_STAGES,
+  voiceStartupStageLabel,
+} from "./voice-startup-preflight.js";
 import { createWaitingSound } from "./waiting-sound.js";
 
 const appShellElement = document.querySelector("#app-shell");
@@ -49,6 +56,7 @@ const headerCallButton = document.querySelector("#header-call");
 const headerCallLabelElement = document.querySelector("#header-call-label");
 const callLabelElement = document.querySelector("#call-label");
 const callEndButton = document.querySelector("#call-end");
+const callEndLabelElement = callEndButton.querySelector("span:not(.call-end-glyph)");
 const callTimerElement = document.querySelector("#call-timer");
 const callWaveCanvas = document.querySelector("#call-wave");
 const remoteAudioElement = document.querySelector("#remote-audio");
@@ -110,6 +118,10 @@ let liveCommandCenter = null;
 let liveCommandCenterMount = null;
 let appRuntimeStarted = false;
 let onboardingMount = null;
+let shellController = null;
+let voiceStartupFailure = null;
+let voiceStartupGeneration = 0;
+let voiceStartupStage = VOICE_STARTUP_STAGES.starting;
 
 function emitSessionEvent(eventName, payload = {}) {
   window.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
@@ -251,6 +263,128 @@ function setStatus(message) {
   statusElement.textContent = message;
 }
 
+function setCallEndLabel(label, ariaLabel = label) {
+  callEndLabelElement.textContent = label;
+  callEndButton.setAttribute("aria-label", ariaLabel);
+}
+
+function resetCallEndLabel() {
+  setCallEndLabel("End", "End call");
+}
+
+function showVoiceStartupNotice(message) {
+  toolActivityLabelElement.textContent = message;
+  toolActivityElement.hidden = false;
+  appShellElement.dataset.voiceStartup = voiceStartupStage;
+}
+
+function hideVoiceStartupNotice() {
+  if (appShellElement.dataset.toolActivity !== "active") {
+    toolActivityElement.hidden = true;
+  }
+  delete appShellElement.dataset.voiceStartup;
+}
+
+function beginVoiceStartup() {
+  voiceStartupGeneration += 1;
+  voiceStartupFailure = null;
+  voiceStartupStage = VOICE_STARTUP_STAGES.starting;
+  resetCallEndLabel();
+  showVoiceStartupNotice(voiceStartupStageLabel(voiceStartupStage));
+  return voiceStartupGeneration;
+}
+
+function isVoiceStartupCurrent(generation) {
+  return generation === voiceStartupGeneration && isCallActive;
+}
+
+function setVoiceStartupStage(stage, generation) {
+  if (!isVoiceStartupCurrent(generation)) {
+    return;
+  }
+
+  voiceStartupStage = stage;
+  const label = voiceStartupStageLabel(stage);
+  setStatus(label);
+  showVoiceStartupNotice(label);
+  emitSessionState("thinking", { connected: true, message: label, phase: stage });
+}
+
+function presentVoiceStartupFailure(error, generation) {
+  if (!isVoiceStartupCurrent(generation)) {
+    return;
+  }
+
+  const failure = classifyVoiceStartupError(error, voiceStartupStage);
+  voiceStartupFailure = failure;
+  voiceStartupStage = failure.stage;
+  setStatus(failure.message);
+  setMode("failed");
+  showVoiceStartupNotice(failure.message);
+  setCallEndLabel(failure.actionLabel, `${failure.actionLabel}: ${failure.message}`);
+  callEndButton.disabled = false;
+  callEndButton.tabIndex = 0;
+  emitSessionEvent(SESSION_STATE_EVENTS.error, {
+    action: failure.action,
+    kind: failure.kind,
+    message: failure.message,
+    stage: failure.stage,
+  });
+}
+
+async function handleVoiceStartupFailureAction() {
+  if (!voiceStartupFailure) {
+    return;
+  }
+
+  const failure = voiceStartupFailure;
+  if (failure.action === VOICE_STARTUP_ACTIONS.retry) {
+    await startCall();
+    return;
+  }
+
+  if (failure.action === VOICE_STARTUP_ACTIONS.openSettings) {
+    await openMicrophoneSettingsForRetry();
+    return;
+  }
+
+  if (failure.action === VOICE_STARTUP_ACTIONS.configureProvider) {
+    await openProviderSettings();
+  }
+}
+
+async function openMicrophoneSettingsForRetry() {
+  const retryFailure = Object.freeze({
+    action: VOICE_STARTUP_ACTIONS.retry,
+    actionLabel: "Retry",
+    kind: voiceStartupFailure?.kind ?? "mic_denied",
+    message: "Grant microphone access in macOS settings, then retry voice.",
+    stage: VOICE_STARTUP_STAGES.microphone,
+  });
+  voiceStartupFailure = retryFailure;
+  setCallEndLabel(retryFailure.actionLabel, `${retryFailure.actionLabel}: ${retryFailure.message}`);
+  showVoiceStartupNotice("Opening microphone settings...");
+  setStatus("Opening microphone settings...");
+
+  try {
+    await window.leena.openOsPermissionSettings("microphone");
+    showVoiceStartupNotice(retryFailure.message);
+    setStatus(retryFailure.message);
+  } catch (error) {
+    const message = `Settings failed: ${error.message}`;
+    voiceStartupFailure = Object.freeze({ ...retryFailure, message });
+    showVoiceStartupNotice(message);
+    setStatus(message);
+    await writeRendererDiagnostic("call.microphone.settings_failed", formatRendererError(error));
+  }
+}
+
+async function openProviderSettings() {
+  await stopCall({ prefetchNextSecret: false });
+  shellController?.setActiveScreen("Settings");
+  setStatus("Configure provider");
+}
+
 function setMode(mode) {
   appShellElement.dataset.mode = mode;
   syncTrayStateForMode(mode);
@@ -327,6 +461,7 @@ function setCallActive(active, { inactiveWindowMode = "panel" } = {}) {
   headerCallButton.setAttribute("aria-pressed", String(active));
   headerCallLabelElement.textContent = active ? "End" : "Call";
   callLabelElement.textContent = active ? "End" : "Call";
+  resetCallEndLabel();
   callEndButton.disabled = !active;
   callEndButton.tabIndex = active ? 0 : -1;
   appShellElement.dataset.call = active ? "active" : "idle";
@@ -337,6 +472,7 @@ function setCallActive(active, { inactiveWindowMode = "panel" } = {}) {
   } else {
     stopCallTimer();
     clearWaveform();
+    hideVoiceStartupNotice();
     void setWindowFocusable(true);
     void setWindowMode(inactiveWindowMode);
   }
@@ -701,6 +837,7 @@ async function startCall() {
     return;
   }
 
+  const startupGeneration = beginVoiceStartup();
   callToggleButton.disabled = true;
   headerCallButton.disabled = true;
   // Hide the panel instantly (no fade) before resizing so the UI just
@@ -709,9 +846,8 @@ async function startCall() {
     await panelController.close({ immediate: true, skipWindowMode: true });
   }
   setCallActive(true);
-  setStatus("Starting…");
+  setVoiceStartupStage(VOICE_STARTUP_STAGES.starting, startupGeneration);
   setMode("connecting");
-  emitSessionState("thinking", { connected: true });
   realtimeConversationId = createRealtimeConversationId();
   realtimeMemoryKeys = new Set();
   await writeRendererDiagnostic("call.start", {
@@ -719,21 +855,32 @@ async function startCall() {
   });
 
   try {
-    // The secret fetch (network) and mic acquisition (permission/device) are
-    // independent, so run them concurrently to overlap their round-trips. The
-    // secret is usually already prefetched, making this effectively just the
-    // getUserMedia wait.
-    const [secret, stream] = await Promise.all([
-      consumeRealtimeSecret(),
-      acquireMicrophoneStream(),
-    ]);
-    localStream = stream;
+    const { secret } = await runVoiceStartupPreflight({
+      acquireMicrophone: acquireMicrophoneStream,
+      createPeerConnection: () => new RTCPeerConnection(),
+      createSecret: consumeRealtimeSecret,
+      getProviderStatus: () => window.leena.getOpenAIStatus(),
+      onResource: (stage, resource) => {
+        if (!isVoiceStartupCurrent(startupGeneration)) {
+          disposeVoiceStartupResource(stage, resource);
+          return;
+        }
+        if (stage === VOICE_STARTUP_STAGES.microphone) {
+          localStream = resource;
+        } else if (stage === VOICE_STARTUP_STAGES.peer) {
+          peerConnection = resource;
+        }
+      },
+      onStage: (stage) => setVoiceStartupStage(stage, startupGeneration),
+    });
+    if (!isVoiceStartupCurrent(startupGeneration)) {
+      return;
+    }
     await writeRendererDiagnostic("call.secret.created", { hasValue: Boolean(secret?.value) });
     await writeRendererDiagnostic("call.microphone.stream", describeMediaStream(localStream));
     startAudioLevelMonitor(localStream);
     void populateMicDevices();
 
-    peerConnection = new RTCPeerConnection();
     dataChannel = peerConnection.createDataChannel("oai-events");
     await writeRendererDiagnostic("call.peer.created", {});
 
@@ -761,6 +908,10 @@ async function startCall() {
     };
     dataChannel.addEventListener("open", () => {
       void writeRendererDiagnostic("call.data_channel.open", {});
+      voiceStartupFailure = null;
+      voiceStartupStage = VOICE_STARTUP_STAGES.listening;
+      hideVoiceStartupNotice();
+      resetCallEndLabel();
       setStatus("Listening");
       setMode("listening");
       emitSessionState("listening", { connected: true });
@@ -781,8 +932,15 @@ async function startCall() {
     }
     await writeRendererDiagnostic("call.microphone.tracks_added", describeMediaStream(localStream));
 
+    setVoiceStartupStage(VOICE_STARTUP_STAGES.session, startupGeneration);
     const offer = await peerConnection.createOffer();
+    if (!isVoiceStartupCurrent(startupGeneration)) {
+      return;
+    }
     await peerConnection.setLocalDescription(offer);
+    if (!isVoiceStartupCurrent(startupGeneration)) {
+      return;
+    }
 
     const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
       method: "POST",
@@ -797,6 +955,9 @@ async function startCall() {
       throw new Error(`Realtime call failed (${sdpResponse.status}): ${await sdpResponse.text()}`);
     }
 
+    if (!isVoiceStartupCurrent(startupGeneration)) {
+      return;
+    }
     await peerConnection.setRemoteDescription({
       type: "answer",
       sdp: await sdpResponse.text(),
@@ -808,16 +969,28 @@ async function startCall() {
     setStatus("Connecting");
   } catch (error) {
     await writeRendererDiagnostic("call.error", formatRendererError(error));
-    setStatus(`Failed: ${error.message}`);
-    emitSessionEvent(SESSION_STATE_EVENTS.error, error);
-    await stopCall();
+    await cleanupRealtimeResources({ finalizeMemorySession: true });
+    presentVoiceStartupFailure(error, startupGeneration);
   } finally {
     callToggleButton.disabled = !isOpenAIConnected;
     headerCallButton.disabled = !isOpenAIConnected;
   }
 }
 
-async function stopCall() {
+function disposeVoiceStartupResource(stage, resource) {
+  if (stage === VOICE_STARTUP_STAGES.microphone) {
+    for (const track of resource?.getTracks?.() ?? []) {
+      track.stop();
+    }
+    return;
+  }
+
+  if (stage === VOICE_STARTUP_STAGES.peer && typeof resource?.close === "function") {
+    resource.close();
+  }
+}
+
+async function cleanupRealtimeResources({ finalizeMemorySession = true } = {}) {
   audioLevelMonitor?.stop();
   audioLevelMonitor = null;
   setOrbLevel(0);
@@ -828,6 +1001,8 @@ async function stopCall() {
   }
 
   if (peerConnection) {
+    peerConnection.onconnectionstatechange = null;
+    peerConnection.ontrack = null;
     peerConnection.close();
     peerConnection = null;
   }
@@ -853,16 +1028,29 @@ async function stopCall() {
   waitingSound.reset();
 
   realtimeToolHandler.reset();
-  finalizeRealtimeMemorySession();
+  if (finalizeMemorySession) {
+    finalizeRealtimeMemorySession();
+  }
   hideToolActivity();
   remoteAudioElement.srcObject = null;
+}
+
+async function stopCall({ prefetchNextSecret = true } = {}) {
+  voiceStartupGeneration += 1;
+  voiceStartupFailure = null;
+  voiceStartupStage = VOICE_STARTUP_STAGES.starting;
+  hideVoiceStartupNotice();
+  resetCallEndLabel();
+  await cleanupRealtimeResources();
   setCallActive(false, { inactiveWindowMode: "panel" });
   appShellElement.dataset.panel = "open";
   setMode("idle");
   setStatus(isOpenAIConnected ? "Ready" : "Connect OpenAI");
   emitSessionState("idle", { connected: isOpenAIConnected });
   // Re-prime a secret so the next call starts without the client_secret wait.
-  prefetchRealtimeSecret();
+  if (prefetchNextSecret) {
+    prefetchRealtimeSecret();
+  }
 }
 
 async function handleRealtimeEvent(event) {
@@ -1627,6 +1815,10 @@ function startAppRuntime() {
   callToggleButton.addEventListener("click", toggleCall);
   headerCallButton.addEventListener("click", toggleCall);
   callEndButton.addEventListener("click", () => {
+    if (voiceStartupFailure) {
+      void handleVoiceStartupFailureAction();
+      return;
+    }
     // Same button, context-aware: during computer use it stops the task and keeps
     // the call going; otherwise it ends the call.
     if (appShellElement.dataset.toolActivity === "active") {
@@ -1648,7 +1840,7 @@ function startAppRuntime() {
   setOrbLevel(0);
 
   panelController.init({ openByDefault: false });
-  initShell();
+  shellController = initShell();
   mountLiveCommandCenter();
   initClickSound();
 

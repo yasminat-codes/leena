@@ -6,9 +6,12 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const cssPath = join(rootDir, "src", "renderer", "leena.css");
+const commandCenterCssPath = join(rootDir, "src", "renderer", "components", "command-center.css");
 const indexPath = join(rootDir, "src", "renderer", "index.html");
 const css = readFileSync(cssPath, "utf8");
+const commandCenterCss = readFileSync(commandCenterCssPath, "utf8");
 const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+const commandCenterCssWithoutComments = commandCenterCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
 const rootTokens = [
   "--cream",
@@ -64,10 +67,28 @@ const themeTokens = [
   "--on-grad-dim",
   "--on-grad-faint",
   "--shadow",
+  "--command-shadow",
+  "--home-command-shadow",
+  "--orb-signal",
+  "--orb-shadow",
+  "--orb-inner-highlight",
+  "--orb-inner-shade",
+  "--orb-ring-color",
+  "--orb-ring-opacity",
+  "--orb-well-background",
+  "--orb-well-shadow",
+  "--traffic-light-rail",
+  "--traffic-light-border",
+  "--traffic-light-glint",
+  "--traffic-close-shadow",
+  "--traffic-minimize-shadow",
+  "--traffic-zoom-shadow",
   "--wall",
 ];
 
 const densityTokens = ["--pad", "--gap", "--row"];
+const themeValues = ["workspace", "light", "dark", "vercel-dark"];
+const treatmentValues = ["workspace", "aurora", "coral", "iris"];
 
 function extractRuleBody(source, selector) {
   const block = collectCssBlocks(source).find((candidate) => {
@@ -76,6 +97,13 @@ function extractRuleBody(source, selector) {
       .map((part) => part.trim())
       .includes(selector);
   });
+
+  assert.ok(block, `Missing selector ${selector}`);
+  return source.slice(block.start, block.end);
+}
+
+function extractExactRuleBody(source, selector) {
+  const block = collectCssBlocks(source).find((candidate) => candidate.prelude.trim() === selector);
 
   assert.ok(block, `Missing selector ${selector}`);
   return source.slice(block.start, block.end);
@@ -91,6 +119,14 @@ function assertIncludesAll(body, needles, context) {
   for (const needle of needles) {
     assert.ok(body.includes(needle), `${context} missing ${needle}`);
   }
+}
+
+function extractDeclarationValue(body, property) {
+  const escapedProperty = property.replaceAll("-", "\\-");
+  const match = body.match(new RegExp(`${escapedProperty}\\s*:\\s*([\\s\\S]*?);`));
+
+  assert.ok(match, `Missing declaration ${property}`);
+  return match[1].trim();
 }
 
 function collectCssBlocks(source) {
@@ -155,7 +191,7 @@ test("visible wallpaper surfaces cross-fade background over 200ms", () => {
 });
 
 test("every treatment defines gradient, accent, and orb tokens", () => {
-  for (const treatment of ["workspace", "aurora", "coral", "iris"]) {
+  for (const treatment of treatmentValues) {
     const selector = `.leena[data-treatment="${treatment}"]`;
     const body = extractRuleBody(cssWithoutComments, selector);
 
@@ -185,13 +221,26 @@ test("workspace treatment matches the teal and paper reference palette", () => {
 });
 
 test("every theme defines surface, text, glass, shadow, and wallpaper tokens", () => {
-  for (const theme of ["workspace", "light", "dark", "vercel-dark"]) {
+  for (const theme of themeValues) {
     const selector = `.leena[data-theme="${theme}"]`;
     const body = extractRuleBody(cssWithoutComments, selector);
 
     assertHasProperties(body, themeTokens, selector);
     assert.match(body, /--wall\s*:[\s\S]*radial-gradient/, `${selector} defines wallpaper`);
   }
+});
+
+test("appearance theme and treatment selector values stay stable", () => {
+  const blocks = collectCssBlocks(cssWithoutComments);
+  const themes = blocks
+    .map((block) => block.prelude.match(/^\.leena\[data-theme="([^"]+)"\]$/)?.[1])
+    .filter(Boolean);
+  const treatments = blocks
+    .map((block) => block.prelude.match(/^\.leena\[data-treatment="([^"]+)"\]$/)?.[1])
+    .filter(Boolean);
+
+  assert.deepEqual(themes, ["light", "workspace", "dark", "vercel-dark"]);
+  assert.deepEqual(treatments, ["aurora", "workspace", "coral", "iris"]);
 });
 
 test("default dark theme is graphite neutral, not lavender purple", () => {
@@ -214,6 +263,140 @@ test("workspace theme uses off-white as the dominant shell color with teal accen
     "workspace theme",
   );
   assert.match(body, /linear-gradient\(135deg,\s*#fbf8ef,\s*#f2eee4\)/);
+});
+
+test("workspace orb and home command use restrained theme-aware shadow tokens", () => {
+  const workspaceTheme = extractRuleBody(cssWithoutComments, '.leena[data-theme="workspace"]');
+  const orbBody = extractRuleBody(cssWithoutComments, ".orb");
+  const workspaceOrbBody = extractRuleBody(
+    cssWithoutComments,
+    '.leena[data-theme="workspace"] .orb',
+  );
+  const homeSurfaceBody = extractRuleBody(cssWithoutComments, ".home-command__surface");
+  const homeSurfaceWorkspaceBody = extractRuleBody(
+    cssWithoutComments,
+    '.leena[data-theme="workspace"] .home-command__surface',
+  );
+  const orbWellBody = extractRuleBody(cssWithoutComments, ".home-command__orb-well");
+  const workspaceOrbShadow = extractDeclarationValue(workspaceTheme, "--orb-shadow");
+  const workspaceHomeShadow = extractDeclarationValue(workspaceTheme, "--home-command-shadow");
+
+  assertIncludesAll(
+    orbBody,
+    [
+      "var(--orb-signal)",
+      "linear-gradient(145deg, var(--orb-b), var(--orb-c))",
+      "box-shadow: var(--orb-shadow)",
+    ],
+    ".orb tokenized material",
+  );
+  assertIncludesAll(workspaceOrbBody, ["box-shadow: var(--orb-shadow)"], "workspace orb");
+  assertIncludesAll(homeSurfaceBody, ["box-shadow: var(--home-command-shadow)"], "home surface");
+  assertIncludesAll(
+    homeSurfaceWorkspaceBody,
+    ["box-shadow: var(--home-command-shadow)"],
+    "workspace home surface",
+  );
+  assertIncludesAll(
+    orbWellBody,
+    ["background: var(--orb-well-background)", "box-shadow: var(--orb-well-shadow)"],
+    "orb well",
+  );
+  assertIncludesAll(
+    workspaceTheme,
+    [
+      "--orb-signal: rgba(7, 91, 85, 0.16)",
+      "0 10px 28px -24px rgba(8, 42, 39, 0.26)",
+      "0 20px 48px -38px rgba(8, 42, 39, 0.22)",
+    ],
+    "workspace restrained orb shadows",
+  );
+  assert.doesNotMatch(workspaceOrbShadow, /rgba\(8,\s*42,\s*39,\s*0\.(?:3[1-9]|[4-9]\d)\)/);
+  assert.doesNotMatch(
+    workspaceHomeShadow,
+    /0\s+28px\s+64px\s+-42px\s+rgba\(8,\s*42,\s*39,\s*0\.52\)/,
+  );
+});
+
+test("traffic lights use aligned tokenized materials", () => {
+  const railBody = extractRuleBody(cssWithoutComments, ".win__lights");
+  const lightBody = extractRuleBody(cssWithoutComments, ".win__lights i");
+  const glintBody = extractRuleBody(cssWithoutComments, ".win__lights i::after");
+
+  assertIncludesAll(
+    railBody,
+    [
+      "align-items: center",
+      "gap: 7px",
+      "min-height: 18px",
+      "border-radius: var(--r-pill)",
+      "background: var(--traffic-light-rail)",
+    ],
+    "traffic light rail",
+  );
+  assertIncludesAll(
+    lightBody,
+    [
+      "width: 11px",
+      "height: 11px",
+      "border: 1px solid var(--traffic-light-border)",
+      "border-radius: var(--r-round)",
+    ],
+    "traffic light dot",
+  );
+  assertIncludesAll(
+    glintBody,
+    ["width: 3px", "height: 3px", "background: var(--traffic-light-glint)"],
+    "traffic light glint",
+  );
+
+  for (const [selector, shadowToken] of [
+    [".win__lights i:nth-child(1)", "--traffic-close-shadow"],
+    [".win__lights i:nth-child(2)", "--traffic-minimize-shadow"],
+    [".win__lights i:nth-child(3)", "--traffic-zoom-shadow"],
+  ]) {
+    const body = extractRuleBody(cssWithoutComments, selector);
+
+    assertIncludesAll(
+      body,
+      [
+        "radial-gradient(circle at 32% 28%, var(--traffic-light-glint)",
+        `box-shadow: var(${shadowToken})`,
+      ],
+      selector,
+    );
+  }
+});
+
+test("home suggested slot reserves its own grid row", () => {
+  const homeScreenBody = extractExactRuleBody(cssWithoutComments, ".home-screen");
+  const suggestedSlotBody = extractRuleBody(cssWithoutComments, "[data-home-suggested-slot]");
+  const recentBody = extractRuleBody(cssWithoutComments, ".home-context--recent");
+  const nextBody = extractRuleBody(cssWithoutComments, ".home-context--next");
+
+  assertIncludesAll(
+    homeScreenBody,
+    ["grid-template-rows: auto auto minmax(0, 1fr)"],
+    "home grid rows",
+  );
+  assertIncludesAll(suggestedSlotBody, ["grid-column: 1", "grid-row: 2"], "home suggested slot");
+  assertIncludesAll(recentBody, ["grid-column: 1", "grid-row: 3"], "recent column");
+  assertIncludesAll(nextBody, ["grid-column: 2", "grid-row: 2 / span 2"], "up next column");
+});
+
+test("command center consumes the shared theme shadow token", () => {
+  const body = extractRuleBody(commandCenterCssWithoutComments, ".cc");
+
+  assertIncludesAll(
+    body,
+    [
+      "0 0 0 1px var(--glass-bd, var(--hairline))",
+      "var(--command-shadow)",
+      "inset 0 1px 0 var(--glass-hi, var(--raised-hover))",
+    ],
+    ".cc shadow contract",
+  );
+  assert.doesNotMatch(body, /legacy-command-shadow\)\s+18%/);
 });
 
 test("every density defines spacing tokens", () => {
@@ -245,8 +428,18 @@ test("component class bodies include the expected design-system properties", () 
     [".tooldot", ["width: 28px", "display: grid", "place-items: center"]],
     [".row", ["gap: 9px", "border-radius: var(--r-inner)", "background: var(--surface-2)"]],
     [".row__txt", ["min-width: 0"]],
-    [".orb", ["border-radius: var(--r-round)", "var(--orb-a)", "var(--orb-b)", "var(--orb-c)"]],
-    [".orb__ring", ["inset: -10px", "border: 1px solid", "var(--accent)"]],
+    [
+      ".orb",
+      [
+        "border-radius: var(--r-round)",
+        "var(--orb-a)",
+        "var(--orb-b)",
+        "var(--orb-c)",
+        "var(--orb-signal)",
+        "box-shadow: var(--orb-shadow)",
+      ],
+    ],
+    [".orb__ring", ["inset: -10px", "border: 1px solid var(--orb-ring-color)"]],
     [".wave", ["display: flex", "color: var(--accent)"]],
     [".grad", ["linear-gradient(", "157deg", "var(--grad-2) 86%"]],
     [".icon-btn", ["width: 28px", "height: 28px", "background: var(--surface-2)"]],

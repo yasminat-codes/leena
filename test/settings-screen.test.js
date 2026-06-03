@@ -122,6 +122,10 @@ function createSettingsRoot() {
   return { densityCompact, root, themeDark, themeLight, treatmentCoral, wrapper };
 }
 
+function getHtmlTags(html, tagName) {
+  return html.match(new RegExp(`<${tagName}\\b[^>]*>`, "g")) ?? [];
+}
+
 test.afterEach(() => {
   delete globalThis.localStorage;
 });
@@ -214,12 +218,28 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   const html = renderSettings();
 
   assert.match(html, /^\s*<section class="settings-screen" aria-label="Settings">/);
-  assert.match(html, /class="panel-glass settings-identity"/);
+  assert.match(html, /class="panel-glass settings-identity[^"]*settings-detail-section/);
+  assert.match(html, /class="settings-identity__fields"/);
+  assert.match(html, /data-settings-primitive="detail-section"/);
+  assert.match(html, /data-settings-detail="general"/);
+  assert.match(html, /data-settings-detail="overview"/);
+  assert.match(html, /data-settings-primitive="overview-card"/);
+  assert.match(html, /data-settings-detail-target="general"/);
+  assert.match(html, /data-settings-detail-target="theme"/);
+  assert.match(html, /data-settings-detail-target="providers"/);
+  assert.match(html, /data-settings-detail-target="updates"/);
+  assert.match(html, /data-settings-detail-target="mac-access"/);
   assert.match(html, /class="orb settings-avatar"/);
   assert.match(html, /class="lx-h2">Yasmine<\/h1>/);
   assert.match(html, /class="lx-sm text-dim">yasmine@leena\.local<\/span>/);
-  assert.match(html, /class="btn btn--ghost" type="button">Edit<\/button>/);
+  assert.match(html, /data-settings-action="edit-identity"/);
+  assert.match(html, /data-agent-name/);
+  assert.match(html, /data-persona-select/);
+  assert.match(html, /data-persona-tone/);
   assert.match(html, /Appearance/);
+  assert.match(html, /data-settings-detail="appearance"/);
+  assert.match(html, /data-settings-primitive="detail-row"/);
+  assert.match(html, /data-settings-primitive="segmented-option"/);
   assert.match(html, /data-appearance-key="theme"/);
   assert.match(html, /data-appearance-value="workspace"/);
   assert.match(html, /data-appearance-value="vercel-dark"/);
@@ -238,8 +258,8 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /Updates/);
   assert.match(html, /data-update-version/);
   assert.match(html, /data-update-check/);
-  assert.match(html, /data-update-download disabled/);
-  assert.match(html, /data-update-install disabled/);
+  assert.match(html, /data-update-download[\s\S]*disabled/);
+  assert.match(html, /data-update-install[\s\S]*disabled/);
   assert.match(html, /Providers/);
   assert.match(html, /OpenAI/);
   assert.match(html, /settings-chip--success/);
@@ -253,12 +273,36 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /Launch on Login/);
   assert.match(html, /Notifications/);
   assert.match(html, /role="switch" aria-checked="true"/);
+  assert.match(html, /data-settings-primitive="toggle"/);
+  assert.match(html, /data-settings-primitive="status-callout"/);
   assert.doesNotMatch(html, /#[0-9a-fA-F]{3,8}\b/);
 
   for (const group of Object.values(SETTINGS_MOCK_DATA.appearance)) {
     for (const option of group) {
       assert.match(html, new RegExp(`data-appearance-value="${option.value}"`));
     }
+  }
+
+  const inputTags = getHtmlTags(html, "input");
+  assert.ok(inputTags.length >= 5);
+  for (const tag of inputTags) {
+    assert.match(tag, /\bclass="[^"]*\bsettings-input\b[^"]*"/);
+    assert.match(tag, /data-settings-primitive="input"/);
+    assert.match(tag, /aria-label="/);
+  }
+
+  const selectTags = getHtmlTags(html, "select");
+  assert.ok(selectTags.length >= 3);
+  for (const tag of selectTags) {
+    assert.match(tag, /\bclass="[^"]*\bsettings-select\b[^"]*"/);
+    assert.match(tag, /data-settings-primitive="select"/);
+    assert.match(tag, /aria-label="/);
+  }
+
+  const buttonTags = getHtmlTags(html, "button");
+  assert.ok(buttonTags.length >= 12);
+  for (const tag of buttonTags) {
+    assert.match(tag, /data-settings-primitive="(?:action-button|segmented-option|toggle)"/);
   }
 });
 

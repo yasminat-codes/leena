@@ -143,6 +143,39 @@ const DEFAULT_PERSONA_STATE = Object.freeze({
   tone: "warm, direct, conversational",
 });
 
+const SETTINGS_OVERVIEW_CARDS = Object.freeze([
+  Object.freeze({
+    id: "general",
+    meta: "Profile",
+    title: "General",
+    description: "Profile, persona, hotkey.",
+  }),
+  Object.freeze({
+    id: "theme",
+    meta: "Appearance",
+    title: "Theme",
+    description: "Theme, treatment, density.",
+  }),
+  Object.freeze({
+    id: "providers",
+    meta: "Models",
+    title: "Providers",
+    description: "API keys and model routes.",
+  }),
+  Object.freeze({
+    id: "updates",
+    meta: "Version",
+    title: "Updates",
+    description: "Version and install flow.",
+  }),
+  Object.freeze({
+    id: "mac-access",
+    meta: "Trusted",
+    title: "Mac Access",
+    description: "Trusted Mac permissions.",
+  }),
+]);
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -1037,22 +1070,201 @@ export function createProviderModelSelectorController(mount, bridge = getLeenaBr
   return controller;
 }
 
+function renderSettingsOverview() {
+  return renderSettingsSection({
+    caption: "Focused detail surfaces",
+    children: `
+      <div
+        class="settings-provider-grid settings-overview-grid"
+        data-settings-primitive="overview-grid"
+      >
+        ${SETTINGS_OVERVIEW_CARDS.map((card) => renderSettingsOverviewCard(card)).join("")}
+      </div>
+    `,
+    id: "overview",
+    title: "Overview",
+  });
+}
+
+function renderSettingsOverviewCard(card) {
+  return `
+    <article
+      class="settings-provider-cardlet settings-overview-card"
+      data-settings-primitive="overview-card"
+      data-settings-detail-target="${escapeHtml(card.id)}"
+    >
+      <div class="settings-provider-cardlet__head">
+        <span class="tooldot" aria-hidden="true">${escapeHtml(card.title.at(0))}</span>
+        <span class="row__txt">
+          <strong class="lx-body">${escapeHtml(card.title)}</strong>
+          <span class="lx-sm">${escapeHtml(card.description)}</span>
+        </span>
+      </div>
+    </article>
+  `;
+}
+
+function renderSettingsSection({ caption = "", children, id, title }) {
+  return `
+    <section
+      class="card settings-card settings-detail-section"
+      data-settings-primitive="detail-section"
+      data-settings-detail="${escapeHtml(id)}"
+      aria-labelledby="settings-${escapeHtml(id)}-title"
+    >
+      <div class="settings-card__head">
+        <h2 id="settings-${escapeHtml(id)}-title" class="lx-h2">${escapeHtml(title)}</h2>
+        ${caption ? `<span class="lx-sm text-dim">${escapeHtml(caption)}</span>` : ""}
+      </div>
+      ${children}
+    </section>
+  `;
+}
+
+function renderDetailRow({
+  children,
+  className = "",
+  description = "",
+  descriptionAttributes = "",
+  id = "",
+  title,
+}) {
+  return `
+    <article
+      class="row settings-row settings-detail-row ${escapeHtml(className)}"
+      data-settings-primitive="detail-row"
+      ${id ? `data-settings-row="${escapeHtml(id)}"` : ""}
+    >
+      <span class="row__txt">
+        <strong class="lx-body">${escapeHtml(title)}</strong>
+        <span class="lx-sm" ${descriptionAttributes}>${escapeHtml(description)}</span>
+      </span>
+      ${children}
+    </article>
+  `;
+}
+
+function renderSettingsInputField({
+  ariaLabel,
+  attributes = "",
+  autocomplete = "",
+  dataAttribute = "",
+  label,
+  placeholder = "",
+  readonly = false,
+  spellcheck = "",
+  type = "text",
+  value = "",
+}) {
+  return `
+    <label
+      class="settings-field settings-field--input"
+      data-settings-primitive="field-row"
+      data-settings-control="input"
+    >
+      <span class="lx-sm">${escapeHtml(label)}</span>
+      <input
+        class="settings-input settings-control settings-control--input"
+        type="${escapeHtml(type)}"
+        data-settings-primitive="input"
+        aria-label="${escapeHtml(ariaLabel ?? label)}"
+        ${dataAttribute}
+        value="${escapeHtml(value)}"
+        ${autocomplete ? `autocomplete="${escapeHtml(autocomplete)}"` : ""}
+        ${spellcheck ? `spellcheck="${escapeHtml(spellcheck)}"` : ""}
+        ${placeholder ? `placeholder="${escapeHtml(placeholder)}"` : ""}
+        ${readonly ? "readonly" : ""}
+        ${attributes}
+      />
+    </label>
+  `;
+}
+
+function renderSettingsSelectField({
+  ariaLabel,
+  attributes = "",
+  dataAttribute = "",
+  label,
+  options,
+}) {
+  return `
+    <label
+      class="settings-field settings-field--select"
+      data-settings-primitive="field-row"
+      data-settings-control="select"
+    >
+      <span class="lx-sm">${escapeHtml(label)}</span>
+      <select
+        class="settings-select settings-control settings-control--select"
+        data-settings-primitive="select"
+        aria-label="${escapeHtml(ariaLabel ?? label)}"
+        ${dataAttribute}
+        ${attributes}
+      >
+        ${options}
+      </select>
+    </label>
+  `;
+}
+
+function renderActionButton({
+  action = "",
+  attributes = "",
+  disabled = false,
+  label,
+  variant = "ghost",
+}) {
+  const safeVariant = variant === "primary" ? "primary" : "ghost";
+  return `
+    <button
+      class="btn btn--${safeVariant} settings-action-button"
+      type="button"
+      data-settings-primitive="action-button"
+      ${action ? `data-settings-action="${escapeHtml(action)}"` : ""}
+      ${attributes}
+      ${disabled ? "disabled" : ""}
+    >
+      ${escapeHtml(label)}
+    </button>
+  `;
+}
+
+function renderStatusCallout({
+  attributes = "",
+  className = "",
+  hidden = false,
+  message = "",
+  tone = "",
+}) {
+  return `
+    <p
+      class="lx-sm settings-status ${tone ? `settings-status--${escapeHtml(tone)}` : ""} ${escapeHtml(
+        className,
+      )}"
+      data-settings-primitive="status-callout"
+      ${attributes}
+      ${hidden ? "hidden" : ""}
+    >
+      ${escapeHtml(message)}
+    </p>
+  `;
+}
+
 function renderSegmentedControl(key, label, options) {
   return `
-    <div class="row settings-row">
-      <span class="row__txt">
-        <strong class="lx-body">${escapeHtml(label)}</strong>
-        <span class="lx-sm">Saved across Leena windows</span>
-      </span>
+    ${renderDetailRow({
+      children: `
       <div class="settings-segmented" role="group" aria-label="${escapeHtml(label)}">
         ${options
           .map(
             (option) => `
               <button
-                class="btn btn--ghost"
+                class="btn btn--ghost settings-segmented__option"
                 type="button"
+                data-settings-primitive="segmented-option"
                 data-appearance-key="${escapeHtml(key)}"
                 data-appearance-value="${escapeHtml(option.value)}"
+                aria-label="${escapeHtml(`${label}: ${option.label}`)}"
                 aria-pressed="${String(option.value === DEFAULT_APPEARANCE[key])}"
               >
                 ${escapeHtml(option.label)}
@@ -1061,7 +1273,11 @@ function renderSegmentedControl(key, label, options) {
           )
           .join("")}
       </div>
-    </div>
+      `,
+      description: "Saved across Leena windows",
+      id: key,
+      title: label,
+    })}
   `;
 }
 
@@ -1089,24 +1305,25 @@ function renderProviderModelSelectorContent(state) {
         ).join("")}
       </div>
       <div class="settings-ollama-download" aria-label="Ollama model download">
-        <label class="settings-field">
-          <span class="lx-sm">Ollama model</span>
-          <input
-            class="settings-input"
-            type="text"
-            data-ollama-model-input
-            value="${escapeHtml(state.pull.model)}"
-            placeholder="llama3.2 or nomic-embed-text"
-          />
-        </label>
-        <button class="btn btn--primary" type="button" data-ollama-download>Download</button>
+        ${renderSettingsInputField({
+          ariaLabel: "Ollama model to download",
+          dataAttribute: "data-ollama-model-input",
+          label: "Ollama model",
+          placeholder: "llama3.2 or nomic-embed-text",
+          value: state.pull.model,
+        })}
+        ${renderActionButton({
+          attributes: "data-ollama-download",
+          label: "Download",
+          variant: "primary",
+        })}
         ${renderPullProgress(state.pull)}
       </div>
-      <p class="lx-sm settings-status settings-status--${escapeHtml(state.statusTone)}" ${
-        state.statusMessage ? "" : "hidden"
-      }>
-        ${escapeHtml(state.statusMessage)}
-      </p>
+      ${renderStatusCallout({
+        hidden: !state.statusMessage,
+        message: state.statusMessage,
+        tone: state.statusTone,
+      })}
       ${renderProviderModal(state)}
   `;
 }
@@ -1122,17 +1339,14 @@ function renderSwitchControl({
   const disabledAttribute = disabled ? "disabled" : "";
   const titleAttribute = title ? `title="${escapeHtml(title)}"` : "";
   return `
-    <article class="row">
-      <span class="row__txt">
-        <strong class="lx-body">${escapeHtml(label)}</strong>
-        <span class="lx-sm" data-settings-toggle-status="${escapeHtml(
-          toggleAttribute,
-        )}">${escapeHtml(description || (checked ? "On" : "Off"))}</span>
-      </span>
+    ${renderDetailRow({
+      children: `
       <button
-        class="btn btn--ghost"
+        class="btn btn--ghost settings-toggle"
         type="button"
+        data-settings-primitive="toggle"
         role="switch" aria-checked="${String(checked)}"
+        aria-label="${escapeHtml(label)}"
         ${
           toggleAttribute.startsWith("wake:")
             ? `data-wake-${escapeHtml(toggleAttribute.slice(5))}`
@@ -1143,120 +1357,139 @@ function renderSwitchControl({
       >
         ${checked ? "On" : "Off"}
       </button>
-    </article>
+      `,
+      description: description || (checked ? "On" : "Off"),
+      descriptionAttributes: `data-settings-toggle-status="${escapeHtml(toggleAttribute)}"`,
+      id: toggleAttribute,
+      title: label,
+    })}
   `;
 }
 
 function renderHotkeySettings() {
-  return `
-      <section class="card settings-card" aria-labelledby="settings-hotkey-title">
-        <div class="settings-card__head">
-          <h2 id="settings-hotkey-title" class="lx-h2">Keyboard Shortcut</h2>
-          <span class="lx-sm text-dim" data-hotkey-display>${escapeHtml(
-            formatHotkeyAccelerator(DEFAULT_HOTKEY_ACCELERATOR),
-          )}</span>
-        </div>
+  return renderSettingsSection({
+    caption: formatHotkeyAccelerator(DEFAULT_HOTKEY_ACCELERATOR),
+    children: `
         <div class="settings-hotkey-row">
-          <label class="settings-field">
-            <span class="lx-sm">Shortcut</span>
-            <input
-              class="settings-input"
-              type="text"
-              data-hotkey-input
-              value="${escapeHtml(DEFAULT_HOTKEY_ACCELERATOR)}"
-              autocomplete="off"
-              spellcheck="false"
-            />
-          </label>
+          ${renderSettingsInputField({
+            ariaLabel: "Keyboard shortcut",
+            autocomplete: "off",
+            dataAttribute: "data-hotkey-input",
+            label: "Shortcut",
+            spellcheck: "false",
+            value: DEFAULT_HOTKEY_ACCELERATOR,
+          })}
           <div class="settings-provider-actions settings-hotkey-actions">
-            <button class="btn btn--ghost" type="button" data-hotkey-record>Record</button>
-            <button class="btn btn--ghost" type="button" data-hotkey-default>Default</button>
-            <button class="btn btn--primary" type="button" data-hotkey-save>Save</button>
+            ${renderActionButton({ attributes: "data-hotkey-record", label: "Record" })}
+            ${renderActionButton({ attributes: "data-hotkey-default", label: "Default" })}
+            ${renderActionButton({
+              attributes: "data-hotkey-save",
+              label: "Save",
+              variant: "primary",
+            })}
           </div>
         </div>
-        <p class="lx-sm settings-status" data-hotkey-status></p>
-      </section>
-  `;
+        ${renderStatusCallout({ attributes: "data-hotkey-status" })}
+    `,
+    id: "hotkey",
+    title: "Keyboard Shortcut",
+  });
 }
 
 function renderUpdateSettings() {
-  return `
-      <section class="card settings-card" aria-labelledby="settings-updates-title">
-        <div class="settings-card__head">
-          <h2 id="settings-updates-title" class="lx-h2">Updates</h2>
-          <span class="lx-sm text-dim" data-update-version>Version</span>
-        </div>
+  return renderSettingsSection({
+    caption: "Version",
+    children: `
         <div class="settings-provider-actions settings-update-actions">
-          <button class="btn btn--ghost" type="button" data-update-check>Check</button>
-          <button class="btn btn--ghost" type="button" data-update-download disabled>Download</button>
-          <button class="btn btn--primary" type="button" data-update-install disabled>Restart</button>
+          ${renderActionButton({ attributes: "data-update-check", label: "Check" })}
+          ${renderActionButton({
+            attributes: "data-update-download",
+            disabled: true,
+            label: "Download",
+          })}
+          ${renderActionButton({
+            attributes: "data-update-install",
+            disabled: true,
+            label: "Restart",
+            variant: "primary",
+          })}
         </div>
-        <p class="lx-sm settings-status" data-update-status>Updates have not been checked yet.</p>
-      </section>
-  `;
+        <span class="lx-sm text-dim" data-update-version>Version</span>
+        ${renderStatusCallout({
+          attributes: "data-update-status",
+          message: "Updates have not been checked yet.",
+        })}
+    `,
+    id: "updates",
+    title: "Updates",
+  });
 }
 
 export function renderSettings() {
   return `
     <section class="settings-screen" aria-label="Settings">
-      <section class="panel-glass settings-identity" aria-labelledby="settings-identity-title">
+      <section
+        class="panel-glass settings-identity settings-detail-section"
+        data-settings-primitive="detail-section"
+        data-settings-detail="general"
+        aria-labelledby="settings-identity-title"
+      >
         <div class="orb settings-avatar" aria-hidden="true"></div>
         <span class="row__txt">
           <h1 data-settings-identity-name id="settings-identity-title" class="lx-h2">${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}</h1>
           <span data-settings-identity-email class="lx-sm text-dim">${escapeHtml(SETTINGS_MOCK_DATA.identity.email)}</span>
         </span>
-        <button class="btn btn--ghost" type="button">Edit</button>
-        <label class="settings-field">
-          <span class="lx-sm">Your name</span>
-          <input
-            class="settings-input"
-            type="text"
-            data-agent-name
-            value="${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}"
-            autocomplete="name"
-          />
-        </label>
-        <label class="settings-field">
-          <span class="lx-sm">Persona</span>
-          <select class="settings-select" data-persona-select>
-            <option value="">Loading personas</option>
-          </select>
-        </label>
-        <label class="settings-field">
-          <span class="lx-sm">Tone</span>
-          <input
-            class="settings-input"
-            type="text"
-            data-persona-tone
-            value=""
-            readonly
-          />
-        </label>
+        ${renderActionButton({ action: "edit-identity", label: "Edit" })}
+        <div class="settings-identity__fields">
+          ${renderSettingsInputField({
+            ariaLabel: "Your name",
+            autocomplete: "name",
+            dataAttribute: "data-agent-name",
+            label: "Your name",
+            value: SETTINGS_MOCK_DATA.identity.name,
+          })}
+          ${renderSettingsSelectField({
+            ariaLabel: "Persona",
+            dataAttribute: "data-persona-select",
+            label: "Persona",
+            options: '<option value="">Loading personas</option>',
+          })}
+          ${renderSettingsInputField({
+            ariaLabel: "Persona tone",
+            dataAttribute: "data-persona-tone",
+            label: "Tone",
+            readonly: true,
+          })}
+        </div>
       </section>
 
-      <section class="card settings-card" aria-labelledby="settings-appearance-title">
-        <h2 id="settings-appearance-title" class="lx-h2">Appearance</h2>
-        ${renderSegmentedControl("theme", "Theme", SETTINGS_MOCK_DATA.appearance.theme)}
-        ${renderSegmentedControl("treatment", "Treatment", SETTINGS_MOCK_DATA.appearance.treatment)}
-        ${renderSegmentedControl("density", "Density", SETTINGS_MOCK_DATA.appearance.density)}
-      </section>
+      ${renderSettingsOverview()}
+
+      ${renderSettingsSection({
+        caption: "Theme, treatment, and density",
+        children: `
+          ${renderSegmentedControl("theme", "Theme", SETTINGS_MOCK_DATA.appearance.theme)}
+          ${renderSegmentedControl("treatment", "Treatment", SETTINGS_MOCK_DATA.appearance.treatment)}
+          ${renderSegmentedControl("density", "Density", SETTINGS_MOCK_DATA.appearance.density)}
+        `,
+        id: "appearance",
+        title: "Appearance",
+      })}
 
       ${renderHotkeySettings()}
       ${renderUpdateSettings()}
 
-      <section class="card settings-card" aria-labelledby="settings-providers-title">
-        <div class="settings-card__head">
-          <h2 id="settings-providers-title" class="lx-h2">Providers</h2>
-          <span class="lx-sm text-dim">Defaults by capability</span>
-        </div>
-        ${renderProviderModelSelector()}
-      </section>
+      ${renderSettingsSection({
+        caption: "Defaults by capability",
+        children: renderProviderModelSelector(),
+        id: "providers",
+        title: "Providers",
+      })}
 
-      <section class="card settings-card" aria-labelledby="settings-features-title">
-        <div class="settings-card__head">
-          <h2 id="settings-features-title" class="lx-h2">Features</h2>
-          <span class="lx-sm text-dim" data-settings-status></span>
-        </div>
+      ${renderSettingsSection({
+        caption: "",
+        children: `
+        <span class="lx-sm text-dim" data-settings-status></span>
         <div class="settings-list">
           ${renderSwitchControl({
             checked: false,
@@ -1284,7 +1517,10 @@ export function renderSettings() {
           ).join("")}
           <p class="lx-sm text-dim" data-wake-status>${escapeHtml(WAKE_UNAVAILABLE_MESSAGE)}</p>
         </div>
-      </section>
+        `,
+        id: "features",
+        title: "Features",
+      })}
     </section>
   `;
 }
@@ -1313,15 +1549,18 @@ function renderProviderCard(provider, state) {
           .join("")}
       </div>
       <div class="settings-provider-actions">
-        <button class="btn btn--ghost" type="button" data-provider-configure="${escapeHtml(
-          provider.id,
-        )}">Configure</button>
-        <button class="btn btn--ghost" type="button" data-provider-test="${escapeHtml(
-          provider.id,
-        )}">Test</button>
-        <button class="btn btn--ghost" type="button" data-provider-refresh="${escapeHtml(
-          provider.id,
-        )}">Refresh Models</button>
+        ${renderActionButton({
+          attributes: `data-provider-configure="${escapeHtml(provider.id)}"`,
+          label: "Configure",
+        })}
+        ${renderActionButton({
+          attributes: `data-provider-test="${escapeHtml(provider.id)}"`,
+          label: "Test",
+        })}
+        ${renderActionButton({
+          attributes: `data-provider-refresh="${escapeHtml(provider.id)}"`,
+          label: "Refresh Models",
+        })}
       </div>
       <p class="lx-sm settings-provider-result" ${testResult ? "" : "hidden"}>
         ${escapeHtml(formatTestResult(testResult))}
@@ -1344,17 +1583,14 @@ function renderCapabilityRow(capability, state) {
   const error = state.modelErrors[key];
 
   return `
-    <article class="settings-capability-row">
-      <span class="row__txt">
-        <strong class="lx-body">${escapeHtml(capability.label)}</strong>
-        <span class="lx-sm">${escapeHtml(getCapabilityHint(capability.id))}</span>
-      </span>
-      <label class="settings-field">
-        <span class="sr-only">${escapeHtml(capability.label)} provider</span>
-        <select class="settings-select" data-capability-provider="${escapeHtml(capability.id)}" ${
-          providers.length === 0 ? "disabled" : ""
-        }>
-          ${providers
+    ${renderDetailRow({
+      children: `
+        ${renderSettingsSelectField({
+          ariaLabel: `${capability.label} provider`,
+          attributes: providers.length === 0 ? "disabled" : "",
+          dataAttribute: `data-capability-provider="${escapeHtml(capability.id)}"`,
+          label: `${capability.label} provider`,
+          options: providers
             .map(
               (provider) => `
                 <option value="${escapeHtml(provider.id)}" ${
@@ -1362,18 +1598,21 @@ function renderCapabilityRow(capability, state) {
                 }>${escapeHtml(provider.name)}</option>
               `,
             )
-            .join("")}
-        </select>
-      </label>
-      <label class="settings-field">
-        <span class="sr-only">${escapeHtml(capability.label)} model</span>
-        <select class="settings-select" data-capability-model="${escapeHtml(capability.id)}" ${
-          loading || !selectedProviderId ? "disabled" : ""
-        }>
-          ${renderModelOptions(models, selectedModel, loading, error)}
-        </select>
-      </label>
-    </article>
+            .join(""),
+        })}
+        ${renderSettingsSelectField({
+          ariaLabel: `${capability.label} model`,
+          attributes: loading || !selectedProviderId ? "disabled" : "",
+          dataAttribute: `data-capability-model="${escapeHtml(capability.id)}"`,
+          label: `${capability.label} model`,
+          options: renderModelOptions(models, selectedModel, loading, error),
+        })}
+      `,
+      className: "settings-capability-row",
+      description: getCapabilityHint(capability.id),
+      id: `capability-${capability.id}`,
+      title: capability.label,
+    })}
   `;
 }
 
@@ -1431,43 +1670,51 @@ function renderProviderModal(state) {
             <h3 class="lx-h3">${escapeHtml(provider?.name ?? "Provider")}</h3>
             <span class="lx-sm text-dim">Connection and default models</span>
           </span>
-          <button class="btn btn--ghost" type="button" data-provider-modal-close>Close</button>
+          ${renderActionButton({
+            attributes: "data-provider-modal-close",
+            label: "Close",
+          })}
         </div>
-        <label class="settings-field">
+        <label
+          class="settings-field settings-field--input"
+          data-settings-primitive="field-row"
+          data-settings-control="input"
+        >
           <span class="lx-sm">API key</span>
           <span class="settings-secret">
             <input
-              class="settings-input"
+              class="settings-input settings-control settings-control--input"
               type="${state.maskedApiKey ? "password" : "text"}"
+              data-settings-primitive="input"
+              aria-label="${escapeHtml(provider?.name ?? "Provider")} API key"
               data-provider-api-key
               value="${escapeHtml(config.apiKey ?? "")}"
               autocomplete="off"
             />
-            <button
-              class="btn btn--ghost"
-              type="button"
-              data-api-key-toggle
-              aria-pressed="${String(!state.maskedApiKey)}"
-            >${state.maskedApiKey ? "Show" : "Hide"}</button>
+            ${renderActionButton({
+              attributes: `data-api-key-toggle aria-pressed="${String(!state.maskedApiKey)}"`,
+              label: state.maskedApiKey ? "Show" : "Hide",
+            })}
           </span>
         </label>
-        <label class="settings-field">
-          <span class="lx-sm">Base URL</span>
-          <input
-            class="settings-input"
-            type="url"
-            data-provider-base-url
-            value="${escapeHtml(config.baseUrl ?? "")}"
-            placeholder="http://localhost:11434"
-          />
-        </label>
+        ${renderSettingsInputField({
+          ariaLabel: `${provider?.name ?? "Provider"} base URL`,
+          dataAttribute: "data-provider-base-url",
+          label: "Base URL",
+          placeholder: "http://localhost:11434",
+          type: "url",
+          value: config.baseUrl ?? "",
+        })}
         <div class="settings-provider-actions">
-          <button class="btn btn--ghost" type="button" data-provider-test="${escapeHtml(
-            state.activeProviderId,
-          )}">Test Connection</button>
-          <button class="btn btn--primary" type="button" data-provider-save="${escapeHtml(
-            state.activeProviderId,
-          )}">Save</button>
+          ${renderActionButton({
+            attributes: `data-provider-test="${escapeHtml(state.activeProviderId)}"`,
+            label: "Test Connection",
+          })}
+          ${renderActionButton({
+            attributes: `data-provider-save="${escapeHtml(state.activeProviderId)}"`,
+            label: "Save",
+            variant: "primary",
+          })}
         </div>
         <p class="lx-sm settings-provider-result" ${testResult ? "" : "hidden"}>
           ${escapeHtml(formatTestResult(testResult))}

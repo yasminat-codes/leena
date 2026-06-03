@@ -10,7 +10,7 @@
   "rendererUrl": "/renderer/index.html",
   "screenshots": [
     {
-      "colorBuckets": 130,
+      "colorBuckets": 160,
       "height": 712,
       "luminanceRange": 223.88,
       "visibleRatio": 1,
@@ -21,7 +21,7 @@
       "selector": null
     },
     {
-      "colorBuckets": 132,
+      "colorBuckets": 152,
       "height": 712,
       "luminanceRange": 222.88,
       "visibleRatio": 1,
@@ -32,7 +32,7 @@
       "selector": null
     },
     {
-      "colorBuckets": 134,
+      "colorBuckets": 172,
       "height": 712,
       "luminanceRange": 222.88,
       "visibleRatio": 1,
@@ -43,7 +43,7 @@
       "selector": null
     },
     {
-      "colorBuckets": 58,
+      "colorBuckets": 50,
       "height": 60,
       "luminanceRange": 222.88,
       "visibleRatio": 1,

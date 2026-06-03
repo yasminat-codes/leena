@@ -1,3 +1,10 @@
+import {
+  createOsPermissionSnapshot,
+  isOsPermissionActionable,
+  normalizeOsPermissionStatus,
+  osPermissionDefinitions,
+} from "../../os-permissions.js";
+
 const STATUS_META = Object.freeze({
   connected: Object.freeze({ className: "chip chip--green", label: "Connected" }),
   connecting: Object.freeze({
@@ -22,6 +29,122 @@ const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
   "streamable_http",
   "streamable",
 ]);
+const MAC_ACCESS_PERMISSION_IDS = Object.freeze([
+  "microphone",
+  "screen",
+  "accessibility",
+  "full-disk-access",
+  "apple-calendar",
+  "files",
+]);
+const OS_PERMISSION_DEFINITIONS_BY_ID = new Map(
+  osPermissionDefinitions.map((permission) => [permission.id, permission]),
+);
+const MAC_ACCESS_DETAILS = Object.freeze({
+  accessibility: Object.freeze({
+    accent: "A",
+    description: "Real OS mouse and keyboard control stays explicit and permission-led.",
+    eyebrow: "Mac Access",
+    rows: Object.freeze([
+      Object.freeze(["Control scope", "Mouse, keyboard, windows, and app surfaces"]),
+      Object.freeze(["Execution rule", "Only after a current Accessibility grant"]),
+      Object.freeze(["Safety", "Unknown or stale status blocks OS control"]),
+    ]),
+    title: "Accessibility",
+  }),
+  "apple-calendar": Object.freeze({
+    accent: "C",
+    description: "Day-one Calendar setup card; adapter execution is not enabled here.",
+    eyebrow: "Apple",
+    rows: Object.freeze([
+      Object.freeze(["Read access", "Requires a read-capable Calendar permission"]),
+      Object.freeze(["Write actions", "Separate confirmation path; not implied by read access"]),
+      Object.freeze(["Current scope", "Guided permission card only"]),
+    ]),
+    title: "Apple Calendar",
+  }),
+  files: Object.freeze({
+    accent: "F",
+    description: "File access starts with workspace or user-selected scopes, not broad disk trust.",
+    eyebrow: "Mac Access",
+    rows: Object.freeze([
+      Object.freeze(["Workspace files", "Allowed inside explicit workspace scope"]),
+      Object.freeze(["Selected folders", "Review Files and Folders access in System Settings"]),
+      Object.freeze(["Broad reads", "Use Full Disk Access only when that grant is known-good"]),
+    ]),
+    title: "Files",
+  }),
+  "full-disk-access": Object.freeze({
+    accent: "D",
+    description: "High-power broad read/search capability controlled by macOS System Settings.",
+    eyebrow: "High Power",
+    rows: Object.freeze([
+      Object.freeze(["Capability", "Broad file read/search after a known-good grant"]),
+      Object.freeze(["Grant owner", "macOS System Settings; Leena only guides setup"]),
+      Object.freeze(["Write/delete", "Still confirmation-gated by default"]),
+    ]),
+    title: "Full Disk Access",
+  }),
+  microphone: Object.freeze({
+    accent: "M",
+    description: "Voice input for realtime sessions and local microphone capture.",
+    eyebrow: "Mac Access",
+    rows: Object.freeze([
+      Object.freeze(["Voice input", "Realtime conversation microphone stream"]),
+      Object.freeze(["Prompt", "OS-supported microphone request"]),
+      Object.freeze(["Fallback", "Open System Settings if the prompt was denied"]),
+    ]),
+    title: "Microphone",
+  }),
+  screen: Object.freeze({
+    accent: "S",
+    description: "Screenshot and screen-understanding access for visible Mac context.",
+    eyebrow: "Mac Access",
+    rows: Object.freeze([
+      Object.freeze(["Screen reads", "Screenshot source listing and capture"]),
+      Object.freeze(["Prompt", "Electron capture request plus System Settings review"]),
+      Object.freeze(["Safety", "Unknown status blocks screen tools"]),
+    ]),
+    title: "Screen Recording",
+  }),
+});
+const DEFAULT_DETAIL_ID = "composio";
+const INTEGRATION_DETAILS = Object.freeze({
+  composio: Object.freeze({
+    accent: "C",
+    description: "Protected app-action credentials and account connections for future tools.",
+    eyebrow: "Actions Hub",
+    status: "First-class",
+    title: "Composio",
+  }),
+  "custom-mcp": Object.freeze({
+    accent: "M",
+    description: "Advanced Streamable HTTP and stdio setup for local or remote MCP servers.",
+    eyebrow: "Advanced",
+    status: "Custom MCP",
+    title: "Custom MCP",
+  }),
+  ...MAC_ACCESS_DETAILS,
+  "provider-health": Object.freeze({
+    accent: "H",
+    description: "Connection health, server counts, and tool availability at a glance.",
+    eyebrow: "Status",
+    status: "Live",
+    title: "Provider Health",
+  }),
+});
+const INTEGRATION_DETAIL_ORDER = Object.freeze([
+  "composio",
+  "custom-mcp",
+  "microphone",
+  "screen",
+  "accessibility",
+  "full-disk-access",
+  "apple-calendar",
+  "files",
+  "provider-health",
+]);
+const MAC_ACCESS_PERMISSION_ID_SET = new Set(MAC_ACCESS_PERMISSION_IDS);
 
 let activeBinding = null;
 
@@ -31,6 +154,10 @@ function getDocument() {
 
 function getDefaultMCPBridge() {
   return typeof window === "undefined" ? null : window.leena?.mcp;
+}
+
+function getDefaultPermissionBridge() {
+  return typeof window === "undefined" ? null : window.leena;
 }
 
 function escapeHtml(value) {
@@ -88,6 +215,11 @@ function normalizeStatus(server, status) {
   return "disconnected";
 }
 
+function normalizeDetailId(detailId) {
+  const id = firstString(detailId);
+  return Object.hasOwn(INTEGRATION_DETAILS, id) ? id : DEFAULT_DETAIL_ID;
+}
+
 function normalizeStatuses(statuses) {
   if (statuses instanceof Map) {
     return Object.fromEntries(statuses);
@@ -95,6 +227,38 @@ function normalizeStatuses(statuses) {
   return typeof statuses === "object" && statuses !== null && !Array.isArray(statuses)
     ? statuses
     : {};
+}
+
+function normalizePermissionStatuses(permissions) {
+  if (permissions instanceof Map) {
+    return Object.fromEntries(permissions);
+  }
+  if (Array.isArray(permissions)) {
+    return Object.fromEntries(
+      permissions
+        .filter((permission) => typeof permission?.id === "string")
+        .map((permission) => [permission.id, permission.status]),
+    );
+  }
+  return typeof permissions === "object" && permissions !== null ? permissions : {};
+}
+
+function normalizePermissions(permissions) {
+  const statuses = normalizePermissionStatuses(permissions);
+  const detailsById = new Map(
+    (Array.isArray(permissions) ? permissions : [])
+      .filter((permission) => typeof permission?.id === "string")
+      .map((permission) => [permission.id, permission]),
+  );
+
+  return createOsPermissionSnapshot(statuses).map((permission) => {
+    const detail = detailsById.get(permission.id) ?? {};
+    return {
+      ...permission,
+      ...detail,
+      status: normalizeOsPermissionStatus(detail.status ?? permission.status),
+    };
+  });
 }
 
 function normalizeServer(server, statuses = {}) {
@@ -121,6 +285,7 @@ export function normalizeIntegrationsData(data = {}) {
   const servers = Array.isArray(data.servers) ? data.servers : [];
   const statuses = normalizeStatuses(data.statuses);
   return {
+    permissions: normalizePermissions(data.permissions ?? data.osPermissions),
     servers: servers
       .map((server) => normalizeServer(server, statuses))
       .filter((server) => server.id),
@@ -133,15 +298,30 @@ function assertMCPBridge(bridge) {
   }
 }
 
-export async function loadIntegrations(bridge = getDefaultMCPBridge()) {
+async function loadPermissionSnapshot(permissionBridge = getDefaultPermissionBridge()) {
+  if (typeof permissionBridge?.getOsPermissions !== "function") {
+    return createOsPermissionSnapshot();
+  }
+  try {
+    return await permissionBridge.getOsPermissions();
+  } catch {
+    return createOsPermissionSnapshot();
+  }
+}
+
+export async function loadIntegrations(
+  bridge = getDefaultMCPBridge(),
+  permissionBridge = getDefaultPermissionBridge(),
+) {
   assertMCPBridge(bridge);
 
-  const [servers, statuses] = await Promise.all([
+  const [servers, statuses, permissions] = await Promise.all([
     bridge.listServers(),
     typeof bridge.getStatus === "function" ? bridge.getStatus() : {},
+    loadPermissionSnapshot(permissionBridge),
   ]);
 
-  return normalizeIntegrationsData({ servers, statuses });
+  return normalizeIntegrationsData({ permissions, servers, statuses });
 }
 
 function renderStatusChip(server) {
@@ -192,7 +372,7 @@ function renderServerTile(server) {
 
 function renderEmptyState() {
   return `
-    <article class="card integrations-tile" data-integrations-empty="true">
+    <article class="card integrations-tile integrations-state-card" data-integrations-empty="true">
       <header class="integrations-tile__head">
         <span class="tooldot integrations-tile__icon" data-icon-gradient="mcp" aria-hidden="true">M</span>
         <span class="chip status-badge status-error">Disconnected</span>
@@ -207,7 +387,7 @@ function renderEmptyState() {
 
 function renderLoadingState() {
   return `
-    <article class="card integrations-tile" data-integrations-loading="true" aria-busy="true">
+    <article class="card integrations-tile integrations-state-card" data-integrations-loading="true" aria-busy="true">
       <header class="integrations-tile__head">
         <span class="tooldot integrations-tile__icon" data-icon-gradient="mcp" aria-hidden="true">M</span>
         <span class="chip status-badge status-max_steps">Loading</span>
@@ -224,78 +404,368 @@ function renderServerList(servers) {
   return servers.length > 0 ? servers.map(renderServerTile).join("") : renderEmptyState();
 }
 
+function renderErrorState(error) {
+  return `
+    <article class="card integrations-tile integrations-state-card" data-integrations-error="true">
+      <header class="integrations-tile__head">
+        <span class="tooldot integrations-tile__icon" data-icon-gradient="mcp" aria-hidden="true">!</span>
+        <span class="chip status-badge status-error">Error</span>
+      </header>
+      <div class="integrations-tile__body">
+        <h2 class="lx-h3">Unable to load MCP servers</h2>
+        <p class="lx-sm text-dim">${escapeHtml(error instanceof Error ? error.message : String(error))}</p>
+      </div>
+    </article>
+  `;
+}
+
 function formatSummary(servers) {
   const serverLabel = servers.length === 1 ? "server" : "servers";
   return `${servers.length} configured MCP ${serverLabel} for Leena's realtime workspace.`;
 }
 
+function getServerMetrics(servers) {
+  const connected = servers.filter((server) => server.connected).length;
+  const connecting = servers.filter((server) => server.status === "connecting").length;
+  const errors = servers.filter((server) => server.status === "error").length;
+  const tools = servers.reduce((total, server) => total + server.toolCount, 0);
+
+  return {
+    connected,
+    connecting,
+    errors,
+    total: servers.length,
+    tools,
+  };
+}
+
+function getPermissionDefinition(permissionId) {
+  return (
+    OS_PERMISSION_DEFINITIONS_BY_ID.get(permissionId) ?? {
+      id: permissionId,
+      label: permissionId,
+      requestMode: "guided",
+    }
+  );
+}
+
+function getPermissionState(normalized, permissionId) {
+  const permission = normalized.permissions.find((item) => item.id === permissionId);
+  const definition = getPermissionDefinition(permissionId);
+  return {
+    ...definition,
+    ...(permission ?? {}),
+    status: normalizeOsPermissionStatus(permission?.status),
+  };
+}
+
+function formatPermissionStatus(status) {
+  switch (normalizeOsPermissionStatus(status)) {
+    case "granted":
+      return "Allowed";
+    case "not-determined":
+      return "Needs setup";
+    case "denied":
+      return "Needs settings";
+    case "restricted":
+      return "Restricted";
+    case "stale":
+      return "Refresh";
+    case "unsupported":
+      return "Unsupported";
+    default:
+      return "Check status";
+  }
+}
+
+function getPermissionStatusClass(status) {
+  switch (normalizeOsPermissionStatus(status)) {
+    case "granted":
+      return "chip chip--green";
+    case "denied":
+    case "restricted":
+      return "chip status-badge status-error";
+    default:
+      return "chip settings-chip--warning";
+  }
+}
+
+function getPermissionRequestLabel(permission) {
+  if (permission.requestMode === "settings") {
+    return "Open Settings";
+  }
+  return permission.id === "computer" ? "Install" : "Request";
+}
+
+function isMacAccessDetail(detailId) {
+  return MAC_ACCESS_PERMISSION_ID_SET.has(detailId);
+}
+
+function formatCardStatus(detailId, normalized, { isLoading = false } = {}) {
+  if (isLoading && (detailId === "custom-mcp" || detailId === "provider-health")) {
+    return "Loading";
+  }
+
+  if (isMacAccessDetail(detailId)) {
+    return formatPermissionStatus(getPermissionState(normalized, detailId).status);
+  }
+
+  const metrics = getServerMetrics(normalized.servers);
+  if (detailId === "custom-mcp") {
+    const serverLabel = metrics.total === 1 ? "server" : "servers";
+    return `${metrics.total} ${serverLabel}`;
+  }
+  if (detailId === "provider-health") {
+    if (metrics.total === 0) {
+      return "No servers";
+    }
+    if (metrics.errors > 0) {
+      const errorLabel = metrics.errors === 1 ? "error" : "errors";
+      return `${metrics.errors} ${errorLabel}`;
+    }
+    if (metrics.connecting > 0) {
+      return "Connecting";
+    }
+    return `${metrics.connected}/${metrics.total} online`;
+  }
+  return INTEGRATION_DETAILS[detailId].status;
+}
+
+function getCardStatusClass(detailId, normalized, { isLoading = false } = {}) {
+  if (isLoading) {
+    return "chip status-badge status-max_steps";
+  }
+  if (isMacAccessDetail(detailId)) {
+    return getPermissionStatusClass(getPermissionState(normalized, detailId).status);
+  }
+  if (detailId === "provider-health") {
+    const metrics = getServerMetrics(normalized.servers);
+    if (metrics.errors > 0 || metrics.total === 0) {
+      return "chip status-badge status-error";
+    }
+    return "chip chip--green";
+  }
+  if (detailId === "custom-mcp") {
+    return "chip chip--mcp";
+  }
+  return "chip chip--accent";
+}
+
+function renderIntegrationCards(normalized, selectedDetail, state = {}) {
+  return INTEGRATION_DETAIL_ORDER.map((id) => {
+    const detail = INTEGRATION_DETAILS[id];
+    const isSelected = id === selectedDetail;
+    const isPermission = isMacAccessDetail(id);
+    const permission = isPermission ? getPermissionState(normalized, id) : null;
+    const permissionAttrs = isPermission
+      ? ` data-integrations-permission-card data-permission-id="${escapeHtml(id)}" data-permission-status="${escapeHtml(permission.status)}"`
+      : "";
+    return `
+        <button class="card integrations-card" type="button" data-integrations-action="select-detail" data-integrations-detail-card data-integrations-detail="${escapeHtml(id)}"${permissionAttrs} aria-pressed="${String(isSelected)}">
+          <span class="tooldot integrations-card__icon" data-icon-gradient="${escapeHtml(id)}" aria-hidden="true">${escapeHtml(detail.accent)}</span>
+          <span class="integrations-card__copy">
+            <span class="lx-mono text-faint">${escapeHtml(detail.eyebrow)}</span>
+            <strong class="lx-h3">${escapeHtml(detail.title)}</strong>
+            <span class="lx-sm text-dim">${escapeHtml(detail.description)}</span>
+          </span>
+          <span class="${getCardStatusClass(id, normalized, state)}" data-integrations-card-status="${escapeHtml(id)}">${escapeHtml(formatCardStatus(id, normalized, state))}</span>
+          <span class="integrations-card__learn">Learn more</span>
+        </button>
+      `;
+  }).join("");
+}
+
+function renderDetailRow(label, value) {
+  return `
+    <div class="integrations-detail-row">
+      <span class="lx-mono text-faint">${escapeHtml(label)}</span>
+      <strong class="lx-body">${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function renderDetailHeader(detailId, statusClass, statusLabel) {
+  const detail = INTEGRATION_DETAILS[detailId];
+  return `
+    <header class="integrations-detail__head">
+      <div class="integrations-detail__title">
+        <span class="tooldot integrations-card__icon" data-icon-gradient="${escapeHtml(detailId)}" aria-hidden="true">${escapeHtml(detail.accent)}</span>
+        <div>
+          <p class="lx-mono text-faint">${escapeHtml(detail.eyebrow)}</p>
+          <h2 class="lx-h2">${escapeHtml(detail.title)}</h2>
+        </div>
+      </div>
+      <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
+    </header>
+  `;
+}
+
 function renderAddServerDialog() {
   return `
-    <section class="card integrations-dialog" data-integrations-dialog hidden aria-label="Add MCP server">
+    <section class="integrations-dialog" data-integrations-dialog aria-label="Add custom MCP server">
       <form data-integrations-add-form>
-        <div class="row settings-row">
-          <label class="row__txt">
-            <strong class="lx-body">Name</strong>
-            <input name="name" autocomplete="off" placeholder="Project tools" />
+        <div class="integrations-form-grid">
+          <label class="settings-field">
+            <span class="lx-mono text-faint">Name</span>
+            <input class="settings-input" name="name" autocomplete="off" placeholder="Project tools" />
           </label>
-        </div>
-        <div class="row settings-row">
-          <label class="row__txt">
-            <strong class="lx-body">Transport</strong>
-            <select name="transport" data-integrations-transport-select>
+          <label class="settings-field">
+            <span class="lx-mono text-faint">Transport</span>
+            <select class="settings-select" name="transport" data-integrations-transport-select>
               <option value="http">Streamable HTTP URL</option>
               <option value="stdio">Stdio command</option>
             </select>
           </label>
-        </div>
-        <div class="row settings-row" data-integrations-field="url">
-          <label class="row__txt">
-            <strong class="lx-body">MCP endpoint URL</strong>
-            <input name="url" autocomplete="off" placeholder="https://example.com/mcp" />
+          <label class="settings-field" data-integrations-field="url">
+            <span class="lx-mono text-faint">MCP endpoint URL</span>
+            <input class="settings-input" name="url" autocomplete="off" placeholder="https://example.com/mcp" />
           </label>
-        </div>
-        <div class="row settings-row" data-integrations-field="command" hidden>
-          <label class="row__txt">
-            <strong class="lx-body">Command</strong>
-            <input name="command" autocomplete="off" placeholder="npx @modelcontextprotocol/server-filesystem" />
+          <label class="settings-field" data-integrations-field="command" hidden>
+            <span class="lx-mono text-faint">Command</span>
+            <input class="settings-input" name="command" autocomplete="off" placeholder="npx @modelcontextprotocol/server-filesystem" />
           </label>
-        </div>
-        <div class="row settings-row" data-integrations-field="args" hidden>
-          <label class="row__txt">
-            <strong class="lx-body">Args</strong>
-            <input name="args" autocomplete="off" placeholder="workspace-root" />
+          <label class="settings-field" data-integrations-field="args" hidden>
+            <span class="lx-mono text-faint">Args</span>
+            <input class="settings-input" name="args" autocomplete="off" placeholder="workspace-root" />
           </label>
         </div>
         <p class="lx-sm text-dim" data-integrations-form-error role="alert" hidden></p>
-        <div class="integrations-tile__head">
-          <button class="btn btn--ghost" type="submit">Add</button>
-          <button class="btn btn--ghost" type="button" data-integrations-action="cancel-add">Cancel</button>
+        <div class="integrations-dialog__actions">
+          <button class="btn btn--primary" type="submit">Add MCP Server</button>
+          <button class="btn btn--ghost" type="button" data-integrations-action="cancel-add">Clear</button>
         </div>
       </form>
     </section>
   `;
 }
 
+function renderComposioDetail() {
+  return `
+    ${renderDetailHeader("composio", "chip chip--accent", "Actions Hub")}
+    <p class="lx-sm text-dim">Composio stays visible as the primary app-actions path while credentials remain protected, redacted, and fail-closed until runtime connection work is ready.</p>
+    <div class="integrations-detail__rows">
+      ${renderDetailRow("Credentials", "Stored through the protected Composio bridge")}
+      ${renderDetailRow("Renderer state", "Configured status only; secrets are never returned")}
+      ${renderDetailRow("Tool exposure", "Hidden until account/tool metadata is trusted")}
+    </div>
+  `;
+}
+
+function renderCustomMCPDetail(normalized) {
+  const metrics = getServerMetrics(normalized.servers);
+  return `
+    ${renderDetailHeader("custom-mcp", "chip chip--mcp", `${metrics.total} configured`)}
+    <p class="lx-sm text-dim">Use Custom MCP for advanced local or remote servers. Existing servers stay listed below and continue using the current live bridge.</p>
+    ${renderAddServerDialog()}
+  `;
+}
+
+function renderPermissionActions(permission) {
+  const status = normalizeOsPermissionStatus(permission.status);
+  const requestLabel = getPermissionRequestLabel(permission);
+  const requestDisabled = !isOsPermissionActionable(status) ? "disabled" : "";
+
+  if (permission.requestMode === "settings") {
+    return `
+      <div class="integrations-permission-actions" data-integrations-permission-actions="${escapeHtml(permission.id)}">
+        <button class="btn btn--primary" type="button" data-integrations-action="open-permission-settings" data-permission-id="${escapeHtml(permission.id)}">${escapeHtml(requestLabel)}</button>
+        <span class="integrations-permission-note lx-sm text-dim">macOS owns this grant; refresh status after changing System Settings.</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="integrations-permission-actions" data-integrations-permission-actions="${escapeHtml(permission.id)}">
+      <button class="btn btn--primary" type="button" data-integrations-action="request-permission" data-permission-id="${escapeHtml(permission.id)}" ${requestDisabled}>${escapeHtml(requestLabel)}</button>
+      <button class="btn btn--ghost" type="button" data-integrations-action="open-permission-settings" data-permission-id="${escapeHtml(permission.id)}">Open Settings</button>
+      <span class="integrations-permission-note lx-sm text-dim">Request only uses approved OS prompts or opens guided settings.</span>
+    </div>
+  `;
+}
+
+function renderPermissionDetail(detailId, normalized) {
+  const permission = getPermissionState(normalized, detailId);
+  const detail = MAC_ACCESS_DETAILS[detailId];
+  const statusClass = getPermissionStatusClass(permission.status);
+  const statusLabel = formatPermissionStatus(permission.status);
+
+  return `
+    ${renderDetailHeader(detailId, statusClass, statusLabel)}
+    <p class="lx-sm text-dim">${escapeHtml(detail.description)}</p>
+    <div class="integrations-detail__rows">
+      ${detail.rows.map(([label, value]) => renderDetailRow(label, value)).join("")}
+      ${renderDetailRow("Current status", statusLabel)}
+    </div>
+    ${renderPermissionActions(permission)}
+  `;
+}
+
+function renderProviderHealthDetail(normalized) {
+  const metrics = getServerMetrics(normalized.servers);
+  return `
+    ${renderDetailHeader("provider-health", getCardStatusClass("provider-health", normalized), formatCardStatus("provider-health", normalized))}
+    <p class="lx-sm text-dim">Provider health summarizes the live MCP bridge without replacing the server list or connection controls.</p>
+    <div class="integrations-detail__rows integrations-detail__rows--metrics">
+      ${renderDetailRow("Configured", `${metrics.total}`)}
+      ${renderDetailRow("Connected", `${metrics.connected}`)}
+      ${renderDetailRow("Errors", `${metrics.errors}`)}
+      ${renderDetailRow("Tools", `${metrics.tools}`)}
+    </div>
+  `;
+}
+
+function renderIntegrationDetailContent(detailId, normalized) {
+  switch (normalizeDetailId(detailId)) {
+    case "custom-mcp":
+      return renderCustomMCPDetail(normalized);
+    case "provider-health":
+      return renderProviderHealthDetail(normalized);
+    default:
+      if (isMacAccessDetail(detailId)) {
+        return renderPermissionDetail(detailId, normalized);
+      }
+      return renderComposioDetail();
+  }
+}
+
 function renderIntegrationsShell(data = {}) {
   const normalized = normalizeIntegrationsData(data);
   const connectedCount = normalized.servers.filter((server) => server.connected).length;
   const isLoading = data.loading === true;
+  const selectedDetail = normalizeDetailId(data.selectedDetail);
 
   return `
-    <section class="integrations-screen" aria-label="Integrations" data-integrations-state="${isLoading ? "loading" : "ready"}">
+    <section class="integrations-screen" aria-label="Integrations" data-integrations-state="${isLoading ? "loading" : "ready"}" data-integrations-detail="${escapeHtml(selectedDetail)}">
       <header class="panel-glass integrations-header">
         <div class="integrations-header__copy">
           <p class="lx-mono">Connections</p>
           <p class="lx-h1" data-integrations-connected-count>${connectedCount} connected</p>
           <p class="lx-sm text-dim" data-integrations-summary>${escapeHtml(formatSummary(normalized.servers))}</p>
         </div>
-        <button class="btn btn--ghost" type="button" data-integrations-action="open-add" aria-expanded="false">Add Server</button>
+        <button class="btn btn--ghost" type="button" data-integrations-action="open-add" aria-expanded="${String(selectedDetail === "custom-mcp")}">Add MCP Server</button>
       </header>
 
-      ${renderAddServerDialog()}
+      <section class="integrations-marketplace" aria-label="Integration options" data-integrations-card-grid>
+        ${renderIntegrationCards(normalized, selectedDetail, { isLoading })}
+      </section>
 
-      <section class="integrations-grid" aria-label="Configured MCP servers" data-integrations-list>
-        ${isLoading ? renderLoadingState() : renderServerList(normalized.servers)}
+      <section class="integrations-detail-layout">
+        <section class="card integrations-detail" aria-live="polite" data-integrations-detail-panel data-integrations-detail-active="${escapeHtml(selectedDetail)}">
+          ${renderIntegrationDetailContent(selectedDetail, normalized)}
+        </section>
+
+        <section class="integrations-server-shell" aria-label="Configured MCP servers">
+          <header class="integrations-section-head">
+            <div>
+              <p class="lx-mono text-faint">Live MCP</p>
+              <h2 class="lx-h2">Configured servers</h2>
+            </div>
+            <button class="btn btn--ghost" type="button" data-integrations-action="refresh">Refresh</button>
+          </header>
+          <section class="integrations-grid" aria-label="Configured MCP servers" data-integrations-list>
+            ${isLoading ? renderLoadingState() : renderServerList(normalized.servers)}
+          </section>
+        </section>
       </section>
     </section>
   `;
@@ -310,7 +780,11 @@ export function renderIntegrations() {
   return renderIntegrationsShell({ loading: true });
 }
 
-function scheduleIntegrationsHydration(root = getDocument(), bridge = getDefaultMCPBridge()) {
+function scheduleIntegrationsHydration(
+  root = getDocument(),
+  bridge = getDefaultMCPBridge(),
+  permissionBridge = getDefaultPermissionBridge(),
+) {
   if (!root || !bridge) {
     return;
   }
@@ -320,8 +794,8 @@ function scheduleIntegrationsHydration(root = getDocument(), bridge = getDefault
     if (!screen) {
       return;
     }
-    bindIntegrationsControls(root, bridge);
-    void refreshIntegrationsScreen(root, bridge).catch((error) =>
+    bindIntegrationsControls(root, bridge, permissionBridge);
+    void refreshIntegrationsScreen(root, bridge, permissionBridge).catch((error) =>
       renderIntegrationsError(root, error),
     );
   };
@@ -350,18 +824,7 @@ function renderIntegrationsError(root, error) {
     return;
   }
   setScreenState(screen, "error");
-  list.innerHTML = `
-    <article class="card integrations-tile" data-integrations-error="true">
-      <header class="integrations-tile__head">
-        <span class="tooldot integrations-tile__icon" data-icon-gradient="mcp" aria-hidden="true">!</span>
-        <span class="chip status-badge status-error">Error</span>
-      </header>
-      <div class="integrations-tile__body">
-        <h2 class="lx-h3">Unable to load MCP servers</h2>
-        <p class="lx-sm text-dim">${escapeHtml(error instanceof Error ? error.message : String(error))}</p>
-      </div>
-    </article>
-  `;
+  list.innerHTML = renderErrorState(error);
 }
 
 function updateIntegrationsScreen(root, data) {
@@ -374,7 +837,10 @@ function updateIntegrationsScreen(root, data) {
   const connectedCount = normalized.servers.filter((server) => server.connected).length;
   const count = screen.querySelector?.("[data-integrations-connected-count]");
   const summary = screen.querySelector?.("[data-integrations-summary]");
+  const cardGrid = screen.querySelector?.("[data-integrations-card-grid]");
+  const detailPanel = screen.querySelector?.("[data-integrations-detail-panel]");
   const list = screen.querySelector?.("[data-integrations-list]");
+  const selectedDetail = getSelectedDetail(screen);
 
   if (count) {
     count.textContent = `${connectedCount} connected`;
@@ -382,9 +848,21 @@ function updateIntegrationsScreen(root, data) {
   if (summary) {
     summary.textContent = formatSummary(normalized.servers);
   }
+  if (cardGrid) {
+    cardGrid.innerHTML = renderIntegrationCards(normalized, selectedDetail);
+  }
+  if (detailPanel) {
+    detailPanel.dataset.integrationsDetailActive = selectedDetail;
+    detailPanel.innerHTML = renderIntegrationDetailContent(selectedDetail, normalized);
+    syncAddServerFields(detailPanel.querySelector?.("[data-integrations-add-form]"));
+  }
   if (list) {
     list.innerHTML = renderServerList(normalized.servers);
   }
+  if (activeBinding?.screen === screen) {
+    activeBinding.data = normalized;
+  }
+  syncDetailButtons(screen, selectedDetail);
   setScreenState(screen, "ready");
   return normalized;
 }
@@ -392,11 +870,12 @@ function updateIntegrationsScreen(root, data) {
 export async function refreshIntegrationsScreen(
   root = getDocument(),
   bridge = getDefaultMCPBridge(),
+  permissionBridge = getDefaultPermissionBridge(),
 ) {
   if (!root) {
     return null;
   }
-  const data = await loadIntegrations(bridge);
+  const data = await loadIntegrations(bridge, permissionBridge);
   return updateIntegrationsScreen(root, data);
 }
 
@@ -550,6 +1029,45 @@ function getServerFromAction(action) {
   };
 }
 
+function getSelectedDetail(screen) {
+  return normalizeDetailId(screen?.dataset?.integrationsDetail);
+}
+
+function syncDetailButtons(screen, selectedDetail = getSelectedDetail(screen)) {
+  for (const card of screen?.querySelectorAll?.("[data-integrations-detail-card]") ?? []) {
+    card.setAttribute(
+      "aria-pressed",
+      String(normalizeDetailId(card.dataset?.integrationsDetail) === selectedDetail),
+    );
+  }
+
+  const addButton = screen?.querySelector?.('[data-integrations-action="open-add"]');
+  addButton?.setAttribute?.("aria-expanded", String(selectedDetail === "custom-mcp"));
+}
+
+function setActiveIntegrationDetail(screen, detailId, data = activeBinding?.data) {
+  if (!screen) {
+    return;
+  }
+  const selectedDetail = normalizeDetailId(detailId);
+  const normalized = data ?? normalizeIntegrationsData({});
+  const cardGrid = screen.querySelector?.("[data-integrations-card-grid]");
+  const detailPanel = screen.querySelector?.("[data-integrations-detail-panel]");
+
+  if (screen.dataset) {
+    screen.dataset.integrationsDetail = selectedDetail;
+  }
+  if (cardGrid) {
+    cardGrid.innerHTML = renderIntegrationCards(normalized, selectedDetail);
+  }
+  if (detailPanel) {
+    detailPanel.dataset.integrationsDetailActive = selectedDetail;
+    detailPanel.innerHTML = renderIntegrationDetailContent(selectedDetail, normalized);
+    syncAddServerFields(detailPanel.querySelector?.("[data-integrations-add-form]"));
+  }
+  syncDetailButtons(screen, selectedDetail);
+}
+
 function setFormError(form, message = "") {
   const error = form?.querySelector?.("[data-integrations-form-error]");
   if (!error) {
@@ -592,22 +1110,27 @@ function syncAddServerFields(form) {
 }
 
 function toggleAddServerDialog(screen, isOpen) {
+  if (isOpen) {
+    setActiveIntegrationDetail(screen, "custom-mcp");
+  }
   const dialog = screen?.querySelector?.("[data-integrations-dialog]");
-  const button = screen?.querySelector?.('[data-integrations-action="open-add"]');
-  if (dialog) {
-    dialog.hidden = !isOpen;
-  }
-  if (button) {
-    button.setAttribute("aria-expanded", String(isOpen));
-  }
   const form = dialog?.querySelector?.("[data-integrations-add-form]");
   if (form) {
+    if (!isOpen) {
+      form.reset?.();
+    }
     syncAddServerFields(form);
     setFormError(form);
   }
 }
 
-async function handleIntegrationAction(action, root, bridge) {
+function assertPermissionBridge(permissionBridge, method) {
+  if (!permissionBridge || typeof permissionBridge[method] !== "function") {
+    throw new Error(`Integrations screen requires window.leena.${method}().`);
+  }
+}
+
+async function handleIntegrationAction(action, root, bridge, permissionBridge) {
   const screen = findScreen(root);
   const type = action.dataset.integrationsAction;
   if (type === "open-add") {
@@ -618,11 +1141,41 @@ async function handleIntegrationAction(action, root, bridge) {
     toggleAddServerDialog(screen, false);
     return;
   }
+  if (type === "select-detail") {
+    setActiveIntegrationDetail(screen, action.dataset.integrationsDetail);
+    return;
+  }
+  if (type === "refresh") {
+    action.disabled = true;
+    try {
+      await refreshIntegrationsScreen(root, bridge, permissionBridge);
+    } finally {
+      action.disabled = false;
+    }
+    return;
+  }
+  if (type === "request-permission" || type === "open-permission-settings") {
+    const permissionId = firstString(action.dataset.permissionId);
+    action.disabled = true;
+    try {
+      if (type === "request-permission") {
+        assertPermissionBridge(permissionBridge, "requestOsPermission");
+        await permissionBridge.requestOsPermission(permissionId);
+      } else {
+        assertPermissionBridge(permissionBridge, "openOsPermissionSettings");
+        await permissionBridge.openOsPermissionSettings(permissionId);
+      }
+      await refreshIntegrationsScreen(root, bridge, permissionBridge);
+    } finally {
+      action.disabled = false;
+    }
+    return;
+  }
   if (type === "connect" || type === "disconnect") {
     action.disabled = true;
     try {
       await toggleIntegrationConnection(getServerFromAction(action), bridge);
-      await refreshIntegrationsScreen(root, bridge);
+      await refreshIntegrationsScreen(root, bridge, permissionBridge);
     } finally {
       action.disabled = false;
     }
@@ -632,16 +1185,16 @@ async function handleIntegrationAction(action, root, bridge) {
     action.disabled = true;
     try {
       await removeIntegrationServer(action.dataset.serverId, bridge);
-      await refreshIntegrationsScreen(root, bridge);
+      await refreshIntegrationsScreen(root, bridge, permissionBridge);
     } finally {
       action.disabled = false;
     }
   }
 }
 
-async function handleAddServerSubmit(event, root, bridge) {
+async function handleAddServerSubmit(event, root, bridge, permissionBridge) {
   event.preventDefault();
-  const form = event.currentTarget;
+  const form = event.target;
   const draft = getAddServerDraft(form);
   const validation = validateMCPServerDraft(draft);
   if (!validation.config) {
@@ -658,7 +1211,7 @@ async function handleAddServerSubmit(event, root, bridge) {
     await addIntegrationServer(draft, bridge);
     form.reset?.();
     toggleAddServerDialog(findScreen(root), false);
-    await refreshIntegrationsScreen(root, bridge);
+    await refreshIntegrationsScreen(root, bridge, permissionBridge);
   } catch (error) {
     setFormError(form, error instanceof Error ? error.message : String(error));
   } finally {
@@ -668,7 +1221,11 @@ async function handleAddServerSubmit(event, root, bridge) {
   }
 }
 
-export function bindIntegrationsControls(root = getDocument(), bridge = getDefaultMCPBridge()) {
+export function bindIntegrationsControls(
+  root = getDocument(),
+  bridge = getDefaultMCPBridge(),
+  permissionBridge = getDefaultPermissionBridge(),
+) {
   const screen = findScreen(root);
   if (!screen || !bridge) {
     return null;
@@ -682,27 +1239,39 @@ export function bindIntegrationsControls(root = getDocument(), bridge = getDefau
   const handleClick = (event) => {
     const action = closestAction(event.target, screen);
     if (action) {
-      void handleIntegrationAction(action, root, bridge);
+      void handleIntegrationAction(action, root, bridge, permissionBridge);
     }
   };
   const handleStatusChange = () => {
-    void refreshIntegrationsScreen(root, bridge).catch((error) =>
+    void refreshIntegrationsScreen(root, bridge, permissionBridge).catch((error) =>
       renderIntegrationsError(root, error),
     );
+  };
+  const handleSubmit = (event) => {
+    if (event.target?.matches?.("[data-integrations-add-form]")) {
+      void handleAddServerSubmit(event, root, bridge, permissionBridge);
+    }
+  };
+  const handleChange = (event) => {
+    if (event.target?.matches?.("[data-integrations-transport-select]")) {
+      syncAddServerFields(event.target.form);
+    }
   };
   const statusCleanup = subscribeToMCPStatusChanges(bridge, handleStatusChange);
 
   screen.addEventListener("click", handleClick);
-  const form = screen.querySelector?.("[data-integrations-add-form]");
-  const transport = screen.querySelector?.("[data-integrations-transport-select]");
-  form?.addEventListener?.("submit", (event) => void handleAddServerSubmit(event, root, bridge));
-  transport?.addEventListener?.("change", () => syncAddServerFields(form));
+  screen.addEventListener("submit", handleSubmit);
+  screen.addEventListener("change", handleChange);
 
   activeBinding = {
+    data: normalizeIntegrationsData({}),
     dispose() {
       screen.removeEventListener?.("click", handleClick);
+      screen.removeEventListener?.("submit", handleSubmit);
+      screen.removeEventListener?.("change", handleChange);
       statusCleanup();
     },
+    permissionBridge,
     screen,
   };
   return activeBinding;

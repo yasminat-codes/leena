@@ -12,6 +12,7 @@ import {
 } from "../src/ipc/provider-handlers.js";
 import { BaseProvider } from "../src/providers/base-provider.js";
 import { ProviderRegistry } from "../src/providers/index.js";
+import { COMPOSIO_CREDENTIAL_KEY } from "../src/providers/provider-settings.js";
 import { CHAT, EMBEDDINGS, STT, TTS } from "../src/providers/types.js";
 import { closeDatabase, getDatabase } from "../src/realtime/tools/database.js";
 import { ProviderError } from "../src/utils/errors.js";
@@ -220,6 +221,85 @@ test("set-config preserves existing API key when receiving a redacted placeholde
       readStoredSetting(filePath, getProviderDefaultModelSettingKey("openai", CHAT)),
       JSON.stringify("gpt-4o"),
     );
+  });
+});
+
+test("composio credential IPC stores protected credential and returns redacted status", async () => {
+  await withProviderDb(async (filePath) => {
+    const composioCredential = "composio-test-credential-1234567890";
+    const { handlers, safeStorage } = createHandlers({ storePath: filePath });
+
+    const missingStatus = await handlers.getComposioCredentialStatus(null);
+    assert.equal(missingStatus.ok, true);
+    assert.equal(missingStatus.provider, "composio");
+    assert.equal(missingStatus.configured, false);
+    assert.equal(missingStatus.connected, false);
+    assert.equal(missingStatus.apiKey, null);
+
+    const saved = await handlers.saveComposioCredential(null, {
+      apiKey: `  ${composioCredential}  `,
+    });
+
+    assert.deepEqual(safeStorage.encryptedValues, [composioCredential]);
+    assert.equal(saved.ok, true);
+    assert.equal(saved.provider, "composio");
+    assert.equal(saved.configured, true);
+    assert.equal(saved.connected, false);
+    assert.equal(saved.apiKey, "[REDACTED]7890");
+    assert.equal(saved.apiKey.includes(composioCredential), false);
+
+    const storedCredential = readStoredSetting(filePath, COMPOSIO_CREDENTIAL_KEY);
+    assert.equal(storedCredential.includes(composioCredential), false);
+
+    const status = await handlers.getComposioCredentialStatus(null);
+    assert.equal(status.configured, true);
+    assert.equal(status.apiKey, "[REDACTED]7890");
+
+    const connection = await handlers.testComposioConnection(null);
+    assert.equal(connection.ok, true);
+    assert.equal(connection.provider, "composio");
+    assert.equal(connection.configured, true);
+    assert.equal(connection.connected, true);
+    assert.equal(connection.message.includes(composioCredential), false);
+
+    const connectedStatus = await handlers.getComposioCredentialStatus(null);
+    assert.equal(connectedStatus.connected, true);
+    assert.notEqual(connectedStatus.testedAt, null);
+  });
+});
+
+test("composio credential IPC preserves redacted placeholders and clears credential", async () => {
+  await withProviderDb(async (filePath) => {
+    const composioCredential = "composio-test-credential-abcdef123456";
+    const { handlers, safeStorage } = createHandlers({ storePath: filePath });
+
+    await handlers.saveComposioCredential(null, { credential: composioCredential });
+    const storedCredential = readStoredSetting(filePath, COMPOSIO_CREDENTIAL_KEY);
+    const redactedStatus = await handlers.getComposioCredentialStatus(null);
+
+    const preserved = await handlers.saveComposioCredential(null, {
+      credential: redactedStatus.apiKey,
+    });
+
+    assert.deepEqual(safeStorage.encryptedValues, [composioCredential]);
+    assert.equal(readStoredSetting(filePath, COMPOSIO_CREDENTIAL_KEY), storedCredential);
+    assert.equal(preserved.configured, true);
+    assert.equal(preserved.apiKey, redactedStatus.apiKey);
+
+    const cleared = await handlers.clearComposioCredential(null);
+
+    assert.equal(cleared.ok, true);
+    assert.equal(cleared.provider, "composio");
+    assert.equal(cleared.configured, false);
+    assert.equal(cleared.connected, false);
+    assert.equal(cleared.apiKey, null);
+    assert.equal(readStoredSetting(filePath, COMPOSIO_CREDENTIAL_KEY), null);
+
+    const missingConnection = await handlers.testComposioConnection(null);
+    assert.equal(missingConnection.ok, false);
+    assert.equal(missingConnection.error.name, "ProviderError");
+    assert.equal(missingConnection.error.code, "COMPOSIO_CREDENTIAL_MISSING");
+    assert.equal(missingConnection.error.provider, "composio");
   });
 });
 

@@ -2,7 +2,7 @@
 id: "125"
 title: "Visual token and orb polish"
 type: ui
-status: pending
+status: completed
 wave: 18
 priority: critical
 complexity: M
@@ -16,7 +16,9 @@ context_files:
   - test/orb-waveform.test.js
 skills: []
 tags: [ui-polish, orb, theme, light-mode]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T22:05:26Z"
+completed_at: "2026-06-03T22:27:04Z"
 created_at: "2026-06-03"
 ---
 
@@ -36,11 +38,11 @@ The screenshots show a heavy green orb shadow, weak lights, and inconsistent gla
 7. Refresh screenshot proof with task 121 harness.
 
 ## Acceptance Criteria
-- [ ] No oversized green shadow behind the home orb in light/workspace mode.
-- [ ] Theme/treatment values are preserved exactly.
-- [ ] Traffic lights are visually distinct and aligned.
-- [ ] Screenshots show no overlapping chrome.
-- [ ] Token tests prevent one-note purple/green regressions.
+- [x] No oversized green shadow behind the home orb in light/workspace mode.
+- [x] Theme/treatment values are preserved exactly.
+- [x] Traffic lights are visually distinct and aligned.
+- [x] Screenshots show no overlapping chrome.
+- [x] Token tests prevent one-note purple/green regressions.
 
 ## Tests Required
 - `node --test test/leena-css-tokens.test.js test/orb-waveform.test.js`
@@ -56,10 +58,13 @@ The screenshots show a heavy green orb shadow, weak lights, and inconsistent gla
 Appearance still applies through `#app-shell.leena` data attributes only.
 
 ## Handoff Notes
-To be filled by executor.
+Implemented theme-scoped orb, command shadow, home surface, orb well, and traffic-light tokens in `src/renderer/leena.css`; routed the floating Command Center through `--command-shadow`; and added focused CSS/orb regressions. The refreshed task 121 baseline screenshots under `tasks/artifacts/post-mvp-ui-baseline/` show the workspace Home orb without the oversized green halo and the Suggested/Recent Home row collision repaired.
+
+Task-local gates are green: owned-file Biome check, focused CSS/orb tests, and the UI baseline harness. Repo-wide `npm run check` and full `node --test` are blocked by concurrent task 126 Settings changes outside task 125 scope.
 
 ## Errors Encountered
-To be filled if errors occur.
+- `npm run check` fails only on unowned `src/renderer/screens/settings.js` formatting at `renderSettingsSelectField(...)`.
+- Full `node --test` passes 553/554; the lone failure is `test/settings-screen.test.js` expecting `class="panel-glass settings-identity"` while the concurrent Settings implementation renders `class="panel-glass settings-identity settings-detail-section"`.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

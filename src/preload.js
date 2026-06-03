@@ -77,6 +77,12 @@ contextBridge.exposeInMainWorld("leena", {
     onPullProgress: (callback) => onIpc("ollama:pull-progress", callback),
     offPullProgress: (listener) => offIpc("ollama:pull-progress", listener),
   },
+  composio: {
+    getCredentialStatus: () => ipcRenderer.invoke("composio:get-credential-status"),
+    saveCredential: (apiKey) => ipcRenderer.invoke("composio:save-credential", { apiKey }),
+    clearCredential: () => ipcRenderer.invoke("composio:clear-credential"),
+    testConnection: () => ipcRenderer.invoke("composio:test-connection"),
+  },
   mcp: {
     listServers: () => ipcRenderer.invoke("mcp:list-servers"),
     addServer: (config) => ipcRenderer.invoke("mcp:add-server", config),

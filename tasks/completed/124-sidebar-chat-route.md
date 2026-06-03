@@ -2,7 +2,7 @@
 id: "124"
 title: "Sidebar Chat route"
 type: ui
-status: pending
+status: completed
 wave: 18
 priority: high
 complexity: S
@@ -16,7 +16,9 @@ context_files:
   - test/shell-rendering.test.js
 skills: []
 tags: [chat, sidebar, navigation]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T22:05:26Z"
+completed_at: "2026-06-03T22:27:04Z"
 created_at: "2026-06-03"
 ---
 
@@ -35,10 +37,10 @@ Chat exists in components and IPC, but the sidebar cannot open a conversation wo
 6. Verify existing routes still pass.
 
 ## Acceptance Criteria
-- [ ] Sidebar order is Home, Chat, Activity, Tasks, Integrations, Settings.
-- [ ] Chat route renders a non-empty screen.
-- [ ] Active state and `aria-current` work for Chat.
-- [ ] Existing shell tests pass.
+- [x] Sidebar order is Home, Chat, Activity, Tasks, Integrations, Settings.
+- [x] Chat route renders a non-empty screen.
+- [x] Active state and `aria-current` work for Chat.
+- [x] Existing shell tests pass.
 
 ## Tests Required
 - `node --test test/shell-navigation.test.js test/shell-rendering.test.js`
@@ -54,10 +56,17 @@ Chat exists in components and IPC, but the sidebar cannot open a conversation wo
 Chat screen is the destination for text and voice conversation work, while the global voice dock remains available outside Chat.
 
 ## Handoff Notes
-To be filled by executor.
+- Added Chat as the second sidebar item after Home with a recognizable message icon.
+- Registered `Chat` in shell routing and added `src/renderer/screens/chat.js` with a minimal non-empty screen.
+- Extended shell tests to cover approved sidebar order, static markup order, Chat normalization, screen rendering, active class, and `aria-current`.
+- Verification passed:
+  - `node --test test/shell-navigation.test.js test/shell-rendering.test.js`
+  - `npm run check`
+  - `node --test`
 
 ## Errors Encountered
-To be filled if errors occur.
+- Initial `npm run check` failed on Biome formatting in `test/shell-navigation.test.js`; the formatting was corrected and the check passed.
+- A later `npm run check` rerun failed on out-of-scope concurrent edits in `src/providers/provider-settings.js`; targeted Biome for the task 124 files still passed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

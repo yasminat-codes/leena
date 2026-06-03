@@ -122,8 +122,8 @@ test("missing realtime provider returns the structured no-provider response", as
 });
 
 async function withProviderDb(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-realtime-provider-"));
-  const storePath = path.join(directory, "brah.db");
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-realtime-provider-"));
+  const storePath = path.join(directory, "lena.db");
   try {
     await callback(storePath);
   } finally {

@@ -1,5 +1,5 @@
 {
-  "name": "brah",
+  "name": "leena",
   "version": "0.1.0",
   "description": "A fresh Electron desktop app.",
   "main": "src/main.js",
@@ -11,7 +11,7 @@
     "update:deps": "ncu -u && npm install",
     "test": "npm run check && node --test",
     "build:mac": "electron-builder --mac dir",
-    "open:mac": "npm run build:mac && open dist/mac-arm64/Brah.app"
+    "open:mac": "npm run build:mac && open dist/mac-arm64/Leena.app"
   },
   "keywords": [
     "electron"
@@ -20,8 +20,8 @@
   "license": "MIT",
   "type": "module",
   "build": {
-    "appId": "com.unstablemind.brah",
-    "productName": "Brah",
+    "appId": "com.leena.app",
+    "productName": "Leena",
     "asar": true,
     "npmRebuild": true,
     "asarUnpack": [
@@ -43,8 +43,8 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Brah needs microphone access for realtime voice input.",
-        "NSScreenCaptureDescription": "Brah needs screen recording access for screenshots and screen analysis."
+        "NSMicrophoneUsageDescription": "Leena needs microphone access for realtime voice input.",
+        "NSScreenCaptureDescription": "Leena needs screen recording access for screenshots and screen analysis."
       }
     }
   },

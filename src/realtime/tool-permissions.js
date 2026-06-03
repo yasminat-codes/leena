@@ -1,3 +1,25 @@
+import { parseMCPToolName } from "../mcp/schema-converter.js";
+
+const AUTO_APPROVED_MCP_LEVELS = new Set(["read", "low"]);
+const MCP_PERMISSION_LEVELS = new Set(["auto", "confirm", "trust"]);
+const MCP_RISK_PROPERTY_LEVELS = Object.freeze([
+  ["command", "destructive"],
+  ["delete", "destructive"],
+  ["url", "network"],
+  ["query", "network"],
+  ["path", "write"],
+  ["file", "write"],
+  ["write", "write"],
+]);
+const MCP_LEVEL_RANK = Object.freeze({
+  low: 0,
+  read: 0,
+  write: 1,
+  network: 2,
+  destructive: 3,
+  unknown: 4,
+});
+
 const toolPermissionMetadata = Object.freeze({
   add_task: {
     level: "low",
@@ -102,6 +124,48 @@ export function getToolPermissionRequest(name, args = {}) {
   };
 }
 
+export function getMCPToolPermissionRequest(namespacedName, args = {}, serverConfig = {}) {
+  const context = getMCPPermissionContext(namespacedName, serverConfig);
+  if (!context.valid) {
+    return {
+      toolName: namespacedName,
+      label: "MCP tool",
+      level: "unknown",
+      description: "MCP tool requires confirmation.",
+      summary: summarizeMCPArgs(args),
+    };
+  }
+
+  const toolDescription = sanitizeMCPText(
+    context.tool?.description ?? context.parsed.toolName,
+    240,
+  );
+  return {
+    toolName: namespacedName,
+    label: sanitizeMCPText(toolDescription || context.parsed.toolName, 60) || "MCP tool",
+    level: inferMCPToolLevel(context.tool?.inputSchema),
+    description: `MCP tool from ${context.serverName}: ${toolDescription || context.parsed.toolName}`,
+    summary: summarizeMCPArgs(args),
+  };
+}
+
+export function shouldAutoApproveMCPTool(namespacedName, args = {}, serverConfig = {}) {
+  const context = getMCPPermissionContext(namespacedName, serverConfig);
+  if (!context.valid) {
+    return false;
+  }
+
+  if (context.permissionLevel === "trust") {
+    return true;
+  }
+  if (context.permissionLevel !== "auto") {
+    return false;
+  }
+
+  const request = getMCPToolPermissionRequest(namespacedName, args, serverConfig);
+  return AUTO_APPROVED_MCP_LEVELS.has(request.level);
+}
+
 export function createPermissionDeniedResult(request) {
   return {
     status: "permission_denied",
@@ -160,6 +224,132 @@ function summarizeToolRequest(name, args) {
   }
 }
 
+function summarizeMCPArgs(args) {
+  if (!isRecord(args)) {
+    return "";
+  }
+  return Object.entries(args)
+    .slice(0, 3)
+    .map(([field, value]) => formatField(field, value))
+    .filter(Boolean)
+    .join(", ");
+}
+
+function getMCPPermissionContext(namespacedName, serverConfig) {
+  const parsed = parseMCPToolName(namespacedName);
+  if (!parsed || !isRecord(serverConfig)) {
+    return { valid: false };
+  }
+
+  const configuredServerId = normalizeString(serverConfig.serverId ?? serverConfig.id);
+  if (configuredServerId !== parsed.serverId) {
+    return { valid: false };
+  }
+  const tool = findMCPToolConfig(parsed.toolName, namespacedName, serverConfig);
+  if (!tool) {
+    return { valid: false };
+  }
+
+  return {
+    valid: true,
+    parsed,
+    serverName: sanitizeMCPText(
+      normalizeString(serverConfig.name ?? serverConfig.label) || parsed.serverId,
+      80,
+    ),
+    permissionLevel: normalizeMCPPermissionLevel(serverConfig.permission_level),
+    tool,
+  };
+}
+
+function normalizeMCPPermissionLevel(value) {
+  const normalized = normalizeString(value).toLowerCase();
+  return MCP_PERMISSION_LEVELS.has(normalized) ? normalized : "confirm";
+}
+
+function findMCPToolConfig(toolName, namespacedName, serverConfig) {
+  if (Array.isArray(serverConfig.tools)) {
+    const tool = serverConfig.tools.find(
+      (entry) => isRecord(entry) && (entry.name === toolName || entry.name === namespacedName),
+    );
+    return isValidMCPToolConfig(tool, toolName, namespacedName) ? tool : null;
+  }
+
+  if (isRecord(serverConfig.tools)) {
+    const tool = serverConfig.tools[toolName] ?? serverConfig.tools[namespacedName];
+    return isValidMCPToolConfig(tool, toolName, namespacedName) ? tool : null;
+  }
+
+  if (isRecord(serverConfig.tool)) {
+    return isValidMCPToolConfig(serverConfig.tool, toolName, namespacedName)
+      ? serverConfig.tool
+      : null;
+  }
+
+  return null;
+}
+
+function isValidMCPToolConfig(tool, toolName, namespacedName) {
+  if (!isRecord(tool) || !isRecord(tool.inputSchema)) {
+    return false;
+  }
+
+  const name = normalizeString(tool.name);
+  return name === toolName || name === namespacedName;
+}
+
+function inferMCPToolLevel(inputSchema) {
+  const propertyNames = getMCPPropertyNames(inputSchema);
+  let level = "low";
+
+  for (const propertyName of propertyNames) {
+    const normalizedPropertyName = propertyName.toLowerCase();
+    for (const [riskName, riskLevel] of MCP_RISK_PROPERTY_LEVELS) {
+      if (
+        normalizedPropertyName.includes(riskName) &&
+        MCP_LEVEL_RANK[riskLevel] > MCP_LEVEL_RANK[level]
+      ) {
+        level = riskLevel;
+      }
+    }
+  }
+
+  return level;
+}
+
+function getMCPPropertyNames(schema) {
+  const names = new Set();
+  const seen = new WeakSet();
+  const stack = [{ value: schema, depth: 0 }];
+
+  while (stack.length > 0) {
+    const { value, depth } = stack.pop();
+    if (!isRecord(value) || seen.has(value) || depth > 6) {
+      continue;
+    }
+
+    seen.add(value);
+    if (isRecord(value.properties)) {
+      for (const [name, childSchema] of Object.entries(value.properties)) {
+        names.add(name);
+        stack.push({ value: childSchema, depth: depth + 1 });
+      }
+    }
+
+    for (const child of Object.values(value)) {
+      if (isRecord(child)) {
+        stack.push({ value: child, depth: depth + 1 });
+      } else if (Array.isArray(child)) {
+        for (const item of child) {
+          stack.push({ value: item, depth: depth + 1 });
+        }
+      }
+    }
+  }
+
+  return names;
+}
+
 function summarizeFields(args, fields) {
   if (!isRecord(args)) {
     return "";
@@ -180,4 +370,24 @@ function formatField(field, value) {
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function sanitizeMCPText(value, maxLength) {
+  return stripMCPControlCharacters(normalizeString(value))
+    .replace(/\s+/g, " ")
+    .slice(0, maxLength)
+    .trim();
+}
+
+function stripMCPControlCharacters(value) {
+  let text = "";
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    text += code < 32 || code === 127 ? " " : character;
+  }
+  return text;
 }

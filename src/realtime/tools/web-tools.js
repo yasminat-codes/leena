@@ -7,7 +7,7 @@ const maxFetchMaxLength = 20_000;
 const defaultSearchMaxResults = 5;
 const maxSearchResults = 10;
 const requestTimeoutMs = 10_000;
-const userAgent = "Brah/0.1 RealtimeTool (+https://openai.com)";
+const userAgent = "Leena/0.1 RealtimeTool (+https://openai.com)";
 
 export async function executeWebTool(name, args) {
   switch (name) {

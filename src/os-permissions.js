@@ -11,14 +11,14 @@ export const osPermissionDefinitions = Object.freeze([
     description:
       "Needed for screenshot and screen analysis tools, and to see the live screen during Computer Use OS control.",
     activation:
-      "Click Request to trigger Electron screen capture, then allow Brah/Electron in Screen Recording settings.",
+      "Click Request to trigger Electron screen capture, then allow Leena/Electron in Screen Recording settings.",
   },
   {
     id: "accessibility",
     label: "Accessibility Control",
     description:
       "Needed for Computer Use to control the real OS mouse and keyboard outside the browser harness.",
-    activation: "Click Request, then allow Brah/Electron in Accessibility settings.",
+    activation: "Click Request, then allow Leena/Electron in Accessibility settings.",
   },
   {
     id: "computer",

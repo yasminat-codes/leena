@@ -6,7 +6,7 @@ import test from "node:test";
 import { executeFileSystemTool } from "../src/realtime/tools/filesystem-tools.js";
 
 async function withWorkspace(callback) {
-  const root = await mkdtemp(path.join(tmpdir(), "brah-fs-"));
+  const root = await mkdtemp(path.join(tmpdir(), "leena-fs-"));
   try {
     await callback(root, { rootPath: root });
   } finally {
@@ -129,7 +129,7 @@ test("paths escaping the workspace root are rejected", async () => {
 
 test("paths that resolve through a symlink outside the root are rejected", async () => {
   await withWorkspace(async (root, options) => {
-    const outside = await mkdtemp(path.join(tmpdir(), "brah-outside-"));
+    const outside = await mkdtemp(path.join(tmpdir(), "leena-outside-"));
     try {
       await writeFile(path.join(outside, "secret.txt"), "top secret", "utf8");
       // A symlink inside the workspace pointing at an external directory must
@@ -154,7 +154,7 @@ test("paths that resolve through a symlink outside the root are rejected", async
 
 test("protected secret paths are denied for read, write, and edit", async () => {
   await withWorkspace(async (root, options) => {
-    const secrets = [".ssh/id_rsa", ".aws/credentials", ".zshrc", "Brah/openai-credentials.json"];
+    const secrets = [".ssh/id_rsa", ".aws/credentials", ".zshrc", "Leena/openai-credentials.json"];
     for (const secret of secrets) {
       await mkdir(path.dirname(path.join(root, secret)), { recursive: true });
       await writeFile(path.join(root, secret), "secret", "utf8");

@@ -18,8 +18,8 @@ import { closeDatabase, getDatabase } from "../src/realtime/tools/database.js";
 import { ProviderError } from "../src/utils/errors.js";
 
 async function withProviderDb(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-provider-"));
-  const filePath = path.join(directory, "brah.db");
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-provider-"));
+  const filePath = path.join(directory, "lena.db");
   try {
     await callback(filePath);
   } finally {

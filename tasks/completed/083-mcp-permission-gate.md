@@ -2,7 +2,7 @@
 id: "083"
 title: "MCP tool permission gating (ADR-6)"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -12,7 +12,9 @@ context_files:
   - plans/auth-matrix.md
 skills: []
 tags: [phase-5, mcp, security, permissions]
-attempts: 0
+attempts: 3
+claim_started: "2026-06-02T23:02:41Z"
+completed_at: "2026-06-02T23:28:44Z"
 created_at: "2026-06-01"
 ---
 
@@ -50,10 +52,10 @@ MCP tools come from external, potentially untrusted servers. Unlike built-in too
 - **Task 084** exposes server `permission_level` through IPC for the settings UI
 
 ## Handoff Notes
-[Filled after completion]
+`src/realtime/tool-permissions.js` now exports `getMCPToolPermissionRequest()` and `shouldAutoApproveMCPTool()`. The gate parses namespaced MCP tool names, validates server ownership, requires the requested tool to exist in server metadata with a matching name and object `inputSchema`, defaults malformed or missing-tool input to confirmation, infers risk from nested schema property names, sanitizes user-facing MCP text, summarizes the first three arguments, and applies `auto` / `confirm` / `trust` server policies only after ownership and metadata validation. Verification passed: `npm run check`, focused MCP permission tests, changed JS syntax checks, WAL parse, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+Biome initially rejected a control-character sanitizer regex and one long assertion; fixed by switching to a character-code sanitizer and wrapping the test assertion. Reviewer then found missing MCP tool metadata could be auto-approved on an `auto` server; fixed by making missing tool metadata invalid even for trusted servers and adding regression coverage. Reviewer-hardening coverage now also rejects stale metadata, missing names, and malformed or absent `inputSchema` under permissive policies.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

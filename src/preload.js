@@ -1,6 +1,16 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-contextBridge.exposeInMainWorld("brah", {
+function onIpc(channel, callback) {
+  const listener = (_event, payload) => callback(payload);
+  ipcRenderer.on(channel, listener);
+  return listener;
+}
+
+function offIpc(channel, listener) {
+  ipcRenderer.removeListener(channel, listener);
+}
+
+contextBridge.exposeInMainWorld("leena", {
   getOpenAIStatus: () => ipcRenderer.invoke("openai:get-status"),
   loginOpenAI: () => ipcRenderer.invoke("openai:login"),
   saveApiKey: (apiKey) => ipcRenderer.invoke("openai:save-api-key", { apiKey }),
@@ -52,4 +62,12 @@ contextBridge.exposeInMainWorld("brah", {
   offLeenaError: (listener) => {
     ipcRenderer.removeListener("leena:error", listener);
   },
+  onRealtimeStateChanged: (callback) => onIpc("realtime:state-changed", callback),
+  offRealtimeStateChanged: (listener) => offIpc("realtime:state-changed", listener),
+  onRealtimeToolExecuting: (callback) => onIpc("realtime:tool-executing", callback),
+  offRealtimeToolExecuting: (listener) => offIpc("realtime:tool-executing", listener),
+  onRealtimeResponseComplete: (callback) => onIpc("realtime:response-complete", callback),
+  offRealtimeResponseComplete: (listener) => offIpc("realtime:response-complete", listener),
+  onRealtimeError: (callback) => onIpc("realtime:error", callback),
+  offRealtimeError: (listener) => offIpc("realtime:error", listener),
 });

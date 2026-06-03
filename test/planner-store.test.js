@@ -13,7 +13,7 @@ import {
 } from "../src/realtime/tools/planner-store.js";
 
 async function withPlannerFile(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-planner-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-planner-"));
   const filePath = path.join(directory, "planner", "items.db");
   try {
     await callback(filePath);

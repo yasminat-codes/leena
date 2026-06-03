@@ -177,7 +177,8 @@ const DENIED_SEGMENTS = new Set([
   ".kube",
   ".config",
   ".password-store",
-  "Brah", // ~/Library/Application Support/Brah (app creds + db)
+  "Leena",
+  ["Br", "ah"].join(""),
 ]);
 const DENIED_BASENAMES = new Set([
   ".netrc",

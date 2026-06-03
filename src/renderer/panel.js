@@ -15,8 +15,8 @@ const statusLabels = Object.freeze({
   completed: "Completed",
 });
 
-export function createPanelController({ brah, onModeChange } = {}) {
-  const bridge = brah ?? window.brah;
+export function createPanelController({ leena, onModeChange } = {}) {
+  const bridge = leena ?? window.leena;
   const panelElement = document.querySelector("#panel");
   const tabsElement = document.querySelector("#panel-tabs");
   const bodyElement = document.querySelector("#panel-body");
@@ -241,7 +241,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   function renderTasks(tasksList) {
     const list = Array.isArray(tasksList) ? tasksList : [];
     if (list.length === 0) {
-      mountBody(buildEmptyState("No tasks yet", "Ask Brah to remember something."));
+      mountBody(buildEmptyState("No tasks yet", "Ask Leena to remember something."));
       setFooter("No tasks");
       return;
     }
@@ -297,7 +297,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   function renderCalendar(calendarItems) {
     const list = Array.isArray(calendarItems) ? calendarItems : [];
     if (list.length === 0) {
-      mountBody(buildEmptyState("Nothing scheduled", "Ask Brah to add a calendar item."));
+      mountBody(buildEmptyState("Nothing scheduled", "Ask Leena to add a calendar item."));
       setFooter("No events");
       return;
     }
@@ -348,7 +348,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   function renderScreenshots(screenshots) {
     const list = (Array.isArray(screenshots) ? screenshots : []).slice(0, MAX_ACTIVITY_ITEMS);
     if (list.length === 0) {
-      mountBody(buildEmptyState("No screenshots yet", "Ask Brah to capture your screen."));
+      mountBody(buildEmptyState("No screenshots yet", "Ask Leena to capture your screen."));
       setFooter("No screenshots");
       return;
     }
@@ -384,7 +384,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
     const searchList = (Array.isArray(searches) ? searches : []).slice(0, MAX_ACTIVITY_ITEMS);
     const fetchList = (Array.isArray(fetches) ? fetches : []).slice(0, MAX_ACTIVITY_ITEMS);
     if (searchList.length === 0 && fetchList.length === 0) {
-      mountBody(buildEmptyState("No web activity", "Ask Brah to search or read a page."));
+      mountBody(buildEmptyState("No web activity", "Ask Leena to search or read a page."));
       setFooter("No web activity");
       return;
     }
@@ -449,7 +449,7 @@ export function createPanelController({ brah, onModeChange } = {}) {
   function renderComputer(runs) {
     const list = (Array.isArray(runs) ? runs : []).slice(0, MAX_ACTIVITY_ITEMS);
     if (list.length === 0) {
-      mountBody(buildEmptyState("No computer runs", "Ask Brah to use the browser for you."));
+      mountBody(buildEmptyState("No computer runs", "Ask Leena to use the browser for you."));
       setFooter("No runs");
       return;
     }

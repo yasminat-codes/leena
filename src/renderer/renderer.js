@@ -5,7 +5,7 @@ import {
   REALTIME_VOICES,
 } from "../realtime/prompts.js";
 import { initClickSound } from "./click-sound.js";
-import { demoAllStates } from "./components/command-center.js";
+import { createCommandCenter, demoAllStates } from "./components/command-center.js";
 import { createPanelController } from "./panel.js";
 import { createRealtimePlaybackTracker, isBenignCancelError } from "./realtime-playback.js";
 import {
@@ -13,6 +13,7 @@ import {
   isActiveResponseConflictError,
 } from "./realtime-response-queue.js";
 import { createRealtimeToolHandler } from "./realtime-tool-handler.js";
+import { SESSION_STATE_EVENTS, SessionStateManager } from "./session-state.js";
 import { initShell } from "./shell.js";
 import { createWaitingSound } from "./waiting-sound.js";
 
@@ -78,6 +79,7 @@ let pendingHangup = false;
 let hangupFallbackTimer = null;
 const playbackTracker = createRealtimePlaybackTracker();
 const responseCoordinator = createRealtimeResponseCoordinator();
+const sessionStateManager = new SessionStateManager({ eventSource: window });
 const waitingSound = createWaitingSound();
 let callTimerInterval = null;
 let callStartedAt = 0;
@@ -89,7 +91,7 @@ let selectedMicId = null;
 // echo it back and trigger a self-reply; this holds the safety-unmute timer.
 let welcomeMicGuardTimer = null;
 const realtimeToolHandler = createRealtimeToolHandler({
-  executeTool: (name, args) => window.brah.executeRealtimeTool(name, args),
+  executeTool: (name, args) => window.leena.executeRealtimeTool(name, args),
   sendEvent: sendRealtimeDataChannelEvent,
   setMode,
   setStatus,
@@ -99,23 +101,58 @@ const realtimeToolHandler = createRealtimeToolHandler({
 });
 
 let commandCenterDemo = null;
+let liveCommandCenter = null;
+let liveCommandCenterMount = null;
+
+function emitSessionEvent(eventName, payload = {}) {
+  window.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
+}
+
+function emitSessionState(state, payload = {}) {
+  emitSessionEvent(SESSION_STATE_EVENTS.stateChanged, { ...payload, state });
+}
+
+function mountLiveCommandCenter() {
+  if (liveCommandCenter) {
+    return;
+  }
+
+  liveCommandCenterMount = document.createElement("div");
+  liveCommandCenterMount.className = "command-center-mount";
+  appShellElement.append(liveCommandCenterMount);
+  liveCommandCenter = createCommandCenter({
+    variant: "compact",
+    sessionStateManager,
+  });
+  liveCommandCenter.mount(liveCommandCenterMount);
+  appShellElement.dataset.commandCenter = "live";
+}
+
+function destroyLiveCommandCenter() {
+  liveCommandCenter?.destroy();
+  liveCommandCenter = null;
+  liveCommandCenterMount?.remove();
+  liveCommandCenterMount = null;
+}
 
 function toggleCommandCenterDemo() {
   if (commandCenterDemo) {
     commandCenterDemo.destroy();
+    commandCenterDemo.mount?.remove();
     commandCenterDemo = null;
-    appShellElement.dataset.commandCenter = "idle";
+    mountLiveCommandCenter();
     return;
   }
 
+  destroyLiveCommandCenter();
   const mount = document.createElement("div");
   mount.className = "command-center-mount";
   appShellElement.append(mount);
-  commandCenterDemo = demoAllStates(mount, { interval: 900 });
+  commandCenterDemo = { ...demoAllStates(mount, { interval: 900 }), mount };
   appShellElement.dataset.commandCenter = "demo";
 }
 
-void window.brah.isDevelopment().then((isDevelopment) => {
+void window.leena.isDevelopment().then((isDevelopment) => {
   if (!isDevelopment) {
     return;
   }
@@ -130,7 +167,8 @@ void window.brah.isDevelopment().then((isDevelopment) => {
 
 // While the agent is busy in a tool call it produces no audio, so fill the
 // silence with the looping waiting ambience (fading in/out via waiting-sound).
-function handleToolStart(name) {
+function handleToolStart(name, args = {}) {
+  emitSessionEvent(SESSION_STATE_EVENTS.toolExecuting, { name, args });
   showToolActivity(name);
   // Computer use has its own on-screen indicator (and can run for a long time),
   // so only fill silence with the waiting ambience for normal quick tool calls.
@@ -139,7 +177,10 @@ function handleToolStart(name) {
   }
 }
 
-function handleToolEnd(name) {
+function handleToolEnd(name, result = null) {
+  emitSessionEvent(SESSION_STATE_EVENTS.responseComplete, {
+    tool: { name, result },
+  });
   hideToolActivity(name);
   if (!stoppableTools.has(name)) {
     waitingSound.stop();
@@ -178,7 +219,7 @@ function hideToolActivity(name) {
 async function stopComputerUse() {
   toolActivityLabelElement.textContent = "Stopping…";
   try {
-    await window.brah.cancelComputerUse();
+    await window.leena.cancelComputerUse();
   } catch (error) {
     await writeRendererDiagnostic("computer_use.cancel.error", formatRendererError(error));
   }
@@ -229,6 +270,7 @@ function setOpenAIConnected(connected) {
   headerCallButton.disabled = !connected;
   appShellElement.classList.toggle("is-authorized", connected);
   if (!connected) {
+    emitSessionState("idle", { connected: false });
     invalidatePrefetchedSecret();
     setMode("idle");
     setStatus("Connect OpenAI");
@@ -263,7 +305,7 @@ function setCallActive(active, { inactiveWindowMode = "panel" } = {}) {
 
 async function setWindowFocusable(focusable) {
   try {
-    await window.brah.setWindowFocusable(focusable);
+    await window.leena.setWindowFocusable(focusable);
   } catch (error) {
     await writeRendererDiagnostic("window.set_focusable.error", {
       focusable,
@@ -274,7 +316,7 @@ async function setWindowFocusable(focusable) {
 
 async function setWindowMode(mode) {
   try {
-    await window.brah.setWindowMode(mode);
+    await window.leena.setWindowMode(mode);
   } catch (error) {
     await writeRendererDiagnostic("window.set_mode.error", {
       mode,
@@ -308,21 +350,22 @@ function updateCallTimer() {
 }
 
 async function refreshOpenAIStatus() {
-  const status = await window.brah.getOpenAIStatus();
+  const status = await window.leena.getOpenAIStatus();
   setOpenAIConnected(status.connected);
   if (status.connected) {
     setStatus("Ready");
+    emitSessionState("idle", { connected: true });
     prefetchRealtimeSecret();
   }
 }
 
 async function refreshOsPermissions() {
-  const permissions = await window.brah.getOsPermissions();
+  const permissions = await window.leena.getOsPermissions();
   renderOsPermissions(permissions);
 }
 
 async function loadAgentProfile() {
-  agentProfile = normalizeAgentProfile(await window.brah.getAgentProfile());
+  agentProfile = normalizeAgentProfile(await window.leena.getAgentProfile());
   renderAgentProfile();
 }
 
@@ -363,7 +406,7 @@ async function saveAgentProfile() {
   };
   agentStatusElement.textContent = "Saving\u2026";
   try {
-    agentProfile = normalizeAgentProfile(await window.brah.setAgentProfile(profile));
+    agentProfile = normalizeAgentProfile(await window.leena.setAgentProfile(profile));
     renderAgentProfile();
     agentStatusElement.textContent = "Saved";
     // Voice/instructions are baked into the minted secret, so drop the stale
@@ -421,7 +464,7 @@ function renderOsPermissions(permissions) {
 async function requestOsPermission(id) {
   setStatus("Requesting permission…");
   try {
-    renderOsPermissions(await window.brah.requestOsPermission(id));
+    renderOsPermissions(await window.leena.requestOsPermission(id));
     setStatus("Permissions updated");
   } catch (error) {
     setStatus(`Permission failed: ${error.message}`);
@@ -431,7 +474,7 @@ async function requestOsPermission(id) {
 async function openOsPermissionSettings(id) {
   setStatus("Opening settings…");
   try {
-    await window.brah.openOsPermissionSettings(id);
+    await window.leena.openOsPermissionSettings(id);
     setStatus("Settings opened");
   } catch (error) {
     setStatus(`Settings failed: ${error.message}`);
@@ -448,10 +491,10 @@ async function connectOpenAI() {
   try {
     if (isOpenAIConnected) {
       await stopCall();
-      await window.brah.logoutOpenAI();
+      await window.leena.logoutOpenAI();
       setOpenAIConnected(false);
     }
-    await window.brah.loginOpenAI();
+    await window.leena.loginOpenAI();
     setOpenAIConnected(true);
     setMode("idle");
     setStatus("Ready");
@@ -502,7 +545,7 @@ function prefetchRealtimeSecret() {
     return;
   }
   const startedAt = performance.now();
-  secretPrefetchPromise = window.brah
+  secretPrefetchPromise = window.leena
     .createRealtimeSecret()
     .then((secret) => {
       prefetchedSecret = secret;
@@ -551,7 +594,7 @@ async function consumeRealtimeSecret() {
       return secret;
     }
   }
-  const secret = await window.brah.createRealtimeSecret();
+  const secret = await window.leena.createRealtimeSecret();
   void writeRendererDiagnostic("call.secret.consumed", {
     source: "on_demand",
     elapsedMs: Math.round(performance.now() - startedAt),
@@ -584,6 +627,7 @@ async function startCall() {
   setCallActive(true);
   setStatus("Starting…");
   setMode("connecting");
+  emitSessionState("thinking", { connected: true });
   await writeRendererDiagnostic("call.start", {
     mediaDevicesAvailable: Boolean(navigator.mediaDevices?.getUserMedia),
   });
@@ -622,8 +666,10 @@ async function startCall() {
       setStatus(formatConnectionState(peerConnection.connectionState));
       if (peerConnection.connectionState === "connected") {
         setMode("listening");
+        emitSessionState("listening", { connected: true });
       }
       if (["closed", "disconnected", "failed"].includes(peerConnection.connectionState)) {
+        emitSessionState(peerConnection.connectionState, { connected: false });
         void stopCall();
       }
     };
@@ -631,6 +677,7 @@ async function startCall() {
       void writeRendererDiagnostic("call.data_channel.open", {});
       setStatus("Listening");
       setMode("listening");
+      emitSessionState("listening", { connected: true });
       sendRealtimeWelcome();
     });
     dataChannel.addEventListener("message", (event) => {
@@ -676,6 +723,7 @@ async function startCall() {
   } catch (error) {
     await writeRendererDiagnostic("call.error", formatRendererError(error));
     setStatus(`Failed: ${error.message}`);
+    emitSessionEvent(SESSION_STATE_EVENTS.error, error);
     await stopCall();
   } finally {
     callToggleButton.disabled = !isOpenAIConnected;
@@ -725,6 +773,7 @@ async function stopCall() {
   appShellElement.dataset.panel = "open";
   setMode("idle");
   setStatus(isOpenAIConnected ? "Ready" : "Connect OpenAI");
+  emitSessionState("idle", { connected: isOpenAIConnected });
   // Re-prime a secret so the next call starts without the client_secret wait.
   prefetchRealtimeSecret();
 }
@@ -749,11 +798,17 @@ async function handleRealtimeEvent(event) {
     interruptAssistantPlayback();
     setStatus("Listening");
     setMode("listening");
+    emitSessionState("listening", { connected: true });
+    return;
+  }
+  if (event.type === "response.created") {
+    emitSessionState("thinking", { connected: true });
     return;
   }
   if (event.type === "response.output_audio.delta") {
     setStatus("Speaking");
     setMode("speaking");
+    emitSessionState("thinking", { connected: true });
     return;
   }
   if (event.type === "response.done") {
@@ -763,6 +818,7 @@ async function handleRealtimeEvent(event) {
     }
     setStatus("Listening");
     setMode("listening");
+    emitSessionEvent(SESSION_STATE_EVENTS.responseComplete, event);
     return;
   }
   if (event.type === "error") {
@@ -784,6 +840,7 @@ async function handleRealtimeEvent(event) {
     }
     setStatus(event.error?.message ?? "Realtime error");
     setMode("idle");
+    emitSessionEvent(SESSION_STATE_EVENTS.error, event);
   }
 }
 
@@ -804,7 +861,7 @@ function interruptAssistantPlayback() {
 
 async function writeRendererDiagnostic(event, details = {}) {
   try {
-    await window.brah.writeDiagnosticLog(event, details);
+    await window.leena.writeDiagnosticLog(event, details);
   } catch {
     // Diagnostics must not break the call flow.
   }
@@ -848,7 +905,7 @@ function buildAudioConstraints() {
 
 async function loadMicPreference() {
   try {
-    selectedMicId = (await window.brah.getMicrophoneDevice()) ?? null;
+    selectedMicId = (await window.leena.getMicrophoneDevice()) ?? null;
   } catch {
     selectedMicId = null;
   }
@@ -913,7 +970,7 @@ async function acquireMicrophoneStream() {
     });
     selectedMicId = null;
     try {
-      await window.brah.setMicrophoneDevice(null);
+      await window.leena.setMicrophoneDevice(null);
     } catch {
       // Persisting the fallback is best-effort.
     }
@@ -924,7 +981,7 @@ async function acquireMicrophoneStream() {
 async function handleMicSelection() {
   selectedMicId = micSelectElement.value || null;
   try {
-    await window.brah.setMicrophoneDevice(selectedMicId);
+    await window.leena.setMicrophoneDevice(selectedMicId);
   } catch (error) {
     await writeRendererDiagnostic("audio.mic.persist_failed", formatRendererError(error));
   }
@@ -1304,11 +1361,11 @@ agentFormElement.addEventListener("submit", (event) => {
 });
 windowMinimizeButton.addEventListener("click", () => {
   setMenuOpen(false);
-  void window.brah.minimizeWindow();
+  void window.leena.minimizeWindow();
 });
 appQuitButton.addEventListener("click", () => {
   setMenuOpen(false);
-  void window.brah.quitApp();
+  void window.leena.quitApp();
 });
 permissionsBackButton.addEventListener("click", () => {
   permissionsPanelElement.hidden = true;
@@ -1317,16 +1374,17 @@ permissionsRefreshButton.addEventListener("click", () => {
   void refreshOsPermissions();
 });
 diagnosticsOpenButton.addEventListener("click", () => {
-  void window.brah.openDiagnosticLog();
+  void window.leena.openDiagnosticLog();
 });
 const panelController = createPanelController({
-  brah: window.brah,
+  leena: window.leena,
   onModeChange: (mode) => {
     appShellElement.dataset.panel = mode === "panel" ? "open" : "closed";
   },
 });
 panelController.init({ openByDefault: false });
 initShell();
+mountLiveCommandCenter();
 
 initClickSound();
 

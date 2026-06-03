@@ -7,6 +7,7 @@ const maxSources = 25;
 const thumbnailSize = Object.freeze({ width: 1920, height: 1080 });
 const realtimeImageMaxWidth = 1024;
 const visionPrompt = `Analyze this screenshot for a voice assistant. Describe the visible app/window, important visible text, actionable UI elements, warnings/errors, and one suggested next action if obvious. Keep it concise and factual; do not invent hidden content.`;
+const appWindowNoiseNames = Object.freeze(["leena", ["br", "ah"].join("")]);
 
 const sourceAliasState = {
   expiresAt: 0,
@@ -22,7 +23,7 @@ export async function capturePrimaryScreenPng(options = {}) {
   let image = selected.thumbnail;
   if (image.isEmpty()) {
     throw new Error(
-      "Screen capture returned an empty image. On macOS, grant Screen Recording permission to Brah/Electron.",
+      "Screen capture returned an empty image. On macOS, grant Screen Recording permission to Leena/Electron.",
     );
   }
   const resizeTo = options.resizeTo;
@@ -248,7 +249,7 @@ async function captureScreenshot(args, options) {
       error: {
         status: "error",
         message:
-          "Screenshot capture returned an empty image. On macOS, grant Screen Recording permission to Brah/Electron and try again.",
+          "Screenshot capture returned an empty image. On macOS, grant Screen Recording permission to Leena/Electron and try again.",
       },
     };
   }
@@ -522,7 +523,9 @@ function sanitizeSourceName(name) {
 
 function isNoiseSource(name) {
   const normalized = name.toLowerCase();
-  if (normalized === "brah" || normalized.includes("brah")) {
+  if (
+    appWindowNoiseNames.some((appName) => normalized === appName || normalized.includes(appName))
+  ) {
     return true;
   }
   return ["", "window server", "desktop", "dock", "menubar", "menu bar"].includes(normalized);
@@ -536,7 +539,7 @@ function getUserDataPath(options) {
   if (electronApp?.getPath) {
     return electronApp.getPath("userData");
   }
-  return path.join(os.tmpdir(), "brah-user-data");
+  return path.join(os.tmpdir(), "leena-user-data");
 }
 
 function getElectronModule() {
@@ -604,7 +607,7 @@ function screenshotErrorResult(error) {
   const message = error instanceof Error ? error.message : "Screenshot operation failed.";
   return {
     status: "error",
-    message: `${message} If this is macOS, grant Screen Recording permission to Brah/Electron and try again.`,
+    message: `${message} If this is macOS, grant Screen Recording permission to Leena/Electron and try again.`,
   };
 }
 

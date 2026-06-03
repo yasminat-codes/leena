@@ -398,3 +398,82 @@
 - Reviewer blockers on renderer error redaction, embedded callback URL redaction, and diagnostics redaction were fixed and independently re-verified.
 - Independent gates passed: `npm run check`, `node --test` (127 tests), and `node --check` on changed JS files.
 - CodeRabbit advisory review was requested on PR #1. It had posted only its generated "review in progress" note with no actionable findings at merge decision time.
+
+### Fix — Wave 09 — 083 — MCP permission gate Biome cleanup
+- **Symptom:** `npm run check` failed on `src/realtime/tool-permissions.js` with `lint/suspicious/noControlCharactersInRegex` and on the new MCP permission test formatting.
+- **Root cause:** The sanitizer used an explicit control-character regex, and one summary assertion exceeded Biome's preferred line width.
+- **Fix:** Replaced the sanitizer regex with a small character-code loop and wrapped the long test assertion.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — 032 — SQLite row prototype in rename migration test
+- **Symptom:** Focused `node --test test/rename-migration.test.js ...` failed because `DatabaseSync#get()` returns a null-prototype row object that did not strict-deep-equal a plain object.
+- **Root cause:** The migration test asserted the raw SQLite row shape instead of normalizing it to the business payload.
+- **Fix:** Spread the returned row before `assert.deepEqual` in `test/rename-migration.test.js`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — 032 — Rename-slice Biome formatting
+- **Symptom:** `npm run check` reported formatting changes for `src/realtime/tools/screenshot-tools.js` and `test/rename-migration.test.js`.
+- **Root cause:** The rename patch left one long predicate and one assertion block outside Biome's preferred wrapping.
+- **Fix:** Wrapped the screenshot noise predicate and normalized the migration-test assertion formatting.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — 105 — Session-state Biome formatting
+- **Symptom:** `npm run check` reported formatting changes for `src/renderer/session-state.js` and `src/renderer/components/command-center.js`.
+- **Root cause:** The new session-state manager and Command Center binding left a few long expressions outside Biome's preferred wrapping.
+- **Fix:** Ran Biome formatting on the task-owned session-state, Command Center, and session-state-manager test files.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — integration — Rename/session-state runtime hook
+- **Symptom:** The global rename was clean in owned files, but `src/renderer/session-state.js` still defaulted to `window.brah`, and the new Command Center state manager was not mounted into the live renderer.
+- **Root cause:** Task `032` and task `105` intentionally avoided each other's active claims, leaving the bridge rename and runtime Command Center hook for integration.
+- **Fix:** Switched `SessionStateManager` default lookup to `window.leena`, added preload `realtime:*` listener helpers, mounted a live compact Command Center from `renderer.js`, dispatched real Realtime state/tool/done/error events from the renderer flow, and passed tool arguments/results through `realtime-tool-handler.js`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 09 — summary
+- Completed tasks `032`, `083`, and `105`; blocked task `092` because dependency `091` has no trained wake model, selected threshold, real audio corpus, or measured FA/FR/latency report.
+- Rebranded runtime identity to Leena: package metadata, preload bridge, renderer bridge calls, docs, user-facing strings, and default SQLite DB path now use Leena. The default DB open migrates an existing legacy DB and SQLite sidecars to `lena.db`.
+- Added default-deny MCP permission helpers with server ownership checks, malformed-name fail-closed behavior, schema risk inference, sanitized descriptions, argument summaries, and `auto` / `confirm` / `trust` policy behavior for downstream task `085`.
+- Added live Command Center state wiring: `SessionStateManager`, Command Center binding, renderer event emission from real Realtime activity, preload push-event hooks, tool preview summaries, debounce, disconnect error state, and reconnect idle recovery.
+- Independent verification passed: `npm run check`, full `node --test` (291 tests), changed JS syntax checks, output existence checks, old-name grep over `src/ test/ package.json README.md CLAUDE.md`, WAL JSON parse, and `git diff --check`.
+- Advisor warnings to carry forward: task `085` must wire these MCP permission helpers into the actual dynamic MCP execution path; Command Center live state has DOM/unit coverage and should get an Electron visual smoke before relying on the live surface for production-visible runtime proof.
+- Wake-word remains non-blocking for the deliverable path. Task `092` can resume only after a real `hey-lena.onnx` model and measured ambient/positive corpus exist, or after selecting the documented Porcupine/hotkey fallback.
+
+### Fix — Wave 09 — reviewer — MCP missing-tool fail-closed
+- **Symptom:** Reviewer found `shouldAutoApproveMCPTool()` could auto-approve a namespaced tool on an `auto` server even when the server config did not list that tool.
+- **Root cause:** Missing MCP tool metadata fell back to an empty object, so risk inference defaulted to `low` and the `auto` policy approved it.
+- **Fix:** `getMCPPermissionContext()` now treats missing tool metadata as invalid, including for `trust` servers; missing tools return an `unknown` permission request and never auto-approve. Added focused regression coverage.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — reviewer — Legacy Electron user-data migration
+- **Symptom:** Reviewer found the rename migration only handled a legacy DB already inside the new Leena user-data directory, so real installs using the old Electron support directory would start fresh.
+- **Root cause:** The database layer only checked adjacent `lena.db`/legacy DB paths and legacy JSON import only looked in the new user-data root plus the historical temp fallback.
+- **Fix:** Startup now computes old Electron user-data roots, passes them into `setDatabaseUserDataPath()`, moves `openai-credentials.json` from the old root when needed, and the database migration imports legacy DB/JSON stores from those roots. Added cross-root DB migration coverage and auth source assertions.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — reviewer — Task log append-only placement
+- **Symptom:** Reviewer found the Wave 09 TASKLOG entry had been inserted above older Wave 01-06 history instead of appended at the end.
+- **Root cause:** The orchestrator inserted the new section next to Wave 07/08 entries rather than respecting the file-level append-only convention.
+- **Fix:** Moved the Wave 09 TASKLOG start/summary block to the end of `tasks/TASKLOG.md` without rewriting older history.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — reviewer-hardening — MCP stale metadata fail-closed
+- **Symptom:** The reviewer fix covered absent MCP tool records, but stale tool metadata, unnamed singleton metadata, and malformed `inputSchema` could still be too easy to treat as trusted configuration.
+- **Root cause:** Tool metadata validity only checked that a matching record existed; it did not require a matching tool name and object schema before permissive `auto` / `trust` policies were evaluated.
+- **Fix:** Required MCP tool metadata to include a matching name and object `inputSchema`; added regressions for malformed names, stale metadata, missing schema, unnamed singleton metadata, and malformed schema under `auto` and `trust`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 09 — reviewer-hardening — Rename migration sidecar proof
+- **Symptom:** Cross-root DB migration coverage proved the legacy DB moved, but did not prove uncheckpointed WAL data and sidecar files survived the rename.
+- **Root cause:** The first reviewer-fix test used a normally closed database path where data may already be checkpointed into the main DB file.
+- **Fix:** Added a realistic SQLite WAL/SHM sidecar migration test with `wal_autocheckpoint=0`, proving an uncheckpointed legacy row survives the cross-root move into `lena.db`; added a focused auth harness test for legacy OpenAI credential migration from the old Electron support root.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl

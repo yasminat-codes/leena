@@ -211,3 +211,27 @@ _(wave execution entries appended below as the build runs)_
 - Kept the Workspace mode but changed the visual hierarchy: off-white now owns the wallpaper, side rail, topbar, Home context, list surfaces, and orb well; teal is constrained to the logo/orb material, active nav, CTA, small markers, and faint sculptural accent.
 - Updated Workspace token tests to assert the off-white shell and refreshed five artifacts under `tasks/artifacts/wave-06-offwhite-dominant-*.png`.
 - Gates passed after the off-white pass: `npm run check`, focused design-audit/token tests, full `node --test` (207 tests), `node --check test/leena-css-tokens.test.js`, `git diff --check`, and Electron/Playwright five-screen screenshot sweep.
+
+## 2026-06-02 — Wave 09 started
+
+- Cut clean branch/worktree `wave-09` from `origin/main` at `4e5e6f3`; primary checkout remains dirty/diverged and was not touched.
+- Moved tasks `032`, `083`, `092`, and `105` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Dispatched four workers in one parallel group for rename, MCP permission gate, wake engine dependency verification, and live Command Center state. Task `092` was expected to block if dependency `091` remained blocked.
+- Ran required `kencode-search` passes before implementation edits. Useful local context came from the existing Electron preload, SQLite database helper, MCP schema converter, Realtime tool handler, and Command Center tests.
+
+## 2026-06-02 — Wave 09 summary
+
+- Completed task `032`: package/app identity, preload bridge, renderer bridge calls, docs, user-facing strings, default DB path, and legacy DB/sidecar migration now use Leena.
+- Completed task `083`: MCP permission requests now fail closed by default, validate server ownership, infer schema risk, sanitize descriptions, summarize arguments, and respect `auto` / `confirm` / `trust` server policy.
+- Completed task `105`: live Command Center state now uses `SessionStateManager`, real renderer Realtime events, preload push-event hooks, tool previews, debounce, disconnect error handling, and reconnect recovery.
+- Blocked task `092`: dependency `091` has no trained `hey-lena.onnx`, selected threshold, one-hour ambient corpus, 50-positive utterance corpus, FA/hr, FR%, model size, or latency measurement. Wake remains decoupled from the DMG path.
+- Independent gates passed after integration: `npm run check`, `node --test` (291 tests), changed JS syntax checks, output existence checks, old-name grep over `src/ test/ package.json README.md CLAUDE.md`, WAL JSON parse, and `git diff --check`.
+
+## 2026-06-02 — Wave 09 reviewer fixes revalidated
+
+- Re-dispatched focused reviewer-fix workers for task `032` rename migration and task `083` MCP permission gating, plus a ledger-order audit worker.
+- Hardened MCP permission validation so stale tool metadata, unnamed singleton metadata, and malformed or absent `inputSchema` fail closed even under `auto` or `trust` server policy.
+- Added stricter rename migration coverage for cross-root SQLite WAL/SHM sidecars with uncheckpointed rows and for legacy `openai-credentials.json` migration from the old Electron support root.
+- Ledger audit confirmed the Wave 09 TASKLOG started/summary entries are now at the physical end of the append-only task log.
+- Reviewer gate cleared with no blockers. Advisor gate cleared with warnings only: pending task `085` must enforce MCP permission helpers in the dynamic MCP execution path, and the live Command Center surface should get an Electron visual smoke when production-visible runtime proof is needed.
+- Parent gates passed after reviewer hardening: `npm run check`, `node --test` (295 tests), changed JS syntax checks, `git diff --check`, WAL JSON parse, old-name grep, active-claims audit, and task-artifact privacy scan.

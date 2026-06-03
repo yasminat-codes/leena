@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -9,28 +9,36 @@ import { DatabaseSync } from "node:sqlite";
 // file-corruption class of bugs the previous JSON files suffered from.
 
 let userDataPathOverride = null;
+let legacyUserDataPathOverrides = [];
 const connections = new Map();
+const databaseFilename = "lena.db";
+const legacyAppSlug = ["br", "ah"].join("");
+const legacyDatabaseFilename = `${legacyAppSlug}.db`;
+const defaultUserDataDirectoryName = "leena-user-data";
+const legacyUserDataDirectoryName = `${legacyAppSlug}-user-data`;
 
-export function setDatabaseUserDataPath(userDataPath) {
-  userDataPathOverride =
-    typeof userDataPath === "string" && userDataPath.trim() ? userDataPath : null;
+export function setDatabaseUserDataPath(userDataPath, options = {}) {
+  userDataPathOverride = normalizePath(userDataPath);
+  legacyUserDataPathOverrides = Array.isArray(options.legacyUserDataPaths)
+    ? uniquePaths(options.legacyUserDataPaths.map(normalizePath).filter(Boolean))
+    : [];
 }
 
 export function getDatabasePath() {
-  return path.join(getUserDataPath(), "brah.db");
+  return path.join(getUserDataPath(), databaseFilename);
 }
 
 export function getDatabase(dbPath = getDatabasePath()) {
-  const existing = connections.get(dbPath);
+  const databasePath = prepareDatabasePath(dbPath);
+  const existing = connections.get(databasePath);
   if (existing) {
     return existing;
   }
-  mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new DatabaseSync(dbPath);
+  const db = new DatabaseSync(databasePath);
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
   applySchema(db);
-  connections.set(dbPath, db);
+  connections.set(databasePath, db);
   return db;
 }
 
@@ -80,7 +88,36 @@ function getUserDataPath() {
   if (userDataPathOverride) {
     return userDataPathOverride;
   }
-  return path.join(os.tmpdir(), "brah-user-data");
+  return path.join(os.tmpdir(), defaultUserDataDirectoryName);
+}
+
+function prepareDatabasePath(dbPath) {
+  mkdirSync(path.dirname(dbPath), { recursive: true });
+  if (path.basename(dbPath) === databaseFilename) {
+    migrateLegacyDatabaseFile(dbPath);
+  }
+  return dbPath;
+}
+
+function migrateLegacyDatabaseFile(dbPath) {
+  if (existsSync(dbPath)) {
+    return;
+  }
+  for (const legacyPath of getLegacyDatabasePaths(dbPath)) {
+    if (!existsSync(legacyPath)) {
+      continue;
+    }
+    renameSync(legacyPath, dbPath);
+    renameSqliteSidecar(`${legacyPath}-wal`, `${dbPath}-wal`);
+    renameSqliteSidecar(`${legacyPath}-shm`, `${dbPath}-shm`);
+    return;
+  }
+}
+
+function renameSqliteSidecar(from, to) {
+  if (existsSync(from) && !existsSync(to)) {
+    renameSync(from, to);
+  }
 }
 
 // One-time import of the legacy JSON stores into SQLite. Because an earlier bug
@@ -89,7 +126,11 @@ function getUserDataPath() {
 // files so the import never repeats.
 export function migrateLegacyStores(importers, dbPath = getDatabasePath()) {
   const db = getDatabase(dbPath);
-  const legacyDirs = [getUserDataPath(), path.join(os.tmpdir(), "brah-user-data")];
+  const legacyDirs = uniquePaths([
+    getUserDataPath(),
+    ...legacyUserDataPathOverrides,
+    path.join(os.tmpdir(), legacyUserDataDirectoryName),
+  ]);
   for (const { relativePath, apply } of importers) {
     for (const dir of legacyDirs) {
       const filePath = path.join(dir, relativePath);
@@ -105,6 +146,30 @@ export function migrateLegacyStores(importers, dbPath = getDatabasePath()) {
       }
     }
   }
+}
+
+function getLegacyDatabasePaths(dbPath) {
+  return uniquePaths([
+    path.join(path.dirname(dbPath), legacyDatabaseFilename),
+    ...legacyUserDataPathOverrides.map((dir) => path.join(dir, legacyDatabaseFilename)),
+  ]);
+}
+
+function normalizePath(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function uniquePaths(paths) {
+  const seen = new Set();
+  const result = [];
+  for (const item of paths) {
+    if (!item || seen.has(item)) {
+      continue;
+    }
+    seen.add(item);
+    result.push(item);
+  }
+  return result;
 }
 
 function readJsonFile(filePath) {

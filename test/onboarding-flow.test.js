@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   completeOnboarding,
   createInitialOnboardingState,
+  createOnboardingFlow,
   formatHotkey,
+  getMissingRequiredPermissions,
   getStepById,
   hasRequiredPermissions,
   normalizeAuthStatus,
@@ -27,6 +29,33 @@ function formRoot(values = {}) {
     },
   };
 }
+
+function onboardingRoot(values = {}) {
+  return {
+    innerHTML: "",
+    listeners: new Map(),
+    addEventListener(type, listener) {
+      this.listeners.set(type, listener);
+    },
+    dispatchEvent(event) {
+      this.dispatchedEvent = event;
+    },
+    querySelector(selector) {
+      const match = selector.match(/name="([^"]+)"/);
+      if (!match) {
+        return null;
+      }
+      return { value: values[match[1]] ?? "" };
+    },
+  };
+}
+
+const fullPermissionGrant = Object.freeze([
+  { id: "microphone", status: "granted" },
+  { id: "screen", status: "granted" },
+  { id: "accessibility", status: "granted" },
+  { id: "computer", status: "granted" },
+]);
 
 test("onboarding exports the required five-step renderer contract", () => {
   assert.deepEqual(
@@ -89,24 +118,43 @@ test("auth step saves an API key and requires OpenAI status to become connected"
   );
 });
 
-test("permissions step only blocks on missing microphone access", async () => {
-  const grantedPermissions = [
+test("permissions step requires every supported local access grant", async () => {
+  const unsupportedPlatformPermissions = [
     { id: "microphone", status: "granted" },
-    { id: "screen", status: "denied" },
-    { id: "accessibility", status: "not-determined" },
-    { id: "computer", status: "unsupported" },
+    { id: "screen", status: "unsupported" },
+    { id: "accessibility", status: "unsupported" },
+    { id: "computer", status: "granted" },
   ];
 
-  assert.equal(hasRequiredPermissions(grantedPermissions), true);
+  assert.equal(hasRequiredPermissions(fullPermissionGrant), true);
+  assert.equal(hasRequiredPermissions(unsupportedPlatformPermissions), true);
+  assert.equal(
+    hasRequiredPermissions([
+      { id: "microphone", status: "granted" },
+      { id: "screen", status: "denied" },
+      { id: "accessibility", status: "not-determined" },
+      { id: "computer", status: "granted" },
+    ]),
+    false,
+  );
   assert.deepEqual(
-    normalizePermissions(grantedPermissions).map((permission) => permission.id),
-    ["microphone", "screen", "accessibility"],
+    normalizePermissions(fullPermissionGrant).map((permission) => permission.id),
+    ["microphone", "screen", "accessibility", "computer"],
+  );
+  assert.deepEqual(
+    getMissingRequiredPermissions([
+      { id: "microphone", status: "granted" },
+      { id: "screen", status: "denied" },
+      { id: "accessibility", status: "not-determined" },
+      { id: "computer", status: "granted" },
+    ]).map((permission) => permission.label),
+    ["Screen Recording", "Accessibility Control"],
   );
 
   await getStepById("permissions").validate({
     bridge: {
       async getOsPermissions() {
-        return grantedPermissions;
+        return fullPermissionGrant;
       },
     },
     state: createInitialOnboardingState({ currentStepId: "permissions" }),
@@ -121,8 +169,26 @@ test("permissions step only blocks on missing microphone access", async () => {
       },
       state: createInitialOnboardingState({ currentStepId: "permissions" }),
     }),
-    /Microphone access is required/,
+    /Finish setup for: Microphone, Screen Recording, Accessibility Control, Automation Browser\./,
   );
+});
+
+test("permissions renderer shows the complete access checklist without legacy panel classes", () => {
+  const html = renderOnboardingShell(
+    createInitialOnboardingState({
+      currentStepId: "permissions",
+      permissions: fullPermissionGrant,
+    }),
+  );
+
+  assert.match(html, /Allow every local access/);
+  assert.match(html, /Microphone/);
+  assert.match(html, /Screen Recording/);
+  assert.match(html, /Accessibility Control/);
+  assert.match(html, /Automation Browser/);
+  assert.match(html, /4 of 4 ready/);
+  assert.doesNotMatch(html, /class="permissions-list"/);
+  assert.doesNotMatch(html, /class="permission-item"/);
 });
 
 test("name step saves the optional user name without losing profile fields", async () => {
@@ -181,6 +247,103 @@ test("completion helpers read, set, and reset the onboardingCompleted setting", 
   assert.equal(formatHotkey("Control+Alt+Space"), "Ctrl+Option+Space");
 });
 
+test("save api key action saves and refreshes auth without advancing the step", async () => {
+  const savedKeys = [];
+  const root = onboardingRoot({ apiKey: "sk-visible-action" });
+  const bridge = {
+    async getOpenAIStatus() {
+      return { connected: savedKeys.length > 0, authType: "api-key" };
+    },
+    async getOsPermissions() {
+      return fullPermissionGrant;
+    },
+    async getSetting(_key, fallback) {
+      return fallback;
+    },
+    async saveApiKey(apiKey) {
+      savedKeys.push(apiKey);
+      return { connected: true, authType: "api-key" };
+    },
+  };
+  const controller = createOnboardingFlow({
+    bridge,
+    root,
+    state: createInitialOnboardingState({ currentStepId: "auth" }),
+  });
+
+  await controller.mount(root);
+  await controller.run("save-api-key");
+
+  assert.deepEqual(savedKeys, ["sk-visible-action"]);
+  assert.equal(controller.getState().currentStepId, "auth");
+  assert.match(root.innerHTML, /Connected with API key/);
+});
+
+test("continue snapshots typed auth values before busy rerender", async () => {
+  const savedKeys = [];
+  const root = onboardingRoot({ apiKey: "sk-continue-path" });
+  const bridge = {
+    async getOpenAIStatus() {
+      return { connected: savedKeys.length > 0, authType: "api-key" };
+    },
+    async getOsPermissions() {
+      return fullPermissionGrant;
+    },
+    async getSetting(_key, fallback) {
+      return fallback;
+    },
+    async saveApiKey(apiKey) {
+      savedKeys.push(apiKey);
+      return { connected: true, authType: "api-key" };
+    },
+  };
+  const controller = createOnboardingFlow({
+    bridge,
+    root,
+    state: createInitialOnboardingState({ currentStepId: "auth" }),
+  });
+
+  await controller.mount(root);
+  await controller.run("next");
+
+  assert.deepEqual(savedKeys, ["sk-continue-path"]);
+  assert.equal(controller.getState().currentStepId, "permissions");
+});
+
+test("continue snapshots typed profile name before busy rerender", async () => {
+  let savedProfile = null;
+  const root = onboardingRoot({ name: "Yasmin" });
+  const bridge = {
+    async getOpenAIStatus() {
+      return { connected: true, authType: "api-key" };
+    },
+    async getOsPermissions() {
+      return fullPermissionGrant;
+    },
+    async getSetting(_key, fallback) {
+      return fallback;
+    },
+    async getAgentProfile() {
+      return { about: "Builder" };
+    },
+    async setAgentProfile(profile) {
+      savedProfile = profile;
+      return profile;
+    },
+  };
+  const controller = createOnboardingFlow({
+    bridge,
+    root,
+    state: createInitialOnboardingState({ currentStepId: "name" }),
+  });
+
+  await controller.mount(root);
+  await controller.run("next");
+
+  assert.equal(savedProfile.name, "Yasmin");
+  assert.equal(controller.getState().currentStepId, "done");
+});
+
 test("runtime bootstrap mounts onboarding before the main app shell on first launch", () => {
   const mainSource = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
   const rendererSource = readFileSync(
@@ -195,6 +358,7 @@ test("runtime bootstrap mounts onboarding before the main app shell on first lau
   );
   assert.match(rendererSource, /new URLSearchParams\(window\.location\.search\)/);
   assert.match(rendererSource, /leenaShellElement\.hidden = true/);
+  assert.match(rendererSource, /leenaShellElement\.setAttribute\("aria-hidden", "true"\)/);
   assert.match(rendererSource, /mountOnboarding\(showOnboardingShell\(\)/);
 
   const runtimeStart = rendererSource.indexOf("function startAppRuntime()");
@@ -210,4 +374,15 @@ test("runtime bootstrap mounts onboarding before the main app shell on first lau
   assert.ok(shellInit > runtimeStart, "normal shell initialization must be inside app runtime");
   assert.ok(onboardingMount > rendererStart, "renderer must mount onboarding in startup path");
   assert.ok(runtimeCall > onboardingMount, "normal runtime must start only after onboarding path");
+});
+
+test("active onboarding CSS removes the normal app shell from layout", () => {
+  const css = readFileSync(new URL("../src/renderer/leena.css", import.meta.url), "utf8");
+
+  assert.match(css, /\.onboarding-root\s*\{[\s\S]*position:\s*absolute;/);
+  assert.match(
+    css,
+    /\.leena\[data-onboarding="active"\]\s+#leena-shell,[\s\S]*#leena-shell\[hidden\]\s*\{[\s\S]*display:\s*none;/,
+  );
+  assert.match(css, /\.onboarding\s*\{[\s\S]*height:\s*min\(680px, calc\(100vh - 48px\)\);/);
 });

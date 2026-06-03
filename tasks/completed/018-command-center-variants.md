@@ -71,7 +71,7 @@ The Command Center is Leena's primary voice interaction surface — it's the flo
 - Parent verification after reviewer fixes passed `npm run check`, `node --test` (189 tests), `node --check` on changed JS/test files, `git diff --check`, output existence checks, and an Electron startup smoke.
 
 ## Errors Encountered
-- The worker wrote command-center files into the primary checkout (`/Users/yasmineseidu/leena`) instead of the wave worktree. Parent verification caught the missing outputs, copied the task-owned files into `/Users/yasmineseidu/leena-wave-04`, and removed only those worker-created untracked files from the primary checkout.
+- The worker wrote command-center files into the primary checkout instead of the wave worktree. Parent verification caught the missing outputs, copied the task-owned files into the Wave 04 worktree, and removed only those worker-created untracked files from the primary checkout.
 - `command-center.css` initially referenced undefined `--danger-soft`; parent integration replaced it with a token-based `color-mix()` expression.
 - Reviewer found renderer demo gating used `location.protocol === "file:"`, which is also true in packaged Electron. Fixed with main-process `app:is-development` IPC and regression coverage.
 

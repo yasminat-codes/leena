@@ -2,7 +2,7 @@
 id: "061"
 title: "Create episodic and semantic SQLite tables"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -12,7 +12,9 @@ context_files:
   - plans/data-model.md
 skills: []
 tags: [phase-3, memory, database]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+completed_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -59,11 +61,14 @@ These tables are the persistence backbone for Leena's memory system. Episodic st
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added additive `memories_episodic` and `memories_semantic` tables plus required indexes to `applySchema()`.
+- Parent integration also added the Wave 10 `mcp_servers` table to the same central schema so fresh databases include all Wave 10 storage surfaces.
+- `test/memory-tables.test.js` verifies column shape, row preservation for existing planner/activity/settings tables, episodic/semantic round trips, indexes, and `superseded_by` FK enforcement.
+- Final parent gates passed: `npm run check`, `node --test` (329/329), focused memory tests, changed JS syntax checks, and `git diff --check`.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- The first FK negative check mixed `BigInt` and number arithmetic from SQLite `lastInsertRowid`; fixed by coercing to `Number()` before adding the invalid offset.
 
 ## Self-Annealing Contract
 

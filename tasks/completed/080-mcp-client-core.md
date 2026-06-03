@@ -73,7 +73,7 @@ MCP is the universal tool integration layer — it lets Leena connect to any MCP
 ## Errors Encountered
 - npm install reported 7 moderate audit findings after adding `@modelcontextprotocol/sdk`; not changed because dependency-audit remediation is outside task 080.
 - Reviewer found default `callTool` retry could duplicate side effects. Fixed by changing the default to one attempt and adding explicit opt-in retry coverage.
-- Accidentally created the new manager/test files in the primary `/Users/yasmineseidu/leena` checkout first; immediately deleted those untracked files and recreated them under `/Users/yasmineseidu/leena-wave-07`. Primary checkout now has no tracked/untracked changes for those two paths.
+- Accidentally created the new manager/test files in the primary checkout first; immediately deleted those untracked files and recreated them under the Wave 07 worktree. Primary checkout had no tracked/untracked changes for those two paths afterward.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

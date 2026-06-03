@@ -236,3 +236,26 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate cleared with no blockers. Advisor gate cleared with warnings only: pending task `085` must enforce MCP permission helpers in the dynamic MCP execution path, and the live Command Center surface should get an Electron visual smoke when production-visible runtime proof is needed.
 - Parent gates passed after reviewer hardening: `npm run check`, `node --test` (295 tests), changed JS syntax checks, `git diff --check`, WAL JSON parse, old-name grep, active-claims audit, and task-artifact privacy scan.
 - Opened PR #10 (`wave-09` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted its generated "Review triggered" response and left the advisory status pending as "Review in progress" with no actionable findings available at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
+
+## 2026-06-03 — Wave 10 started
+
+- Cut clean branch/worktree `wave-10` from `origin/main` at `87a16fd` because the primary checkout is dirty/diverged and must remain untouched.
+- Moved tasks `033`, `035`, `038`, `061`, `081`, `085`, and `093` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Task `093` is expected to block because dependency `092` is already blocked by missing wake model/corpus/metrics; the wave will keep non-wake deliverable work moving.
+- Ran the required kencode-search pass before implementation. No tight curated/live reference repo matched the exact Electron Builder + tray + SQLite + MCP execution mix, so workers must rely on the existing local production patterns and continue with narrower context reads before editing.
+- Shared files are reserved for orchestrator integration to avoid concurrent writes: `src/main.js`, `src/preload.js`, and `src/realtime/tools/database.js`.
+
+## 2026-06-03 — Wave 10 summary
+
+- Completed tasks `033`, `035`, `038`, `061`, `081`, and `085`; blocked task `093` because dependency `092` still lacks a real openWakeWord engine/model/threshold/metrics.
+- Configured mac distribution for unsigned DMG + ZIP while preserving `build:mac:dir`; added `GATEKEEPER-BYPASS.md` and verified `dist/Leena-0.1.0-arm64.dmg`, `dist/Leena-0.1.0-arm64-mac.zip`, mounted DMG layout, and packaged tray assets inside `app.asar`.
+- Added Leena tray/menubar infrastructure: template tray icons, injectable `src/tray.js`, close-to-tray, Show/Hide/Mute/Settings/Quit actions, preload tray listeners, and renderer-driven listening/speaking/idle state updates that preserve muted state.
+- Added persistent settings storage through `src/settings-store.js`, main-process settings IPC, preload settings APIs, default settings, typed helpers, and compatibility with legacy raw string settings rows.
+- Added memory SQLite tables/indexes, `mcp_servers` central schema, `src/mcp/server-store.js` CRUD storage, and MCP auto-connect filtering for downstream MCP IPC/launch tasks.
+- Wired MCP tools into realtime dispatch: merged static+MCP tool definitions, namespaced routing, default-deny permission handling, safe MCP error results, and main-process MCP manager/options.
+- Independent parent gates passed: `npm run check`, `node --test` (329/329), changed JS `node --check`, `git diff --check`, `npm run build:mac:dir`, `npm run build:mac`, mounted DMG layout check, ZIP structure check, and `app.asar` tray asset check.
+- Reviewer/advisor notes for Wave 11: task `084` can build IPC over `ServerStore`; task `086` can use `getAutoConnectServers()` and the single main-process `MCPClientManager`; task `094`/`095` remain blocked from wake runtime until `092` resumes or a fallback is chosen.
+- Reviewer gate initially found two bookkeeping blockers: Wave 10 learning entries were inside the fix-entry template fence, and the WAL physical tail ended with an older tray-slice checkpoint. Both were corrected by moving Wave 10 learnings to the physical tail and appending a later terminal WAL checkpoint.
+- Reviewer gate re-check passed with no findings after the bookkeeping fix.
+- Advisor gate cleared with warnings only: DMG/ZIP remain unsigned until Developer ID signing exists; MCP server IPC and auto-connect lifecycle remain scoped to tasks `084` and `086`; wake coordinator follow-ons remain blocked until task `092` has real wake evidence or an approved fallback.
+- Opened PR #11 (`wave-10` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted its generated "Review triggered" response and left the advisory status pending, with no actionable findings available at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.

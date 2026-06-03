@@ -1,3 +1,5 @@
+import { getMergedToolDefinitions } from "../../mcp/schema-converter.js";
+
 const emptyObjectParameters = Object.freeze({
   type: "object",
   properties: {},
@@ -365,7 +367,11 @@ export const realtimeToolDefinitions = Object.freeze([
   },
 ]);
 
-export function getRealtimeToolDefinitions() {
+export function getRealtimeToolDefinitions(mcpClientManager) {
+  if (mcpClientManager) {
+    return getMergedToolDefinitions(realtimeToolDefinitions, mcpClientManager);
+  }
+
   return structuredClone(realtimeToolDefinitions);
 }
 

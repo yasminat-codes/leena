@@ -2,7 +2,7 @@
 id: "038"
 title: "Persistent settings store"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -13,7 +13,9 @@ context_files:
   - src/realtime/tools/database.js
 skills: []
 tags: [phase-1, settings, storage, sqlite]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+completed_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -48,6 +50,7 @@ Multiple features need persistent user preferences (theme, hotkey, launch-on-log
 - Modified: `src/main.js` (IPC handlers)
 - Modified: `src/preload.js` (settings API)
 - New: `test/settings-store.test.js`
+- New: `test/wave10-integration.test.js`
 
 ## Interface Contracts
 - Task 034 (launch-on-login): reads/writes `launchOnLogin` setting
@@ -57,10 +60,14 @@ Multiple features need persistent user preferences (theme, hotkey, launch-on-log
 - Phase 0 (theme switcher): reads/writes `theme`, `treatment`, `density`
 
 ## Handoff Notes
-<!-- Filled after completion -->
+- `src/settings-store.js` stores JSON-serialized settings in the existing SQLite `settings` table and remains compatible with legacy raw string rows.
+- Defaults include theme/treatment/density, hotkey, launch-on-login, onboarding completion, provider/model defaults, Ollama base URL, and wake toggles.
+- Main process exposes `settings:get`, `settings:set`, and `settings:get-all`. `settings:set` emits `data:changed` with `{ category: "settings", type: "settings", key }`.
+- Preload exposes `window.leena.getSetting`, `setSetting`, and `getAllSettings`.
+- Final parent gates passed: `npm run check`, `node --test` (329/329), focused settings tests, changed JS syntax checks, and `git diff --check`.
 
 ## Errors Encountered
-<!-- Filled if errors occur -->
+- Focused worker verification found a default expectation issue; fixed before parent integration. No new LEARNINGS rule needed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

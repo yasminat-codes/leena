@@ -8,10 +8,10 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 41 |
+| Pending | 34 |
 | In-Progress | 0 |
-| Completed | 29 |
-| Blocked | 2 |
+| Completed | 35 |
+| Blocked | 3 |
 
 ## Wave Map
 
@@ -94,6 +94,7 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 
 - `091` — openWakeWord accuracy spike blocked: no trained `hey-lena.onnx`, no one-hour ambient corpus, and no 50-utterance positive corpus. Task 092 must wait for measured wake results or use the documented Porcupine/hotkey-only fallback.
 - `092` — openWakeWord engine implementation blocked by `091`: no trained model, selected threshold, real audio corpus, FA/hr, FR%, model size, or latency measurement exists. Hotkey-only and non-wake deliverable work remain unblocked.
+- `093` — wake coordinator blocked by `092`: no openWakeWord engine/model/threshold/metrics exist, so coordinator implementation must wait for real wake assets or an explicit fallback decision.
 
 ## Completed Waves
 
@@ -106,6 +107,7 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 - Wave 07 — Provider implementations, subsystem interfaces, auth verification, and Tasks live-data wiring (`030`, `050`, `051`, `052`, `060`, `080`, `090`, `102`) completed 2026-06-02.
 - Wave 08 — Auth key, realtime provider integration, MCP schema conversion, and wake-word accuracy spike (`031`, `055`, `082`, `091`) terminal 2026-06-02: `031`, `055`, and `082` completed; `091` blocked pending real wake-word model/audio measurement.
 - Wave 09 — Rename, MCP permission gate, live Command Center state, and openWakeWord engine (`032`, `083`, `092`, `105`) terminal 2026-06-02: `032`, `083`, and `105` completed; `092` blocked pending real wake-word model/audio measurement or fallback decision.
+- Wave 10 — Storage, settings, build target, tray, MCP execution, and wake coordinator (`033`, `035`, `038`, `061`, `081`, `085`, `093`) terminal 2026-06-03: `033`, `035`, `038`, `061`, `081`, and `085` completed; `093` blocked pending task `092` wake engine assets/metrics or fallback decision.
 
 ## Discovered Tasks
 

@@ -81,6 +81,44 @@ function applySchema(db) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS mcp_servers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      transport TEXT NOT NULL CHECK(transport IN ('http','stdio')),
+      url TEXT,
+      command TEXT,
+      args TEXT,
+      enabled INTEGER DEFAULT 1,
+      auto_connect INTEGER DEFAULT 0,
+      permission_level TEXT DEFAULT 'confirm',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS memories_episodic (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      embedding BLOB,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      metadata TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX IF NOT EXISTS idx_episodic_conversation
+      ON memories_episodic (conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_episodic_created
+      ON memories_episodic (created_at);
+    CREATE TABLE IF NOT EXISTS memories_semantic (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL DEFAULT 'general',
+      content TEXT NOT NULL,
+      confidence REAL NOT NULL DEFAULT 1.0,
+      embedding BLOB,
+      source_episode_ids TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_seen TEXT NOT NULL DEFAULT (datetime('now')),
+      superseded_by INTEGER REFERENCES memories_semantic(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_semantic_category ON memories_semantic (category);
+    CREATE INDEX IF NOT EXISTS idx_semantic_last_seen ON memories_semantic (last_seen);
   `);
 }
 

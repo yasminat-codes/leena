@@ -10,8 +10,9 @@
     "lint": "biome lint .",
     "update:deps": "ncu -u && npm install",
     "test": "npm run check && node --test",
-    "build:mac": "electron-builder --mac dir",
-    "open:mac": "npm run build:mac && open dist/mac-arm64/Leena.app"
+    "build:mac": "electron-builder --mac",
+    "build:mac:dir": "electron-builder --mac dir",
+    "open:mac": "npm run build:mac:dir && open dist/mac-arm64/Leena.app"
   },
   "keywords": [
     "electron"
@@ -29,13 +30,15 @@
     ],
     "files": [
       "src/**/*",
+      "build/tray/**",
       "src/renderer/assets/**",
       "package.json"
     ],
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        "dir"
+        "dmg",
+        "zip"
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -46,6 +49,11 @@
         "NSMicrophoneUsageDescription": "Leena needs microphone access for realtime voice input.",
         "NSScreenCaptureDescription": "Leena needs screen recording access for screenshots and screen analysis."
       }
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "yasmineseidu",
+      "repo": "leena"
     }
   },
   "devDependencies": {

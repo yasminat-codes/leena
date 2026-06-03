@@ -442,6 +442,7 @@
 - Independent verification passed: `npm run check`, full `node --test` (291 tests), changed JS syntax checks, output existence checks, old-name grep over `src/ test/ package.json README.md CLAUDE.md`, WAL JSON parse, and `git diff --check`.
 - Advisor warnings to carry forward: task `085` must wire these MCP permission helpers into the actual dynamic MCP execution path; Command Center live state has DOM/unit coverage and should get an Electron visual smoke before relying on the live surface for production-visible runtime proof.
 - Wake-word remains non-blocking for the deliverable path. Task `092` can resume only after a real `hey-lena.onnx` model and measured ambient/positive corpus exist, or after selecting the documented Porcupine/hotkey fallback.
+- CodeRabbit advisory was requested on PR #10. It posted the generated "Review triggered" response and left the advisory CodeRabbit status pending at merge-decision time, with no actionable findings available; advisory status did not block merge.
 
 ### Fix — Wave 09 — reviewer — MCP missing-tool fail-closed
 - **Symptom:** Reviewer found `shouldAutoApproveMCPTool()` could auto-approve a namespaced tool on an `auto` server even when the server config did not list that tool.

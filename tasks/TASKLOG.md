@@ -455,3 +455,9 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate passed with no blockers. Warning only: stage `test/build-smoke.test.js`, task move, and ledger updates before PR creation.
 - Advisor gate passed with no release-readiness blockers. Owner GUI launch-smoke remaining manual is acceptable because task `046` and `tasks/DELIVERABLE.md` explicitly keep it as a non-autonomous checklist item.
 - Carry forward for final handoff: the MVP build is unsigned/ad-hoc and not notarized, `dist/` artifacts are ignored local build outputs, and no GUI launch was performed or claimed.
+
+## 2026-06-03 — Wave 16 PR and CodeRabbit advisory
+
+- Opened PR #17 (`wave-16` -> `main`) after reviewer and advisor gates cleared; branch head `18f4928`.
+- CodeRabbit posted a generated advisory status/comment but could not run a substantive review because of hourly rate/usage-credit limits. No actionable findings were available, so the advisory-only status did not block merge.
+- The repo still lacks `codex` and `codex-automation` labels, so no automation labels were applied.

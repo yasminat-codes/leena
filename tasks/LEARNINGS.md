@@ -808,4 +808,5 @@
 - Independent parent gates passed: `npm run check`, full `node --test` (529/529), build-smoke focused gates, `git diff --check`, WAL parse, task-count audit, active-claims audit, and task-artifact privacy scan.
 - Owner GUI launch-smoke remains a manual checklist, not an autonomous gate.
 - Reviewer and advisor cleared Wave 16 with warnings only. Final handoff must state the build is unsigned/ad-hoc, not notarized, and not GUI-launched; `dist/` artifacts are ignored local build outputs.
+- PR #17 CodeRabbit state at merge decision: generated rate-limit/usage-credit comment only, GitHub status `SUCCESS`, and no actionable findings available. Advisory status must not block Wave 16 merge.
 - **WAL ref:** tasks/.wal/wal.jsonl

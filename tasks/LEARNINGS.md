@@ -522,3 +522,12 @@
 - Reviewer fix: task-local resize constraints must not override an approved shell contract. Panel mode now preserves the existing 1060px default and allows resizing up to 1280px instead of clamping the desktop shell to 800px.
 - Parent verification passed after reviewer fixes: `npm run check`, `node --test` (400/400), changed JS syntax checks, `git diff --check`, WAL JSON parse, and task-artifact privacy scan.
 - CodeRabbit advisory was requested on PR #12 and was still pending at merge-decision time, with no actionable findings available; advisory status did not block merge.
+
+## Wave 12 — summary
+- Completed tasks `040`, `054`, `056`, `063`, `072`, and `103`; blocked `095` and `096` because wake consent/test-suite work cannot honestly build over absent wake engine/coordinator/IPC runtime.
+- Existing phase-exit tests can satisfy a test-suite task when they already exceed the required coverage; verify counts and full gates instead of duplicating tests.
+- Shared `src/main.js` / `src/preload.js` work for memory and identity IPC should stay serialized by the orchestrator while workers build standalone handler modules and focused tests.
+- Current MCP Integrations UI must use the live `window.leena.mcp.*` bridge, not stale fixture exports or generic invoke prose; keep old fixture tests aligned with the live contract.
+- Parent verification passed: `npm run check`, `node --test` (438/438), changed JS syntax checks, `git diff --check`, WAL parse, active-claims audit, task counts, task-artifact privacy scan, and primary-checkout contamination check.
+- Reviewer gate cleared with no blockers. The realtime provider/model selector warning is non-blocking for now because runtime selection still uses provider defaults and there is only one OpenAI realtime model.
+- CodeRabbit advisory was requested on PR #13. It posted generated pending/triggered responses with no actionable findings available at merge-decision time; advisory status did not block merge.

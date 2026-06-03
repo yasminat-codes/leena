@@ -1761,6 +1761,14 @@
   align-items: center;
 }
 
+.settings-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-width: 0;
+}
+
 .settings-segmented {
   display: inline-flex;
   flex-wrap: wrap;
@@ -1772,6 +1780,204 @@
   color: var(--accent);
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.settings-provider-selector {
+  display: grid;
+  gap: var(--row);
+  min-width: 0;
+}
+
+.settings-provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+.settings-provider-cardlet {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-inner);
+  background: var(--surface-2);
+}
+
+.settings-provider-cardlet__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.settings-provider-capabilities,
+.settings-provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.settings-provider-actions .btn {
+  height: 28px;
+}
+
+.settings-capability-map {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.settings-capability-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 0.54fr) minmax(174px, 0.76fr);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-inner);
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+}
+
+.settings-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-input,
+.settings-select {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-inner);
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.settings-input {
+  padding: 0 10px;
+}
+
+.settings-select {
+  padding: 0 28px 0 10px;
+}
+
+.settings-input::placeholder {
+  color: var(--text-faint);
+}
+
+.settings-input:focus,
+.settings-select:focus {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.settings-secret {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  min-width: 0;
+}
+
+.settings-ollama-download {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(150px, 0.45fr) auto;
+  align-items: end;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-inner);
+  background: var(--surface-2);
+}
+
+.settings-progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
+
+.settings-progress::-webkit-progress-bar {
+  border-radius: var(--r-pill);
+  background: var(--chip);
+}
+
+.settings-progress::-webkit-progress-value {
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: inline-size var(--dur-base) var(--ease-out);
+}
+
+.settings-progress::-moz-progress-bar {
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.settings-provider-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: var(--pad);
+  background: color-mix(in srgb, var(--black) 42%, transparent);
+}
+
+.settings-provider-modal[hidden] {
+  display: none;
+}
+
+.settings-provider-modal__dialog {
+  display: grid;
+  width: min(460px, 100%);
+  gap: var(--row);
+  padding: var(--pad);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--glass-bd),
+    0 24px 64px color-mix(in srgb, var(--black) 30%, transparent),
+    inset 0 1px 0 var(--glass-hi);
+}
+
+.settings-provider-result,
+.settings-status {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.settings-status--success {
+  color: var(--success);
+}
+
+.settings-status--error {
+  color: var(--danger);
+}
+
+.settings-chip--warning {
+  color: var(--accent);
+  background: var(--chip);
+}
+
+.settings-chip--danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 .command-center-mount {
@@ -1787,6 +1993,12 @@
   .tasks-screen,
   .settings-screen,
   .integrations-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-provider-grid,
+  .settings-capability-row,
+  .settings-ollama-download {
     grid-template-columns: minmax(0, 1fr);
   }
 

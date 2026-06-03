@@ -20,6 +20,21 @@ contextBridge.exposeInMainWorld("leena", {
   createRealtimeSecret: (options) => ipcRenderer.invoke("openai:create-realtime-secret", options),
   getAgentProfile: () => ipcRenderer.invoke("agent:get-profile"),
   setAgentProfile: (profile) => ipcRenderer.invoke("agent:set-profile", profile),
+  identity: {
+    listPersonas: () => ipcRenderer.invoke("identity:list-personas"),
+    switchPersona: (id) => ipcRenderer.invoke("identity:switch-persona", { personaId: id }),
+    createPersona: (data) => ipcRenderer.invoke("identity:create-persona", data),
+    updatePersona: (id, changes) => ipcRenderer.invoke("identity:update-persona", { id, changes }),
+    deletePersona: (id) => ipcRenderer.invoke("identity:delete-persona", { id }),
+  },
+  memory: {
+    remember: (text, metadata) => ipcRenderer.invoke("memory:remember", { text, metadata }),
+    recall: (query, limit) => ipcRenderer.invoke("memory:recall", { query, limit }),
+    getConversation: (conversationId) =>
+      ipcRenderer.invoke("memory:get-conversation", { conversationId }),
+    consolidate: () => ipcRenderer.invoke("memory:consolidate"),
+    stats: () => ipcRenderer.invoke("memory:stats"),
+  },
   getMicrophoneDevice: () => ipcRenderer.invoke("audio:get-microphone"),
   setMicrophoneDevice: (deviceId) => ipcRenderer.invoke("audio:set-microphone", deviceId),
   getSetting: (key, defaultValue) => ipcRenderer.invoke("settings:get", key, defaultValue),

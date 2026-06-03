@@ -2,7 +2,7 @@
 id: "054"
 title: "Provider model selector UI component"
 type: ui
-status: pending
+status: completed
 priority: medium
 complexity: M
 estimated_tokens: 15000
@@ -14,7 +14,9 @@ context_files:
   - src/preload.js
 skills: []
 tags: [phase-2, providers, ui, settings]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T04:02:39Z"
+completed_at: "2026-06-03T04:24:04Z"
 created_at: "2026-06-01"
 ---
 
@@ -33,15 +35,15 @@ The universal provider layer is useless without a way to configure it. Users nee
 6. Style using leena.css design tokens only — no hardcoded colors. Responsive within the settings panel width.
 
 ## Acceptance Criteria
-- [ ] Provider cards show accurate connection status (calls `providers:list` on mount)
-- [ ] API key input masks by default, toggle reveals
-- [ ] Test Connection shows latency and model count on success, error message on failure
-- [ ] Capability dropdowns filter providers by declared capability
-- [ ] Model dropdown populated dynamically from provider's model list
-- [ ] Save persists all selections and shows confirmation
-- [ ] Refresh Models updates the dropdown without page reload
-- [ ] Ollama "Download model": typing any model name + Download pulls it, shows live progress %, and the model becomes selectable on success (chat AND embedding models, independently)
-- [ ] All styling uses CSS custom properties from leena.css
+- [x] Provider cards show accurate connection status (calls `providers:list` on mount)
+- [x] API key input masks by default, toggle reveals
+- [x] Test Connection shows latency and model count on success, error message on failure
+- [x] Capability dropdowns filter providers by declared capability
+- [x] Model dropdown populated dynamically from provider's model list
+- [x] Save persists all selections and shows confirmation
+- [x] Refresh Models updates the dropdown without page reload
+- [x] Ollama "Download model": typing any model name + Download pulls it, shows live progress %, and the model becomes selectable on success (chat AND embedding models, independently)
+- [x] All styling uses CSS custom properties from leena.css
 
 ## Tests Required
 - `test/provider-model-selector.test.js`:
@@ -65,10 +67,25 @@ The universal provider layer is useless without a way to configure it. Users nee
 - **Phase 7 (UI wire) depends on:** this component being functional and styled correctly
 
 ## Handoff Notes
-_Filled after completion._
+- Implemented provider selector in `src/renderer/screens/settings.js`.
+  - `bindSettingsControls()` now hydrates a provider selector through `window.leena.providers.*`.
+  - Provider cards render OpenAI/OpenRouter/Ollama status, configure/test/refresh actions, and capability chips.
+  - Capability rows include chat, realtime, embeddings, TTS, and STT; provider dropdowns are capability filtered.
+  - Model dropdowns load from `providers:get-models` for the selected provider/capability.
+  - Provider/default selections persist through `settings:set` keys plus `providers:set-config` defaultModels payloads.
+  - Config modal supports masked API key, show/hide toggle, base URL, test connection latency/model count, and save confirmation.
+  - Ollama download calls `window.leena.ollama.pullModel`, listens to `onPullProgress`, uses a CSP-safe native progress element, and adds completed chat/embedding models to the relevant dropdowns.
+- Added token-only responsive styling in `src/renderer/leena.css`.
+- Added `test/provider-model-selector.test.js` covering render, realtime filtering, model population, mask toggle, test connection success, save payload, and Ollama chat/embedding download progress/success.
+- Required pre-code `kencode-search` was called for `providers:get-models`; no public literal matches were found, so implementation used local context from Settings, preload provider APIs, IPC handlers, provider modules, CSS tokens, and renderer tests.
+- Changed files for this task:
+  - `src/renderer/screens/settings.js`
+  - `src/renderer/leena.css`
+  - `test/provider-model-selector.test.js`
+  - `tasks/in-progress/054-provider-model-selector.md`
 
 ## Errors Encountered
-_Filled if errors occur._
+- Early worker gates saw concurrent Wave 12 integration/test drift while task `103` was still in progress. Parent verification later resolved the integration test mismatch and passed full `npm run check` plus `node --test`.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

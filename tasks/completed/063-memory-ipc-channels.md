@@ -2,7 +2,7 @@
 id: "063"
 title: "Memory IPC channels"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -13,7 +13,9 @@ context_files:
   - src/memory/sqlite-memory-store.js
 skills: []
 tags: [phase-3, memory, ipc]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T04:02:39Z"
+completed_at: "2026-06-03T04:24:04Z"
 created_at: "2026-06-01"
 ---
 
@@ -36,11 +38,12 @@ The renderer (UI, realtime session) needs to trigger memory operations — stori
 
 ## Acceptance Criteria
 
-- [ ] 5 IPC channels registered in main.js (remember, recall, get-conversation, consolidate, stats)
-- [ ] Preload bridge exposes `window.leena.memory.*` (or `window.brah.memory.*` if rename not yet done — adapt to current state)
-- [ ] Input validation prevents empty text, negative limits, missing conversationId
-- [ ] Error responses are structured `{ error: string }`, not raw throws
-- [ ] Tests verify handler-to-store method mapping
+- [x] Standalone registration module exports 5 IPC channels (remember, recall, get-conversation, consolidate, stats)
+- [x] Parent integration registers handlers in `src/main.js`
+- [x] Parent integration exposes `window.leena.memory.*` in `src/preload.js`
+- [x] Input validation prevents empty text, negative limits, missing conversationId
+- [x] Error responses are structured `{ error: string }`, not raw throws
+- [x] Tests verify handler-to-store method mapping
 
 ## Tests Required
 
@@ -48,9 +51,10 @@ The renderer (UI, realtime session) needs to trigger memory operations — stori
 
 ## Outputs
 
-- `src/main.js` — modified (memory store init + IPC handlers)
-- `src/preload.js` — modified (memory bridge methods)
+- `src/ipc/memory-handlers.js` — new standalone IPC registration module
 - `test/memory-ipc.test.js` — new test file
+- `src/main.js` — parent integration registers `registerMemoryHandlers`
+- `src/preload.js` — parent integration exposes `window.leena.memory.*`
 
 ## Interface Contracts
 
@@ -60,11 +64,21 @@ The renderer (UI, realtime session) needs to trigger memory operations — stori
 
 ## Handoff Notes
 
-_Filled after completion._
+- 2026-06-03T04:10:55Z worker 063 slice complete: added `src/ipc/memory-handlers.js` with `MEMORY_IPC_CHANNELS`, `registerMemoryHandlers()`, `createMemoryIpcHandlers()`, and `serializeMemoryIpcError()`.
+- Registered standalone channels: `memory:remember`, `memory:recall`, `memory:get-conversation`, `memory:consolidate`, and `memory:stats`.
+- The module accepts an injected `store`/`memoryStore` for tests and creates `SQLiteMemoryStore({ dbPath, providerRegistry })` by default for parent integration. It delegates `memory:get-conversation` to `store.getConversation()` when present and falls back to upstream 062's `store.getEpisodic()`.
+- Handler results: `memory:remember` returns `{ id }`; `memory:recall` returns store recall results; `memory:get-conversation` returns episodic entries; `memory:consolidate` maps the store consolidation result to `{ newFacts }`; `memory:stats` returns store stats.
+- Validation/errors: invalid remember/recall/conversation payloads and store failures return structured `{ error: string }` results rather than raw thrown errors.
+- Parent `src/main.js` handoff: import `registerMemoryHandlers` from `./ipc/memory-handlers.js`, then call `registerMemoryHandlers({ ipcMain, dbPath: getDatabasePath(), providerRegistry })` after database path and provider registry setup. The module can also receive a prebuilt `memoryStore` if parent wants lifecycle ownership.
+- Parent `src/preload.js` handoff: expose `memory: { remember(text, metadata), recall(query, limit), getConversation(conversationId), consolidate(), stats() }` under `window.leena`, each wrapping the matching `ipcRenderer.invoke("memory:...")` channel with the object payloads documented above.
+- Parent integration complete: `src/main.js` registers the memory handlers with the provider registry, `src/preload.js` exposes the memory bridge, and `test/wave12-integration.test.js` pins both contracts.
+- Verification passed:
+  - `node --test test/memory-ipc.test.js`
+  - `npm run check`
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Early worker full-suite failures came from concurrent provider-test work in task `056`. Parent verification later passed the focused memory/identity/provider/integrations suite and full `node --test`.
 
 ## Self-Annealing Contract
 

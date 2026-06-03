@@ -504,3 +504,77 @@ _(wave execution entries appended below as the build runs)_
 - Requested CodeRabbit review with `@coderabbitai review`.
 - CodeRabbit acknowledged the request and began processing the PR; its status was `PENDING` with no actionable findings available at merge-decision time. Per wave protocol, CodeRabbit is advisory-only and does not block merge.
 - The repo does not have `codex` or `codex-automation` labels, so no automation labels were applied.
+
+## 2026-06-03 — Wave 18 started
+
+- Cut clean branch/worktree `wave-18` from `origin/main` at `2ae0d69` because the primary checkout is dirty/behind and must remain untouched.
+- Baseline gates before implementation passed after `npm install` restored the fresh worktree dependencies: `npm run check` and full `node --test` (542/542).
+- Ran the required initial kencode-search pass before implementation. Curated UI/source searches and literal anchors for `aria-current`, `safeStorage`, and `RTCPeerConnection` did not return reusable snippets; downstream workers must re-run kencode-search against exact task symbols and use Wave 17 contracts plus local Leena source as authoritative context where public search is empty.
+- Moved initial eligible Wave 18 tasks `124`, `125`, `126`, `133`, and `142` from `pending/` to `in-progress/` at `2026-06-03T22:05:26Z`; attempts set to `1`.
+- Opened active file claims for the disjoint first-pass write sets. Shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` integration remains serialized; task `131` waits on terminal `126`, and task `135` waits on terminal `131`.
+
+## 2026-06-03 — Wave 18 initial tasks completed
+
+- Completed task `124`: Chat is now the second sidebar route, has a non-empty `renderChat()` screen, and shell tests cover approved sidebar order, active state, `aria-current`, and screen rendering.
+- Completed task `125`: theme-aware orb, traffic-light, command-shadow, and Home grid visual tokens were refined; token/orb tests were expanded and UI baseline screenshots refreshed.
+- Completed task `126`: Settings now renders reusable overview cards, detail sections, rows, fields, segmented controls, toggles, selects/inputs, buttons, and status callouts while preserving existing settings bridge keys.
+- Completed task `133`: Composio credential storage now uses protected safeStorage-style persistence with redacted status/save/clear/test-stub handlers and parent-serialized preload bridge exposure.
+- Completed task `142`: voice startup now has staged preflight states, stable visible failure UI, Retry/Open Settings/Configure Provider actions, and guarded resource cleanup.
+- Independent parent gates passed: output existence checks, changed-file `node --check`, focused Wave 18 tests (84/84), UI baseline harness (1/1), `npm run check`, full `node --test` (559/559), and `git diff --check`.
+
+## 2026-06-03 — Wave 18 task 131 started
+
+- Moved task `131` from `pending/` to `in-progress/` at `2026-06-03T22:27:04Z`; attempts set to `1`.
+- Opened active claims for `src/renderer/screens/integrations.js`, `src/renderer/leena.css`, `test/integrations-screen.test.js`, and `test/integrations-screen-data.test.js`.
+- Required pre-code kencode-search for the exact local `data-integrations-action` anchor returned no external snippets, so the worker must rely on task 120/123 contracts plus local Integrations source and still run task-local searches before implementation.
+
+## 2026-06-03 — Wave 18 task 131 completed
+
+- Completed task `131`: Integrations now opens as a Composio-first overview/detail shell with Custom MCP scoped to its own advanced detail panel, Apple Calendar and Files/Full Disk Access cards, and Provider Health metrics while preserving the existing MCP server list/actions.
+- Independent parent verification passed: `npm run check`, focused integration tests (10/10), UI baseline harness (1/1), full `node --test` (561/561), and `git diff --check`.
+- Released task `131` active claims and updated `tasks/OVERVIEW.md` counts to `pending=17`, `in-progress=0`, `completed=76`, `blocked=6`.
+- Task `135` is now eligible because `131` is terminal.
+
+## 2026-06-03 — Wave 18 task 135 started
+
+- Moved task `135` from `pending/` to `in-progress/` at `2026-06-03T22:45:12Z`; attempts set to `1`.
+- Opened active claims for Integrations, OS permission definitions, onboarding permission copy, integration CSS, and focused permission/integration tests.
+- Required kencode-search for Electron/macOS permission UI/code anchors returned no reusable external implementation snippets, so implementation must use the task 122 trust contract and current Leena source/tests as the authority.
+
+## 2026-06-03 — Wave 18 task 135 completed
+
+- Completed task `135`: Integrations now includes Mac Access cards for Microphone, Screen Recording, Accessibility, Full Disk Access, Apple Calendar, and Files with detected status labels, scoped Request/Open Settings actions, and no silent-grant copy.
+- Parent fixed the initial UI baseline height regression by making the nine-card marketplace a single-row horizontal strip; the live MCP list now remains inside the proof viewport.
+- Independent parent verification passed: changed-file `node --check`, `npm run check`, focused integration/onboarding/permission tests (28/28), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565).
+- Released task `135` active claims and updated `tasks/OVERVIEW.md` counts to `pending=16`, `in-progress=0`, `completed=77`, `blocked=6`. Wave 18 implementation tasks are terminal.
+
+## 2026-06-03 — Wave 18 reviewer-fix started
+
+- Reviewer gate found a blocker: Settings identity controls were clipped in the refreshed baseline because the identity panel gained a second row of controls while retaining compact panel sizing and clipped overflow.
+- Opened reviewer-fix claims at `2026-06-03T23:10:32Z` for Settings renderer/CSS, focused Settings/UI-baseline tests, and refreshed Settings baseline artifacts.
+- Ran required kencode-search before code; public examples reaffirmed the simple pattern of constrained scroll/overflow surfaces, while the local fix must follow Leena's existing panel and baseline contracts.
+
+## 2026-06-03 — Wave 18 reviewer-fix completed
+
+- Fixed the reviewer blocker by wrapping identity controls in an explicit `.settings-identity__fields` band and giving the Settings identity panel a stable two-row height so name, persona, and tone controls are visible in the baseline viewport.
+- Added UI baseline required selectors for `[data-agent-name]`, `[data-persona-select]`, and `[data-persona-tone]`; refreshed `tasks/artifacts/post-mvp-ui-baseline/settings.png` and manifest.
+- Independent gates passed after the reviewer fix: changed-file `node --check`, `npm run check`, focused Settings tests (16/16), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565).
+- Released reviewer-fix claims; active claims are empty.
+
+## 2026-06-03 — Wave 18 reviewer gate passed
+
+- Re-review confirmed the Settings clipping blocker is fixed in `tasks/artifacts/post-mvp-ui-baseline/settings.png`.
+- Reviewer found no remaining blocking findings in Wave 18.
+- Non-blocking warnings recorded: Composio test connection is still a credential-present stub rather than live SDK validation, and Full Disk Access/Apple Calendar/Files cards are guided/settings capabilities until later status adapter tasks wire real detection.
+
+## 2026-06-03 — Wave 18 advisor gate passed
+
+- Advisor passed Wave 18 with no merge blockers.
+- Advisor confirmed Wave 18 scope is aligned and downstream implementation remains assigned to later tasks: Composio refresh (`134`), Full Disk Access status (`136`), Apple Calendar adapter (`137`), file policy (`138`), Chat workspace/history (`140`/`141`), and screenshot regression matrix (`144`/`145`).
+- Non-blocking warnings carried forward: Composio `testConnection` remains credential-present stub status until task `134`, and Full Disk Access/Apple Calendar/Files are guided capabilities until tasks `136`-`138`.
+
+## 2026-06-03 — Wave 18 final pre-PR gates
+
+- Final gates passed before staging: `npm run check`, `node --test` (565/565), `git diff --check`, WAL JSON parse, overview count audit, active-claim audit, and task-artifact privacy scan.
+- Overview count audit matched filesystem truth: `pending=16`, `in-progress=0`, `completed=77`, `blocked=6`.
+- Active claims are empty; Wave 18 is ready for PR creation and advisory CodeRabbit request.

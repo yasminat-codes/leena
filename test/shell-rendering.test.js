@@ -9,6 +9,7 @@ import {
 import { createOrb } from "../src/renderer/components/orb.js";
 import { createWaveform } from "../src/renderer/components/waveform.js";
 import { renderActivity } from "../src/renderer/screens/activity.js";
+import { renderChat } from "../src/renderer/screens/chat.js";
 import { renderHome } from "../src/renderer/screens/home.js";
 import { renderIntegrations } from "../src/renderer/screens/integrations.js";
 import {
@@ -21,6 +22,7 @@ import { initShell, setActiveScreen, shellScreens } from "../src/renderer/shell.
 
 const screenContracts = Object.freeze([
   Object.freeze({ name: "Home", className: "home-screen", render: renderHome }),
+  Object.freeze({ name: "Chat", className: "chat-screen", render: renderChat }),
   Object.freeze({ name: "Activity", className: "activity-screen", render: renderActivity }),
   Object.freeze({ name: "Tasks", className: "tasks-screen", render: renderTasks }),
   Object.freeze({
@@ -296,8 +298,12 @@ test("shell sidebar navigation switches all screens", () => {
 
     assert.equal(title.textContent, expectedScreen);
     assert.match(content.innerHTML, new RegExp(expectedClass));
-    assert.equal(navItem.classList.contains("nav-item--active"), true);
-    assert.equal(navItem.getAttribute("aria-current"), "page");
+    for (const item of navItems) {
+      const isCurrent = item === navItem;
+
+      assert.equal(item.classList.contains("nav-item--active"), isCurrent);
+      assert.equal(item.getAttribute("aria-current"), isCurrent ? "page" : null);
+    }
     assert.equal(setActiveScreen(expectedScreen.toLowerCase(), root), expectedScreen);
   }
 });

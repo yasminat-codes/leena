@@ -2,7 +2,7 @@
 id: "131"
 title: "Integrations detail shell"
 type: ui
-status: pending
+status: completed
 wave: 18
 priority: high
 complexity: M
@@ -15,7 +15,9 @@ context_files:
   - test/integrations-screen-data.test.js
 skills: []
 tags: [integrations, mcp, composio, apple]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T22:27:04Z"
+completed_at: "2026-06-03T22:42:25Z"
 created_at: "2026-06-03"
 ---
 
@@ -34,10 +36,10 @@ The current MCP add form is raw and takes over the screen. The approved UX needs
 6. Update integration rendering tests.
 
 ## Acceptance Criteria
-- [ ] Integrations screen no longer opens directly into raw MCP form fields.
-- [ ] Composio is first-class and visible.
-- [ ] Custom MCP remains available for advanced setup.
-- [ ] Existing MCP server list still renders and refreshes.
+- [x] Integrations screen no longer opens directly into raw MCP form fields.
+- [x] Composio is first-class and visible.
+- [x] Custom MCP remains available for advanced setup.
+- [x] Existing MCP server list still renders and refreshes.
 
 ## Tests Required
 - `node --test test/integrations-screen.test.js test/integrations-screen-data.test.js`
@@ -53,10 +55,16 @@ The current MCP add form is raw and takes over the screen. The approved UX needs
 Integrations detail panels reuse existing `window.leena.mcp` bridge until new Composio/Mac APIs are added.
 
 ## Handoff Notes
-To be filled by executor.
+- Ran the required task-local kencode-search pass before editing. The shell `kencode-search` wrapper was not on PATH, so the MCP-backed `mcp__kencode_search` tools were used directly; no reusable exact reference matched this shell, so implementation followed Wave 17 contracts and local Leena source/tests.
+- Added a Composio-first overview card row for Composio, Custom MCP, Apple Calendar, Files/Full Disk Access, and Provider Health.
+- Added a shared in-place detail shell. Initial Integrations now opens to the Composio Actions Hub detail and does not include Custom MCP form inputs/selects until the Custom MCP detail is selected.
+- Kept live MCP summary, server list, refresh, connect/disconnect, remove, and add-server bridge behavior on the existing `window.leena.mcp` contract.
+- Added Provider Health metrics from normalized MCP server status and kept loading/empty/error states on the same card system.
+- Updated focused integration render/data tests and inspected the refreshed Integrations UI baseline screenshot.
+- Verification passed: `node --test test/integrations-screen.test.js test/integrations-screen-data.test.js` (10/10), `node --test test/ui-baseline-smoke.test.js` (1/1), `npm run check`, and full `node --test` (561/561).
 
 ## Errors Encountered
-To be filled if errors occur.
+- The shell command `kencode-search` was not installed on PATH (`zsh: command not found: kencode-search`); MCP-backed kencode-search tools were available and used before edits.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

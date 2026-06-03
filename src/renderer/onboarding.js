@@ -1,39 +1,51 @@
 import { DEFAULT_HOTKEY_ACCELERATOR, formatHotkeyAccelerator } from "../hotkey-accelerator.js";
+import { osPermissionDefinitions } from "../os-permissions.js";
 
 const STEP_IDS = Object.freeze(["welcome", "auth", "permissions", "name", "done"]);
 const DISPLAY_PERMISSION_IDS = Object.freeze(["microphone", "screen", "accessibility", "computer"]);
 const REQUIRED_PERMISSION_IDS = DISPLAY_PERMISSION_IDS;
+const osPermissionDefinitionsById = new Map(
+  osPermissionDefinitions.map((permission) => [permission.id, permission]),
+);
 
-const permissionFallbacks = Object.freeze({
-  microphone: {
-    id: "microphone",
-    label: "Microphone",
-    description: "Needed for Realtime voice input.",
-    activation: "Click Request to trigger the OS microphone prompt.",
-    requirement: "Required for voice",
-  },
-  screen: {
-    id: "screen",
-    label: "Screen Recording",
-    description: "Recommended for screenshots, screen analysis, and Computer Use OS control.",
-    activation: "Click Request, then allow Leena in Screen Recording settings.",
-    requirement: "Required for screen understanding",
-  },
-  accessibility: {
-    id: "accessibility",
+const onboardingPermissionRequirements = Object.freeze({
+  accessibility: "Required for OS control",
+  computer: "Required for browser control",
+  microphone: "Required for voice",
+  screen: "Required for screen understanding",
+});
+
+const onboardingPermissionOverrides = Object.freeze({
+  accessibility: Object.freeze({
     label: "Accessibility Control",
     description: "Recommended for Computer Use control of the OS mouse and keyboard.",
-    activation: "Click Request, then allow Leena in Accessibility settings.",
-    requirement: "Required for OS control",
-  },
-  computer: {
-    id: "computer",
+  }),
+  computer: Object.freeze({
     label: "Automation Browser",
     description: "Needed for browser-based Computer Use without controlling the real OS.",
     activation: "Click Request to install the automation browser.",
-    requirement: "Required for browser control",
-  },
+  }),
+  screen: Object.freeze({
+    description: "Recommended for screenshots, screen analysis, and Computer Use OS control.",
+    activation: "Click Request, then allow Leena in Screen Recording settings.",
+  }),
 });
+
+const permissionFallbacks = Object.freeze(
+  Object.fromEntries(
+    DISPLAY_PERMISSION_IDS.map((id) => {
+      const definition = osPermissionDefinitionsById.get(id) ?? { id, label: id };
+      return [
+        id,
+        Object.freeze({
+          ...definition,
+          ...(onboardingPermissionOverrides[id] ?? {}),
+          requirement: onboardingPermissionRequirements[id],
+        }),
+      ];
+    }),
+  ),
+);
 
 const onboardingPermissionCopy = Object.freeze({
   microphone: {

@@ -823,3 +823,100 @@
 - Advisor cleared Wave 17 with warnings only. Before PR, use `git add -A` from the wave worktree so untracked task files, screenshot artifacts, wave ledgers, and the baseline harness are all included.
 - PR #21 CodeRabbit state at merge decision: review requested, CodeRabbit acknowledged and was processing with pending advisory status, and no actionable findings were available. Advisory status must not block Wave 17 merge.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 18 — pre-run notes
+- Wave 18 starts from `origin/main` commit `2ae0d69` in a clean `wave-18` worktree because the primary checkout has unrelated dirty/local state.
+- Baseline verification passed after dependency installation: `npm run check` and full `node --test` (542/542).
+- Initial kencode-search returned no reusable snippets for curated settings/sidebar UI references, `aria-current`, Electron `safeStorage`, `RTCPeerConnection`, or high-star Composio/Electron credential references. Workers must still run task-local kencode-search before code, record no-result searches honestly, and use Wave 17 artifacts plus local Leena contracts as implementation authority when public references are absent.
+- Wave 18 same-wave dependencies are enforced: first dispatch `124`, `125`, `126`, `133`, and `142`; dispatch `131` only after `126` is terminal; dispatch `135` only after `131` is terminal.
+- Shared file edits remain serialized. `src/renderer/leena.css` starts claimed by task `125`; `126`, `131`, `135`, and `142` must not edit it until the claim is released or the parent performs a serialized integration pass. `src/main.js` and `src/preload.js` remain parent-serialized for `133`/`142`.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 133 — Parent preload bridge completion
+- **Symptom:** Composio credential handlers and tests were complete, but renderer-facing preload methods were still only a handoff note.
+- **Root cause:** Task `133` correctly left shared preload work for serialized parent integration.
+- **Fix:** Added `window.leena.composio.getCredentialStatus/saveCredential/clearCredential/testConnection` in `src/preload.js` and pinned the channels with `test/wave18-integration.test.js`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 126/125 — Settings primitive styling handoff
+- **Symptom:** Settings primitives introduced new hooks while visual task `125` owned the stylesheet claim.
+- **Root cause:** `src/renderer/leena.css` is shared across Wave 18 UI tasks and had to be serialized.
+- **Fix:** Task `126` kept behavior/markup in `settings.js`; task `125` and parent verification consumed the resulting classes through the shared stylesheet and refreshed the UI baseline proof.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 18 — initial task summary
+- Completed initial eligible tasks `124`, `125`, `126`, `133`, and `142`.
+- Chat is now a first-class shell route in the approved sidebar order without adding another top-level navigation item.
+- Settings primitives are reusable by later Theme, Providers, Updates, Mac Access, and integration detail tasks while preserving existing bridge contracts.
+- Composio credentials are stored behind the same protected-codec boundary as provider API keys; renderer-visible status is redacted and preload exposure is now present.
+- Voice startup has explicit provider, secret, microphone, peer, session, and listening stages, plus stable failure actions instead of disappearing dock behavior.
+- Independent gates passed: focused Wave 18 tests (84/84), UI baseline harness (1/1), `npm run check`, full `node --test` (559/559), changed-file syntax checks, and `git diff --check`.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 142 — Voice startup preflight dock persistence
+- **Symptom:** Voice startup failures could call `stopCall()` from the startup catch path, tearing down the call dock and leaving only a transient/non-actionable failure.
+- **Root cause:** Provider, secret, microphone, peer, and session setup were treated as one call-start block, so any pre-listening failure used the normal hangup teardown path instead of a visible startup-failure state.
+- **Fix:** Added a renderer preflight helper with explicit provider/secret/microphone/peer stages, generation-guarded startup resources, visible failure actions, and focused provider-missing/secret-failure/mic-denied/success coverage.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 125 — Workspace orb shadow tokenization
+- **Symptom:** Task 125 needed the light/workspace Home orb to stop reading as a heavy green halo while preserving existing appearance values.
+- **Root cause:** The Home command surface, orb well, orb material, and floating Command Center shadow used direct shadows instead of theme-aware visual tokens, so workspace mode could over-weight teal/green.
+- **Fix:** Added theme-scoped orb, command, home-surface, and traffic-light tokens in `src/renderer/leena.css`; routed `src/renderer/components/command-center.css` through `--command-shadow`; and added CSS/orb regression coverage that passed `node --test test/leena-css-tokens.test.js test/orb-waveform.test.js` (29/29).
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 125 — Home suggested grid reservation
+- **Symptom:** The refreshed Home baseline still showed the Suggested nudge row visually colliding with the Recent actions heading.
+- **Root cause:** The suggested slot and Recent column shared the same implicit grid row, so adding nudge content could overlap the left-column section below it.
+- **Fix:** Reserved a dedicated second grid row for `[data-home-suggested-slot]`, moved Recent actions to row 3, let Up next span both rows, and added static grid placement coverage in `test/leena-css-tokens.test.js`; focused CSS/orb tests passed 30/30.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 133 — Composio secure credential storage
+- **Symptom:** Composio post-MVP wiring needed a credential path, but raw credentials could not be persisted in SQLite or returned to renderer-visible IPC.
+- **Root cause:** Existing safeStorage-backed provider secrets covered OpenAI/OpenRouter only; Composio had no dedicated secure setting key, redacted status, placeholder preservation, or test-ready handler contract.
+- **Fix:** Added Composio credential helpers that require the injected safeStorage codec, added redacted IPC save/status/clear/test-stub handlers, and covered raw-storage rejection plus redacted placeholder preservation in focused tests.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 131 — Integrations detail shell
+- **Symptom:** Integrations still rendered as a live MCP-only surface, with Custom MCP setup reachable as the primary add-server path instead of an overview/detail shell.
+- **Root cause:** The existing screen had no first-class Composio, Apple Calendar, Files/Full Disk Access, or Provider Health cards, and the advanced MCP form was not scoped to an in-place detail view.
+- **Fix:** Added Composio-first overview cards, a shared in-place detail panel, Custom MCP advanced setup inside that detail, provider-health metrics, and kept the live MCP server list/actions visible with focused render coverage.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — 135 — Mac Access marketplace height
+- **Symptom:** Task 135 passed focused integration/permission tests, but the UI baseline harness failed because `[data-integrations-list]` was pushed below the 1060x712 proof viewport.
+- **Root cause:** Expanding Integrations from five cards to nine cards let the marketplace wrap into multiple rows, consuming vertical space before the live MCP list.
+- **Fix:** Kept all nine cards visible and selectable in a single-row horizontal marketplace strip with overflow-x auto, added CSS regression assertions for that layout, and reran UI baseline plus full `node --test` (565/565).
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 18 — reviewer — Settings identity clipping
+- **Symptom:** Reviewer found the refreshed Settings baseline clipped the `Your name`, `Persona`, and `Tone` controls under the identity panel.
+- **Root cause:** Task 126 added identity controls as loose second-row grid children, but the identity panel still used compact header sizing and clipped panel overflow.
+- **Fix:** Wrapped the identity controls in an explicit three-column `.settings-identity__fields` band, gave the identity panel a stable two-row height, added UI-baseline selector checks for all three controls, refreshed the Settings screenshot, and reran full `node --test` (565/565).
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 18 — reviewer notes
+- Reviewer gate passed after the Settings identity clipping fix.
+- Keep Composio's current `testConnection` result labeled as storage/stub status only until a live SDK validation slice replaces it.
+- Full Disk Access, Apple Calendar, and Files cards are intentionally guided/settings capabilities in Wave 18; later tasks `136` and `137` must wire real detection/adapters before presenting them as live grants.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 18 — advisor notes
+- Advisor gate passed with no merge blockers.
+- Keep downstream boundaries intact: task `134` replaces the Composio credential-present stub with real refresh/validation behavior, task `136` wires Full Disk Access status, task `137` wires Apple Calendar adapter behavior, and task `138` wires file scope policy.
+- Wave 18 is safe to PR/merge once all files are staged and CodeRabbit advisory status is recorded.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 18 — final gate notes
+- Final pre-PR gates passed after the reviewer/advisor sequence: `npm run check`, full `node --test` (565/565), `git diff --check`, WAL JSON parse, count/active-claim audit, and task-artifact privacy scan.
+- The only cleanup needed after gates was removing a literal Composio API key env-var assignment string from a task note so the privacy scanner stays signal-only.
+- **WAL ref:** tasks/.wal/wal.jsonl

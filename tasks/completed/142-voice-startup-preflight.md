@@ -2,7 +2,7 @@
 id: "142"
 title: "Voice startup preflight"
 type: integration
-status: pending
+status: completed
 wave: 18
 priority: critical
 complexity: M
@@ -16,7 +16,9 @@ context_files:
   - test/microphone-store.test.js
 skills: []
 tags: [voice, realtime, microphone, state]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T22:05:26Z"
+completed_at: "2026-06-03T22:27:04Z"
 created_at: "2026-06-03"
 ---
 
@@ -35,10 +37,10 @@ The user reports the orb appears, cannot talk, then disappears. This is a core t
 6. Add tests for provider missing, mic denied, secret failure, and successful transition.
 
 ## Acceptance Criteria
-- [ ] Plus click shows stable Starting state.
-- [ ] Failure keeps a visible dock with error and action.
-- [ ] Successful path transitions to Listening.
-- [ ] Existing realtime tests still pass.
+- [x] Plus click shows stable Starting state.
+- [x] Failure keeps a visible dock with error and action.
+- [x] Successful path transitions to Listening.
+- [x] Existing realtime tests still pass.
 
 ## Tests Required
 - `node --test test/realtime-provider-integration.test.js test/microphone-store.test.js test/session-state-manager.test.js`
@@ -53,10 +55,13 @@ The user reports the orb appears, cannot talk, then disappears. This is a core t
 Voice state transitions must emit existing session state events so tray/command center stay synchronized.
 
 ## Handoff Notes
-To be filled by executor.
+- Added `src/renderer/voice-startup-preflight.js` for staged provider, secret, microphone, and peer checks with actionable failure classification.
+- Updated `src/renderer/renderer.js` so startup uses generation guards, keeps the call dock visible on pre-listening failure, maps the call-stage action to Retry/Open Settings/Configure Provider, and only tears down the dock on an intentional stop/configure action.
+- Added focused coverage in `test/realtime-provider-integration.test.js` for provider-missing, secret-failure, mic-denied, and successful preflight resource handoff.
+- Verification passed: `node --check src/renderer/voice-startup-preflight.js && node --check src/renderer/renderer.js && node --check test/realtime-provider-integration.test.js`; `node --test test/realtime-provider-integration.test.js test/microphone-store.test.js test/session-state-manager.test.js` (16/16); `node --test test/ui-baseline-smoke.test.js` (1/1); `node --test` (558/558); `npm run check`.
 
 ## Errors Encountered
-To be filled if errors occur.
+- Initial syntax check exposed an accidental patch target in the primary checkout; those accidental primary edits were removed, and the scoped changes were reapplied to this wave worktree before verification.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

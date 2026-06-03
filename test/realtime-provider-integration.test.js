@@ -8,6 +8,11 @@ import { ProviderRegistry } from "../src/providers/index.js";
 import { createOpenAIProvider } from "../src/providers/openai-provider.js";
 import { CHAT, REALTIME } from "../src/providers/types.js";
 import { closeDatabase } from "../src/realtime/tools/database.js";
+import {
+  classifyVoiceStartupError,
+  runVoiceStartupPreflight,
+  VOICE_STARTUP_ACTIONS,
+} from "../src/renderer/voice-startup-preflight.js";
 
 const apiKey = "sk-test-realtime-provider-1234567890";
 
@@ -121,6 +126,105 @@ test("missing realtime provider returns the structured no-provider response", as
   });
 });
 
+test("voice startup preflight surfaces provider-missing action", async () => {
+  const stages = [];
+
+  await assert.rejects(
+    () =>
+      runVoiceStartupPreflight({
+        acquireMicrophone: unreachable("microphone"),
+        createPeerConnection: unreachable("peer"),
+        createSecret: unreachable("secret"),
+        getProviderStatus: async () => ({ connected: false }),
+        onStage: (stage) => stages.push(stage),
+      }),
+    (error) => {
+      const failure = classifyVoiceStartupError(error);
+      assert.equal(failure.kind, "provider_missing");
+      assert.equal(failure.action, VOICE_STARTUP_ACTIONS.configureProvider);
+      assert.equal(failure.actionLabel, "Configure Provider");
+      return true;
+    },
+  );
+  assert.deepEqual(stages, ["provider"]);
+});
+
+test("voice startup preflight surfaces secret-failure retry action", async () => {
+  const stages = [];
+
+  await assert.rejects(
+    () =>
+      runVoiceStartupPreflight({
+        acquireMicrophone: unreachable("microphone"),
+        createPeerConnection: unreachable("peer"),
+        createSecret: async () => {
+          throw new Error("client secret endpoint timed out");
+        },
+        getProviderStatus: async () => ({ connected: true }),
+        onStage: (stage) => stages.push(stage),
+      }),
+    (error) => {
+      const failure = classifyVoiceStartupError(error);
+      assert.equal(failure.kind, "secret_failure");
+      assert.equal(failure.action, VOICE_STARTUP_ACTIONS.retry);
+      assert.match(failure.message, /provider connection/);
+      return true;
+    },
+  );
+  assert.deepEqual(stages, ["provider", "secret"]);
+});
+
+test("voice startup preflight surfaces mic-denied settings action", async () => {
+  const stages = [];
+  const denied = Object.assign(new Error("Permission denied"), { name: "NotAllowedError" });
+
+  await assert.rejects(
+    () =>
+      runVoiceStartupPreflight({
+        acquireMicrophone: async () => {
+          throw denied;
+        },
+        createPeerConnection: unreachable("peer"),
+        createSecret: async () => ({ value: "rt-secret" }),
+        getProviderStatus: async () => ({ connected: true }),
+        onStage: (stage) => stages.push(stage),
+      }),
+    (error) => {
+      const failure = classifyVoiceStartupError(error);
+      assert.equal(failure.kind, "mic_denied");
+      assert.equal(failure.action, VOICE_STARTUP_ACTIONS.openSettings);
+      assert.equal(failure.actionLabel, "Open Settings");
+      return true;
+    },
+  );
+  assert.deepEqual(stages, ["provider", "secret", "microphone"]);
+});
+
+test("voice startup preflight returns resources on success", async () => {
+  const stages = [];
+  const resources = [];
+  const stream = { id: "mic-stream", getTracks: () => [] };
+  const peerConnection = { close: () => null };
+
+  const result = await runVoiceStartupPreflight({
+    acquireMicrophone: async () => stream,
+    createPeerConnection: () => peerConnection,
+    createSecret: async () => ({ value: "rt-secret", expiresAt: Date.now() + 60_000 }),
+    getProviderStatus: async () => ({ connected: true }),
+    onResource: (stage, resource) => resources.push([stage, resource]),
+    onStage: (stage) => stages.push(stage),
+  });
+
+  assert.deepEqual(stages, ["provider", "secret", "microphone", "peer"]);
+  assert.deepEqual(resources, [
+    ["microphone", stream],
+    ["peer", peerConnection],
+  ]);
+  assert.equal(result.secret.value, "rt-secret");
+  assert.equal(result.stream, stream);
+  assert.equal(result.peerConnection, peerConnection);
+});
+
 async function withProviderDb(callback) {
   const directory = await mkdtemp(path.join(tmpdir(), "leena-realtime-provider-"));
   const storePath = path.join(directory, "lena.db");
@@ -188,4 +292,10 @@ function parseJsonBody(call) {
 
 function testRetryOptions(overrides = {}) {
   return { maxAttempts: 1, baseDelay: 0, maxDelay: 0, jitter: false, ...overrides };
+}
+
+function unreachable(label) {
+  return async () => {
+    assert.fail(`${label} should not be reached`);
+  };
 }

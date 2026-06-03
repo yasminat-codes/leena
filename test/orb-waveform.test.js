@@ -132,6 +132,25 @@ test("createOrb supports all design-system sizes and optional rings", () => {
   }
 });
 
+test("createOrb leaves orb material, color, and glow to CSS tokens", () => {
+  const orb = createOrb({ ring: true });
+  const ring = orb.querySelector(".orb__ring");
+
+  assert.equal("background" in orb.style, false);
+  assert.equal("boxShadow" in orb.style, false);
+  assert.equal("border" in orb.style, false);
+  assert.equal("background" in ring.style, false);
+  assert.equal("boxShadow" in ring.style, false);
+
+  orb.breathe(true);
+  orb.pulse();
+  orb.shake();
+
+  assert.equal("background" in orb.style, false);
+  assert.equal("boxShadow" in orb.style, false);
+  assert.equal("border" in orb.style, false);
+});
+
 test("createOrb accepts named sizes and falls back to the bar size for unknown values", () => {
   assert.equal(createOrb({ size: "mini" }).dataset.size, "28");
   assert.equal(createOrb({ size: "bar" }).dataset.size, "40");

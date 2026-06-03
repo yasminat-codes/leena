@@ -96,6 +96,10 @@ function matchesDatasetSelector(element, selector) {
   return typeof expectedValue === "undefined" || element.dataset[key] === expectedValue;
 }
 
+function getHtmlTags(html, tagName) {
+  return html.match(new RegExp(`<${tagName}\\b[^>]*>`, "g")) ?? [];
+}
+
 function createSettingsDom() {
   const root = new TestElement();
   const wrapper = new TestElement({ classes: ["leena"], id: "app-shell" });
@@ -723,6 +727,15 @@ test("provider selector loads real providers, refreshes models, and persists sel
   assert.equal(controller.state.selectedModels.chat, "gpt-4o");
   assert.match(mount.innerHTML, /OpenRouter/);
   assert.match(mount.innerHTML, /GPT Realtime/);
+  assert.match(mount.innerHTML, /data-settings-primitive="detail-row"/);
+  assert.match(mount.innerHTML, /data-settings-primitive="select"/);
+  assert.match(mount.innerHTML, /data-settings-primitive="action-button"/);
+  assert.match(mount.innerHTML, /settings-control--select/);
+
+  for (const tag of getHtmlTags(mount.innerHTML, "select")) {
+    assert.match(tag, /\bclass="[^"]*\bsettings-select\b[^"]*"/);
+    assert.match(tag, /aria-label="/);
+  }
 
   await controller.selectProvider("chat", "openrouter");
   await controller.selectModel("chat", "openrouter/auto");

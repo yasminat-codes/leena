@@ -2,7 +2,7 @@
 id: "126"
 title: "Settings component primitives"
 type: ui
-status: pending
+status: completed
 wave: 18
 priority: high
 complexity: M
@@ -15,7 +15,9 @@ context_files:
   - test/settings-screen-data.test.js
 skills: []
 tags: [settings, components, forms]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T22:05:26Z"
+completed_at: "2026-06-03T22:27:04Z"
 created_at: "2026-06-03"
 ---
 
@@ -34,10 +36,10 @@ The current settings UI shows raw form controls and inconsistent spacing. Later 
 6. Confirm no controls overflow at the approved shell size.
 
 ## Acceptance Criteria
-- [ ] Raw browser-default inputs/selects are not visible in Settings.
-- [ ] Controls have stable dimensions and accessible labels.
-- [ ] Primitives are reusable by Theme, Providers, Updates, and Mac Access details.
-- [ ] Existing settings persistence tests still pass.
+- [x] Raw browser-default inputs/selects are not visible in Settings.
+- [x] Controls have stable dimensions and accessible labels.
+- [x] Primitives are reusable by Theme, Providers, Updates, and Mac Access details.
+- [x] Existing settings persistence tests still pass.
 
 ## Tests Required
 - `node --test test/settings-screen.test.js test/settings-screen-data.test.js`
@@ -53,10 +55,17 @@ The current settings UI shows raw form controls and inconsistent spacing. Later 
 Settings behavior remains driven by existing settings bridge methods and appearance storage keys.
 
 ## Handoff Notes
-To be filled by executor.
+- Ran kencode-search before editing; used production UI/form primitive references and literal control-pattern searches.
+- Added renderer-level primitives for overview cards, detail sections, field rows, segmented controls, inputs, selects, toggles, action buttons, and status callouts in `src/renderer/screens/settings.js`.
+- Preserved existing behavior hooks used by `bindSettingsControls`, including appearance values/storage keys, hotkey controls, provider selectors, update actions, wake toggles, and settings toggles.
+- Added focused render assertions that every generated Settings input/select/action/toggle/segmented button carries primitive classes/data attributes and accessibility labels.
+- Visual proof: `node --test` regenerated `tasks/artifacts/post-mvp-ui-baseline/settings.png`; inspected the approved shell-size screenshot and fixed overview-card text overflow without editing CSS.
+- Deferred CSS integration: `src/renderer/leena.css` remains untouched because task 125 owns the file. Future CSS can target the new `data-settings-primitive` hooks plus `settings-detail-section`, `settings-detail-row`, `settings-control`, and `settings-action-button`.
+- Verification passed: `node --test test/settings-screen.test.js test/settings-screen-data.test.js` (16/16), `npm run check`, and full `node --test` (558/558).
 
 ## Errors Encountered
-To be filled if errors occur.
+- First `npm run check` failed on Biome formatting for the select helper signature; formatted it and reran green.
+- An initial patch attempt targeted the primary checkout instead of this worktree; the accidental primary `settings.js` diff was fully reversed before applying the scoped worktree patch.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

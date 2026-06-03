@@ -3,10 +3,13 @@ import { createOllamaProvider } from "../providers/ollama-provider.js";
 import { createOpenAIProvider } from "../providers/openai-provider.js";
 import { createOpenRouterProvider } from "../providers/openrouter-provider.js";
 import {
+  clearComposioCredential as clearStoredComposioCredential,
+  loadComposioCredential,
   loadOllamaBaseUrl,
   loadProviderApiKey,
   saveOllamaBaseUrl,
   saveProviderApiKey,
+  saveComposioCredential as saveStoredComposioCredential,
 } from "../providers/provider-settings.js";
 import { CHAT, EMBEDDINGS, PROVIDER_CAPABILITIES, STT, TTS } from "../providers/types.js";
 import { getSetting, setSetting } from "../settings-store.js";
@@ -19,9 +22,16 @@ export const PROVIDER_IPC_CHANNELS = Object.freeze({
   testConnection: "providers:test-connection",
   getModels: "providers:get-models",
   pullOllamaModel: "ollama:pull-model",
+  getComposioCredentialStatus: "composio:get-credential-status",
+  saveComposioCredential: "composio:save-credential",
+  clearComposioCredential: "composio:clear-credential",
+  testComposioConnection: "composio:test-connection",
 });
 
 const REDACTED_API_KEY_PREFIX = "[REDACTED]";
+const COMPOSIO_PROVIDER_ID = "composio";
+const COMPOSIO_CONNECTION_STUB_MESSAGE =
+  "Composio credential is stored; live SDK validation is not wired yet.";
 const PROVIDERS_WITH_API_KEYS = new Set(["openai", "openrouter"]);
 const DEFAULT_TEST_TIMEOUT_MS = 10_000;
 const MODEL_SELECTION_CAPABILITIES = Object.freeze([CHAT, EMBEDDINGS, TTS, STT]);
@@ -42,6 +52,13 @@ export function registerProviderHandlers(ipcMain, options = {}) {
   ipcMain.handle(PROVIDER_IPC_CHANNELS.testConnection, handlers.testConnection);
   ipcMain.handle(PROVIDER_IPC_CHANNELS.getModels, handlers.getModels);
   ipcMain.handle(PROVIDER_IPC_CHANNELS.pullOllamaModel, handlers.pullOllamaModel);
+  ipcMain.handle(
+    PROVIDER_IPC_CHANNELS.getComposioCredentialStatus,
+    handlers.getComposioCredentialStatus,
+  );
+  ipcMain.handle(PROVIDER_IPC_CHANNELS.saveComposioCredential, handlers.saveComposioCredential);
+  ipcMain.handle(PROVIDER_IPC_CHANNELS.clearComposioCredential, handlers.clearComposioCredential);
+  ipcMain.handle(PROVIDER_IPC_CHANNELS.testComposioConnection, handlers.testComposioConnection);
   return handlers;
 }
 
@@ -63,6 +80,12 @@ export function createProviderIpcHandlers(options = {}) {
       getProviderModels(providerIdOrPayload, capability, deps),
     ),
     pullOllamaModel: wrapIpcHandler((event, payload) => pullOllamaModel(event, payload, deps)),
+    getComposioCredentialStatus: wrapIpcHandler(() => getComposioCredentialStatus(deps)),
+    saveComposioCredential: wrapIpcHandler((_event, payload) =>
+      saveComposioCredential(payload, deps),
+    ),
+    clearComposioCredential: wrapIpcHandler(() => clearComposioCredential(deps)),
+    testComposioConnection: wrapIpcHandler(() => testComposioConnection(deps)),
   };
 }
 
@@ -97,6 +120,15 @@ export function redactProviderApiKey(apiKey) {
 
 export function isRedactedProviderApiKey(apiKey) {
   return normalizeString(apiKey).startsWith(REDACTED_API_KEY_PREFIX);
+}
+
+export function redactComposioCredential(credential) {
+  const normalized = normalizeString(credential);
+  return normalized ? `${REDACTED_API_KEY_PREFIX}${normalized.slice(-4)}` : null;
+}
+
+export function isRedactedComposioCredential(credential) {
+  return normalizeString(credential).startsWith(REDACTED_API_KEY_PREFIX);
 }
 
 export function getProviderDefaultModelSettingKey(providerName, capability) {
@@ -257,6 +289,67 @@ async function pullOllamaModel(event, payload, deps) {
   return { ok: true, ...(isRecord(result) ? result : {}), model };
 }
 
+function getComposioCredentialStatus(deps) {
+  const credential = readComposioCredential(deps);
+  const connectionStatus = deps.connectionStatuses.get(COMPOSIO_PROVIDER_ID);
+  return {
+    ok: true,
+    provider: COMPOSIO_PROVIDER_ID,
+    configured: Boolean(credential),
+    connected: connectionStatus?.ok === true,
+    testedAt: connectionStatus?.testedAt ?? null,
+    apiKey: redactComposioCredential(credential),
+  };
+}
+
+function saveComposioCredential(payload, deps) {
+  const credential = extractComposioCredential(payload);
+  if (!isRedactedComposioCredential(credential)) {
+    saveStoredComposioCredential(
+      normalizeNullableString(credential),
+      deps.storePath,
+      deps.secretCodec,
+    );
+  }
+  return getComposioCredentialStatus(deps);
+}
+
+function clearComposioCredential(deps) {
+  clearStoredComposioCredential(deps.storePath);
+  deps.connectionStatuses.delete(COMPOSIO_PROVIDER_ID);
+  return getComposioCredentialStatus(deps);
+}
+
+function testComposioConnection(deps) {
+  const startedAt = deps.now();
+  const credential = readComposioCredential(deps);
+  const testedAt = new Date().toISOString();
+  if (!credential) {
+    deps.connectionStatuses.set(COMPOSIO_PROVIDER_ID, { ok: false, testedAt });
+    return {
+      ok: false,
+      provider: COMPOSIO_PROVIDER_ID,
+      configured: false,
+      latencyMs: Math.max(0, deps.now() - startedAt),
+      error: serializeProviderIpcError(
+        new ProviderError("Composio credential is required.", {
+          code: "COMPOSIO_CREDENTIAL_MISSING",
+          provider: COMPOSIO_PROVIDER_ID,
+        }),
+      ),
+    };
+  }
+  deps.connectionStatuses.set(COMPOSIO_PROVIDER_ID, { ok: true, testedAt });
+  return {
+    ok: true,
+    provider: COMPOSIO_PROVIDER_ID,
+    configured: true,
+    connected: true,
+    latencyMs: Math.max(0, deps.now() - startedAt),
+    message: COMPOSIO_CONNECTION_STUB_MESSAGE,
+  };
+}
+
 function parseProviderConfigArgs(providerIdOrPayload, config) {
   if (typeof providerIdOrPayload === "string") {
     return {
@@ -311,6 +404,16 @@ function extractModelName(payload) {
   return "";
 }
 
+function extractComposioCredential(payload) {
+  if (typeof payload === "string") {
+    return payload;
+  }
+  if (isRecord(payload)) {
+    return payload.apiKey ?? payload.credential ?? payload.value ?? "";
+  }
+  return "";
+}
+
 function getProviderFromRegistry(registry, providerId) {
   return registry.get(normalizeProviderName(providerId));
 }
@@ -332,6 +435,10 @@ function readProviderApiKey(provider, deps) {
     );
   }
   return typeof provider.apiKey === "string" ? provider.apiKey : null;
+}
+
+function readComposioCredential(deps) {
+  return loadComposioCredential(deps.storePath, deps.secretCodec);
 }
 
 function readProviderBaseUrl(provider, deps) {

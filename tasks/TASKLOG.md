@@ -461,3 +461,39 @@ _(wave execution entries appended below as the build runs)_
 - Opened PR #17 (`wave-16` -> `main`) after reviewer and advisor gates cleared; branch head `18f4928`.
 - CodeRabbit posted a generated advisory status/comment but could not run a substantive review because of hourly rate/usage-credit limits. No actionable findings were available, so the advisory-only status did not block merge.
 - The repo still lacks `codex` and `codex-automation` labels, so no automation labels were applied.
+
+## 2026-06-03 — Post-MVP refinement plan created
+
+- Used `task-architect` mode to decompose the owner-reviewed UI, Chat, Settings, Integrations, Composio, MCP, Full Disk Access, Apple Calendar, file-access, voice-startup, and verification work into tasks `120`-`146`.
+- Added supplemental spec `tasks/SPEC-POST-MVP-REFINEMENT.md`, pending task cards in `tasks/pending/`, and wave ledgers `tasks/waves/wave-17.md` through `tasks/waves/wave-23.md`.
+- Updated `tasks/OVERVIEW.md` totals to `pending=27`, `in-progress=0`, `completed=66`, `blocked=6`, `total=99`, with Wave 17 as the next planned wave.
+- The plan requires kencode-search/production references before implementation, serialized shared-file integration for renderer/main/preload files, screenshot proof for UI changes, mocked Apple/Composio integration tests, and honest owner-manual GUI smoke in the final handoff.
+
+## 2026-06-03 — Wave 17 started
+
+- Moved tasks `120`, `121`, `122`, and `123` from `pending/` to `in-progress/` at `2026-06-03T21:08:47Z`; attempts set to `1`.
+- Opened active file claims for each task's declared outputs and task files.
+- Wrote WAL `pre_run` entries and prepared parallel agent dispatch for the research/proof/contract wave.
+
+## 2026-06-03 — Wave 17 tasks completed
+
+- Completed task `120`: `tasks/artifacts/post-mvp-reference-brief.md` now records Composio, OpenClaw/Railway, MCP v1 transport, Electron/macOS permission, Full Disk Access, UI reference, and research-gap anchors for downstream implementation.
+- Completed task `121`: `test/ui-baseline-smoke.test.js` captures deterministic Home, Settings, Integrations, and voice dock/start screenshots under `tasks/artifacts/post-mvp-ui-baseline/`, with viewport, selector, and nonblank PNG checks.
+- Completed task `122`: `tasks/artifacts/mac-access-trust-contract.md` defines Trusted Mac Access, Full Disk Access, trusted-write override, read/write/destructive/control separation, and fail-closed rules for Composio, MCP, Apple Calendar, file tools, screenshots, and OS control.
+- Completed task `123`: `tasks/artifacts/settings-ia-contract.md` defines the approved sidebar order, Settings Overview/detail model, Integrations Overview/detail model, Custom MCP placement, Composio Actions Hub placement, and theme/treatment/density preservation.
+- Independent orchestrator gates passed: `node --test test/ui-baseline-smoke.test.js` (1/1), `npm run check` (174 files), full `node --test` (542/542, no skips/failures), WAL parse (`282` entries), task-artifact privacy scan, and `git diff --check`.
+- Released all Wave 17 active claims and updated `tasks/OVERVIEW.md` counts to `pending=23`, `in-progress=0`, `completed=70`, `blocked=6`.
+- Appended a final physical-tail WAL checkpoint after terminal wording cleanup; WAL parse now passes with `283` entries.
+
+## 2026-06-03 — Wave 17 reviewer gate
+
+- Reviewer gate passed with no blocking findings.
+- Advisory warning recorded: Wave 18 has same-wave dependencies (`131` after `126`, `135` after `131`), so future dispatch must respect dependency order instead of starting all seven tasks at once. `tasks/waves/wave-18.md` now makes the initial eligible set and serial follow-ons explicit.
+- Advisory warning recorded: the Wave 17 voice baseline artifact is named `voice-dock-start` while it captures the idle dock state. This remains non-blocking because tasks `142` and `144` own Starting/Listening/Error voice coverage.
+
+## 2026-06-03 — Wave 17 advisor gate
+
+- Advisor gate passed with no blocking findings.
+- Advisor confirmed Wave 17 stayed inside research/proof/contract scope, with no implementation drift into UI, Composio, MCP, or Mac access behavior.
+- Advisor confirmed task contracts are adequate for downstream waves and bookkeeping is consistent at `pending=23`, `in-progress=0`, `completed=70`, `blocked=6`, with empty active claims.
+- Advisory warning recorded: all untracked Wave 17 outputs must be staged before PR so artifacts and task files are included in the branch.

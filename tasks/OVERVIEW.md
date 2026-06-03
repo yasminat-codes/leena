@@ -1,16 +1,16 @@
 # Leena — Build Overview
 
 **Project:** Leena (Electron desktop voice assistant, rebranded from Brah)
-**Total tasks:** 72 · **Total waves:** 16 · **MVP boundary:** Phases 0–4
+**Total tasks:** 99 · **Total waves:** 23 · **MVP boundary:** Phases 0–4 · **Post-MVP refinement:** Waves 17–23
 **Deliverable:** unsigned `.dmg` (MVP build = task 046, Final build = task 111) + `xattr -cr` install docs
 
 ## Progress
 
 | State | Count |
 |-------|-------|
-| Pending | 0 |
+| Pending | 23 |
 | In-Progress | 0 |
-| Completed | 66 |
+| Completed | 70 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -33,6 +33,13 @@
 | 14 | B | 6 | History, nudges, persona composition, E2E + memory tests | — |
 | 15 | B | 2 | Final DMG + identity tests | — |
 | 16 | B | 1 | MVP .dmg (guaranteed deliverable) | — |
+| 17 | C | 4 | Research, proof, and contracts | — |
+| 18 | C | 7 | Shell, visual system, integration foundations, voice preflight | — |
+| 19 | C | 7 | Settings router, MCP polish, Composio refresh, Mac adapters, chat shell | — |
+| 20 | C | 5 | Focused settings details, file policy, live chat wiring | — |
+| 21 | C | 2 | Permission UX and UI regression proof | — |
+| 22 | C | 1 | Integration test matrix | — |
+| 23 | C | 1 | Build smoke and owner handoff | owner manual GUI smoke remains manual |
 
 ## Phase → Wave Mapping
 
@@ -117,6 +124,41 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 - Wave 14 — History, nudges, persona composition, memory tests, CSS token cleanup, and final e2e tests (`065`, `071`, `107`, `108`, `109`, `112`) completed 2026-06-03; final reviewer/advisor gates passed with 525/525 tests.
 - Wave 15 — Identity comprehensive tests and final full-feature DMG (`073`, `111`) completed 2026-06-03; final gates passed with 527/527 tests and `dist/Leena-0.1.0-arm64.dmg` recorded in `tasks/DELIVERABLE.md`.
 - Wave 16 — MVP DMG guaranteed deliverable (`046`) completed 2026-06-03; final gates passed with 529/529 tests and `dist/Leena-MVP.dmg` recorded in `tasks/DELIVERABLE.md`.
+- Wave 17 — Post-MVP research, UI baseline proof, Mac access trust contract, and Settings IA contract (`120`, `121`, `122`, `123`) completed 2026-06-03; final gates passed with 542/542 tests and baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
+
+## Post-MVP Refinement Tasks
+
+Created 2026-06-03 from owner review of the shipped app screenshots and approved IA decisions. Supplemental spec: `tasks/SPEC-POST-MVP-REFINEMENT.md`.
+
+| ID | Wave | Title | State |
+|----|------|-------|-------|
+| 120 | 17 | Production reference research for UI, Composio, MCP, and Mac access | completed |
+| 121 | 17 | UI baseline proof harness | completed |
+| 122 | 17 | Mac access trust contract | completed |
+| 123 | 17 | Settings information architecture contract | completed |
+| 124 | 18 | Sidebar Chat route | pending |
+| 125 | 18 | Visual token and orb polish | pending |
+| 126 | 18 | Settings component primitives | pending |
+| 127 | 19 | Settings overview detail router | pending |
+| 128 | 20 | Theme detail preservation | pending |
+| 129 | 20 | Providers detail polish | pending |
+| 130 | 20 | Updates detail flow | pending |
+| 131 | 18 | Integrations detail shell | pending |
+| 132 | 19 | Custom MCP form polish | pending |
+| 133 | 18 | Composio secure credential storage | pending |
+| 134 | 19 | Composio MCP tool refresh | pending |
+| 135 | 18 | Mac access integration cards | pending |
+| 136 | 19 | Full Disk Access status | pending |
+| 137 | 19 | Apple Calendar adapter | pending |
+| 138 | 20 | File access scope policy | pending |
+| 139 | 21 | Permission confirmation UX | pending |
+| 140 | 19 | Chat workspace shell | pending |
+| 141 | 20 | Chat history and detail wiring | pending |
+| 142 | 18 | Voice startup preflight | pending |
+| 143 | 19 | Theme-aware voice orb | pending |
+| 144 | 21 | UI screenshot regression suite | pending |
+| 145 | 22 | Integration test matrix | pending |
+| 146 | 23 | Post-MVP build smoke handoff | pending |
 
 ## Discovered Tasks
 

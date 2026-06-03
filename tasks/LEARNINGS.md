@@ -810,3 +810,15 @@
 - Reviewer and advisor cleared Wave 16 with warnings only. Final handoff must state the build is unsigned/ad-hoc, not notarized, and not GUI-launched; `dist/` artifacts are ignored local build outputs.
 - PR #17 CodeRabbit state at merge decision: generated rate-limit/usage-credit comment only, GitHub status `SUCCESS`, and no actionable findings available. Advisory status must not block Wave 16 merge.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 17 — summary
+- Completed tasks `120`, `121`, `122`, and `123`.
+- Task `120` produced `tasks/artifacts/post-mvp-reference-brief.md`, grounding later Composio, MCP, macOS permission, Full Disk Access, and UI work in specific official/repo anchors and explicit research gaps. Downstream implementation must re-verify active Composio SDK method shapes at install time and avoid mixing MCP v2 docs with Leena's current v1 SDK dependency.
+- Task `121` added `test/ui-baseline-smoke.test.js` plus baseline screenshots and manifest under `tasks/artifacts/post-mvp-ui-baseline/`. The harness uses a deterministic renderer bridge, fixed `1060x712` viewport, readiness selectors, viewport-fit assertions, and PNG nonblank/variance checks.
+- Task `122` produced `tasks/artifacts/mac-access-trust-contract.md`. Broad Mac read/search is allowed only after a known-good grant/scope; write, delete, destructive, screen-analysis, and OS-control actions require confirmation by default; unknown/stale/malformed metadata fails closed.
+- Task `123` produced `tasks/artifacts/settings-ia-contract.md`. The approved sidebar is Home, Chat, Activity, Tasks, Integrations, Settings; Settings and Integrations open to Overview and use in-place details rather than top-level tab sprawl; existing theme/treatment/density values are preservation-critical.
+- Independent parent gates passed: focused UI baseline harness 1/1, `npm run check`, full `node --test` (542/542), WAL JSON parse, task-count audit, active-claims audit, task-artifact privacy scan, and `git diff --check`.
+- Reviewer cleared Wave 17 with warnings only. Wave 18 must dispatch by dependency eligibility, not as one blind seven-task parallel group: run `124`, `125`, `126`, `133`, and `142` first when file claims permit, then `131` after `126`, then `135` after `131`.
+- The Wave 17 voice baseline artifact is an idle dock snapshot despite the `voice-dock-start` filename. Treat it as visual baseline only; task `142` and task `144` still own actual Starting/Listening/Error state coverage.
+- Advisor cleared Wave 17 with warnings only. Before PR, use `git add -A` from the wave worktree so untracked task files, screenshot artifacts, wave ledgers, and the baseline harness are all included.
+- **WAL ref:** tasks/.wal/wal.jsonl

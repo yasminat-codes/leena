@@ -1,10 +1,11 @@
+import { DEFAULT_HOTKEY_ACCELERATOR } from "./hotkey-accelerator.js";
 import { getDatabase, getDatabasePath } from "./realtime/tools/database.js";
 
 export const DEFAULT_SETTINGS = Object.freeze({
   theme: "dark",
   treatment: "aurora",
   density: "comfortable",
-  hotkey: "CommandOrControl+Shift+L",
+  hotkey: DEFAULT_HOTKEY_ACCELERATOR,
   launchOnLogin: false,
   onboardingCompleted: false,
   defaultProvider: "openai",

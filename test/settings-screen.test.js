@@ -228,6 +228,13 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /data-appearance-value="coral"/);
   assert.match(html, /data-appearance-key="density"/);
   assert.match(html, /data-appearance-value="compact"/);
+  assert.match(html, /Keyboard Shortcut/);
+  assert.match(html, /Cmd\+Shift\+L/);
+  assert.match(html, /data-hotkey-input/);
+  assert.match(html, /value="CommandOrControl\+Shift\+L"/);
+  assert.match(html, /data-hotkey-record/);
+  assert.match(html, /data-hotkey-default/);
+  assert.match(html, /data-hotkey-save/);
   assert.match(html, /Providers/);
   assert.match(html, /OpenAI/);
   assert.match(html, /settings-chip--success/);

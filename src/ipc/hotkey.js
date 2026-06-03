@@ -1,5 +1,10 @@
-export const DEFAULT_HOTKEY_ACCELERATOR = "CommandOrControl+Shift+L";
-export const HOTKEY_SETTING_KEY = "hotkey";
+import {
+  DEFAULT_HOTKEY_ACCELERATOR,
+  HOTKEY_SETTING_KEY,
+  normalizeHotkeyAccelerator,
+} from "../hotkey-accelerator.js";
+
+export { DEFAULT_HOTKEY_ACCELERATOR, HOTKEY_SETTING_KEY } from "../hotkey-accelerator.js";
 
 export const HOTKEY_IPC_CHANNELS = Object.freeze({
   activated: "hotkey:activated",
@@ -29,7 +34,11 @@ export function createHotkeyController({
   }
 
   function readConfiguredHotkey() {
-    return normalizeAccelerator(readStoredHotkey(settingsStore, defaultAccelerator));
+    try {
+      return normalizeAccelerator(readStoredHotkey(settingsStore, defaultAccelerator));
+    } catch {
+      return normalizeAccelerator(defaultAccelerator);
+    }
   }
 
   function getHotkey() {
@@ -239,10 +248,7 @@ function extractAccelerator(payload) {
 }
 
 function normalizeAccelerator(accelerator) {
-  if (typeof accelerator !== "string" || !accelerator.trim()) {
-    throw new TypeError("Hotkey accelerator must be a non-empty string.");
-  }
-  return accelerator.trim();
+  return normalizeHotkeyAccelerator(accelerator);
 }
 
 function assertGlobalShortcut(globalShortcut) {

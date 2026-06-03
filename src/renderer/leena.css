@@ -1853,6 +1853,18 @@
   height: 28px;
 }
 
+.settings-hotkey-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 9px;
+  min-width: 0;
+}
+
+.settings-hotkey-actions {
+  justify-content: flex-end;
+}
+
 .settings-capability-map {
   display: grid;
   gap: 7px;
@@ -2025,6 +2037,7 @@
 
   .settings-provider-grid,
   .settings-capability-row,
+  .settings-hotkey-row,
   .settings-ollama-download {
     grid-template-columns: minmax(0, 1fr);
   }

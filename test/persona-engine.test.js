@@ -117,6 +117,15 @@ test("active persona switches persist and fall back to Leena when removed", asyn
   });
 });
 
+test("active persona falls back to Leena when the stored active id is stale", async () => {
+  await withPersonaDb(({ engine, filePath }) => {
+    engine.getAll();
+    setSetting(ACTIVE_PERSONA_ID_SETTING_KEY, "missing-persona", filePath);
+
+    assert.equal(engine.getActive().id, DEFAULT_PERSONA_ID);
+  });
+});
+
 test("default Leena persona is repaired and protected", async () => {
   await withPersonaDb(({ engine, filePath }) => {
     setSetting(
@@ -137,6 +146,63 @@ test("default Leena persona is repaired and protected", async () => {
     assert.equal(
       stored.some((persona) => persona.id === DEFAULT_PERSONA_ID),
       true,
+    );
+  });
+});
+
+test("stored personas are normalized, deduplicated, repaired, and cloned", async () => {
+  await withPersonaDb(({ engine, filePath }) => {
+    setSetting(
+      PERSONAS_SETTING_KEY,
+      [
+        {
+          id: "custom",
+          name: "  Custom  ",
+          tone: "  dry  ",
+          instructions: "  Keep it brief.  ",
+          isDefault: false,
+        },
+        {
+          id: "CUSTOM",
+          name: "Duplicate Custom",
+          tone: "loud",
+          isDefault: false,
+        },
+        {
+          id: "broken",
+          name: "",
+          tone: "quiet",
+          isDefault: false,
+        },
+        {
+          id: DEFAULT_PERSONA_ID,
+          name: "Wrong",
+          tone: "wrong",
+          isDefault: false,
+        },
+      ],
+      filePath,
+    );
+
+    const personas = engine.getAll();
+
+    assert.deepEqual(
+      personas.map((persona) => persona.id),
+      [DEFAULT_PERSONA_ID, "custom"],
+    );
+    assert.deepEqual(personas[0], DEFAULT_LEENA_PERSONA);
+    assert.equal(personas[1].name, "Custom");
+    assert.equal(personas[1].tone, "dry");
+    assert.equal(personas[1].instructions, "Keep it brief.");
+    assert.equal(personas[1].voicePreference, DEFAULT_VOICE);
+
+    personas[1].name = "Mutated outside the store";
+    assert.equal(engine.getAll().find((persona) => persona.id === "custom").name, "Custom");
+
+    const stored = getJSON(PERSONAS_SETTING_KEY, null, filePath);
+    assert.deepEqual(
+      stored.map((persona) => persona.id),
+      [DEFAULT_PERSONA_ID, "custom"],
     );
   });
 });

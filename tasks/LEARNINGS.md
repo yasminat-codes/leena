@@ -758,3 +758,29 @@
 - Keep `tasks/OVERVIEW.md` proof counts synchronized with the latest full parent gate before PR creation; Wave 14 ended at `npm test` 525/525.
 - CodeRabbit remains advisory-only. For PR #15 it posted review-in-progress/trigger comments with a pending status and no actionable findings available at merge-decision time.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 15 — 073 — Persona test Biome formatting
+- **Symptom:** The first task-local `npm run check` after adding PersonaEngine edge-case tests failed on one long clone-isolation assertion.
+- **Root cause:** Focused `node --test` passed, but the new assertion was not in Biome's preferred wrapped shape.
+- **Fix:** Reformatted the assertion in `test/persona-engine.test.js` and reran focused identity gates plus the full parent suite.
+- **Rule added?:** no — this reinforces the existing Wave 14 rule to preserve Biome formatting after adding test assertions.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 15 — 111 — Parent rebuild checksum reconciliation
+- **Symptom:** The worker-built DMG/ZIP checksums became stale after the parent independently reran `npm run build:mac`.
+- **Root cause:** macOS packaging artifacts are regenerated outputs; a verifier rebuild can produce different archive hashes even when the code/config are unchanged.
+- **Fix:** Recomputed SHA-256 after the parent rebuild, updated `tasks/DELIVERABLE.md` and task `111`, then reran structural DMG/ZIP checks and full gates.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 15 — summary
+- Completed tasks `073` and `111`.
+- Identity coverage now has seven PersonaEngine tests covering seed/default behavior, CRUD persistence, active fallback/switching, default protection, stored-record repair/deduplication, clone isolation, and validation failures. Existing prompt-composition, identity IPC, and agent-profile tests remained green.
+- The final full-feature macOS artifacts were regenerated with `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`: `dist/Leena-0.1.0-arm64.dmg` and `dist/Leena-0.1.0-arm64-mac.zip`.
+- `tasks/DELIVERABLE.md` records the current SHA-256 values after parent rebuild: DMG `eb82e79a4dd974999c0a4a645335916e70a37741c5da3887a9891b6ad8392463`; ZIP `fb1530e7b778360ec24082c00c78f586126b779a92c0fde6fb3c47015e7bb849`.
+- Headless packaging verification passed for the DMG and ZIP: valid DMG checksum, drag-to-Applications layout, executable app bundle, 21 packaged font assets, and four unpacked `@nut-tree-fork` native addon files. GUI launch remains an owner checklist, not an autonomous gate.
+- Independent parent gates passed: `npm run check`, full `node --test` (527/527), changed-file syntax check, `git diff --check`, WAL parse, task-count audit, active-claims audit, and task-artifact privacy scan.
+- CodeRabbit remains advisory-only; request it after reviewer/advisor gates clear and before merge.
+- Reviewer and advisor cleared Wave 15 with warnings only. Wave 16 must keep the MVP artifact lane distinct from the full-feature artifact and should not imply the ignored `dist/` binaries are committed to the PR.
+- PR #16 CodeRabbit state at merge decision: generated trigger/review-in-progress comments only, pending advisory status, and no actionable findings available. Advisory status must not block Wave 15 merge.
+- **WAL ref:** tasks/.wal/wal.jsonl

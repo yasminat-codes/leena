@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 3 |
+| Pending | 1 |
 | In-Progress | 0 |
-| Completed | 63 |
+| Completed | 65 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -115,6 +115,7 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 - Wave 12 — Test suites, provider model selector, memory/identity IPC, live integrations, and wake consent/test-suite follow-ons (`040`, `054`, `056`, `063`, `072`, `095`, `096`, `103`) terminal 2026-06-03: `040`, `054`, `056`, `063`, `072`, and `103` completed; `095` and `096` blocked pending real wake engine/coordinator/IPC assets or fallback decision.
 - Wave 13 — Memory-aware prompts, live Home/Activity/Settings data, and text chat (`064`, `100`, `101`, `104`, `106`) completed 2026-06-03; reviewer/advisor fixes added safe/async text-chat tool handling, default-provider preservation, live cross-conversation Activity history, Launch on Login side effects, and an untrusted-memory prompt boundary.
 - Wave 14 — History, nudges, persona composition, memory tests, CSS token cleanup, and final e2e tests (`065`, `071`, `107`, `108`, `109`, `112`) completed 2026-06-03; final reviewer/advisor gates passed with 525/525 tests.
+- Wave 15 — Identity comprehensive tests and final full-feature DMG (`073`, `111`) completed 2026-06-03; final gates passed with 527/527 tests and `dist/Leena-0.1.0-arm64.dmg` recorded in `tasks/DELIVERABLE.md`.
 
 ## Discovered Tasks
 

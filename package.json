@@ -1,6 +1,6 @@
 {
   "name": "leena",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A fresh Electron desktop app.",
   "main": "src/main.js",
   "scripts": {

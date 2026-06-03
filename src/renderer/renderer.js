@@ -1601,12 +1601,17 @@ function showAppShell() {
   onboardingMount?.remove();
   onboardingMount = null;
   leenaShellElement.hidden = false;
+  leenaShellElement.removeAttribute("aria-hidden");
   appShellElement.dataset.onboarding = "complete";
 }
 
 function showOnboardingShell() {
   leenaShellElement.hidden = true;
+  leenaShellElement.setAttribute("aria-hidden", "true");
   appShellElement.dataset.onboarding = "active";
+  if (onboardingMount) {
+    return onboardingMount;
+  }
   onboardingMount = document.createElement("div");
   onboardingMount.id = "onboarding-root";
   onboardingMount.className = "onboarding-root";

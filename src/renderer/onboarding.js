@@ -1,8 +1,8 @@
 import { DEFAULT_HOTKEY_ACCELERATOR, formatHotkeyAccelerator } from "../hotkey-accelerator.js";
 
 const STEP_IDS = Object.freeze(["welcome", "auth", "permissions", "name", "done"]);
-const DISPLAY_PERMISSION_IDS = Object.freeze(["microphone", "screen", "accessibility"]);
-const REQUIRED_PERMISSION_IDS = Object.freeze(["microphone"]);
+const DISPLAY_PERMISSION_IDS = Object.freeze(["microphone", "screen", "accessibility", "computer"]);
+const REQUIRED_PERMISSION_IDS = DISPLAY_PERMISSION_IDS;
 
 const permissionFallbacks = Object.freeze({
   microphone: {
@@ -10,18 +10,47 @@ const permissionFallbacks = Object.freeze({
     label: "Microphone",
     description: "Needed for Realtime voice input.",
     activation: "Click Request to trigger the OS microphone prompt.",
+    requirement: "Required for voice",
   },
   screen: {
     id: "screen",
     label: "Screen Recording",
     description: "Recommended for screenshots, screen analysis, and Computer Use OS control.",
     activation: "Click Request, then allow Leena in Screen Recording settings.",
+    requirement: "Required for screen understanding",
   },
   accessibility: {
     id: "accessibility",
     label: "Accessibility Control",
     description: "Recommended for Computer Use control of the OS mouse and keyboard.",
     activation: "Click Request, then allow Leena in Accessibility settings.",
+    requirement: "Required for OS control",
+  },
+  computer: {
+    id: "computer",
+    label: "Automation Browser",
+    description: "Needed for browser-based Computer Use without controlling the real OS.",
+    activation: "Click Request to install the automation browser.",
+    requirement: "Required for browser control",
+  },
+});
+
+const onboardingPermissionCopy = Object.freeze({
+  microphone: {
+    description: "Realtime voice input.",
+    activation: "Native OS microphone prompt.",
+  },
+  screen: {
+    description: "Screenshots, screen reading, and OS control.",
+    activation: "Opens Screen Recording settings.",
+  },
+  accessibility: {
+    description: "OS mouse and keyboard control.",
+    activation: "Opens Accessibility settings.",
+  },
+  computer: {
+    description: "Browser-based Computer Use.",
+    activation: "Installs the automation browser.",
   },
 });
 
@@ -76,6 +105,7 @@ export function normalizePermissions(permissions) {
       label: permission.label ?? fallback.label,
       description: permission.description ?? fallback.description,
       activation: permission.activation ?? fallback.activation,
+      requirement: permission.requirement ?? fallback.requirement,
       status: normalizePermissionStatus(permission.status),
     };
   });
@@ -92,8 +122,47 @@ export function normalizePermissionStatus(status) {
 export function hasRequiredPermissions(permissions) {
   const normalized = normalizePermissions(permissions);
   return REQUIRED_PERMISSION_IDS.every((id) =>
-    normalized.some((permission) => permission.id === id && permission.status === "granted"),
+    normalized.some(
+      (permission) => permission.id === id && isPermissionReadyOrUnsupported(permission.status),
+    ),
   );
+}
+
+export function getMissingRequiredPermissions(permissions) {
+  const normalized = normalizePermissions(permissions);
+  return normalized.filter(
+    (permission) =>
+      REQUIRED_PERMISSION_IDS.includes(permission.id) &&
+      !isPermissionReadyOrUnsupported(permission.status),
+  );
+}
+
+function isPermissionReadyOrUnsupported(status) {
+  return status === "granted" || status === "unsupported";
+}
+
+function formatPermissionStatus(status) {
+  switch (status) {
+    case "granted":
+      return "Allowed";
+    case "not-determined":
+      return "Needs setup";
+    case "denied":
+      return "Needs settings";
+    case "restricted":
+      return "Restricted";
+    case "unsupported":
+      return "Not needed here";
+    default:
+      return "Check needed";
+  }
+}
+
+function getOnboardingPermissionCopy(permission) {
+  return {
+    ...permission,
+    ...(onboardingPermissionCopy[permission.id] ?? {}),
+  };
 }
 
 export function formatHotkey(hotkey = ONBOARDING_HOTKEY_DEFAULT) {
@@ -109,8 +178,18 @@ export function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function getFormValue(root, name) {
+function getFormValue(root, name, formValues = null) {
+  if (formValues && Object.hasOwn(formValues, name)) {
+    return formValues[name];
+  }
   return root?.querySelector?.(`[name="${name}"]`)?.value?.trim() ?? "";
+}
+
+function snapshotFormValues(root) {
+  return {
+    apiKey: getFormValue(root, "apiKey"),
+    name: getFormValue(root, "name"),
+  };
 }
 
 function getDefaultBridge(bridge) {
@@ -177,9 +256,26 @@ function renderWelcomeStep() {
       <p class="eyebrow">Leena setup</p>
       <h1>Make Leena yours</h1>
       <p>
-        Connect OpenAI, grant the permissions needed for voice, and add the name Leena should use
-        for you.
+        Connect OpenAI, grant local access for voice and screen control, and add the name Leena
+        should use for you.
       </p>
+      <div class="onboarding-intro-grid" aria-label="Setup checklist">
+        <div>
+          <span class="onboarding-intro-grid__number">01</span>
+          <strong>Connect intelligence</strong>
+          <p>Use an API key or OAuth before starting a realtime session.</p>
+        </div>
+        <div>
+          <span class="onboarding-intro-grid__number">02</span>
+          <strong>Grant access</strong>
+          <p>Microphone, Screen Recording, Accessibility, and browser automation are checked.</p>
+        </div>
+        <div>
+          <span class="onboarding-intro-grid__number">03</span>
+          <strong>Personalize</strong>
+          <p>Set the name Leena should use and confirm your hotkey.</p>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -219,26 +315,43 @@ function renderAuthStep(state) {
 
 function renderPermissionsStep(state) {
   const permissions = normalizePermissions(state.permissions);
+  const readyCount = permissions.filter((permission) =>
+    isPermissionReadyOrUnsupported(permission.status),
+  ).length;
   return `
     <section class="onboarding-step" data-step="permissions">
       <p class="eyebrow">Permissions</p>
-      <h1>Allow local voice and control</h1>
-      <p>Microphone access is required. Screen Recording and Accessibility are recommended.</p>
-      <div class="permissions-list">
+      <h1>Allow every local access</h1>
+      <p>
+        Leena needs these grants to hear you, understand your screen, and control the browser or
+        your Mac when you ask. macOS will keep some choices in System Settings after you click
+        Request.
+      </p>
+      <div class="onboarding-permissions__summary" role="status">
+        <strong>${readyCount} of ${permissions.length} ready</strong>
+        <span>Finish every supported item before continuing.</span>
+      </div>
+      <div class="onboarding-permissions" aria-label="Required local access">
         ${permissions
           .map((permission) => {
-            const isGranted = permission.status === "granted";
+            const displayPermission = getOnboardingPermissionCopy(permission);
+            const statusText = formatPermissionStatus(permission.status);
+            const isReady = isPermissionReadyOrUnsupported(permission.status);
+            const requestLabel = permission.id === "computer" ? "Install" : "Request";
             return `
-              <article class="permission-item" data-permission-id="${escapeHtml(permission.id)}">
-                <div class="permission-title">
-                  <span>${escapeHtml(permission.label)}</span>
-                  <span class="permission-status${isGranted ? " is-granted" : ""}">
-                    ${escapeHtml(permission.status)}
+              <article class="onboarding-permission" data-permission-id="${escapeHtml(permission.id)}" data-status="${escapeHtml(permission.status)}">
+                <div class="onboarding-permission__header">
+                  <div>
+                    <span class="onboarding-permission__kicker">${escapeHtml(displayPermission.requirement)}</span>
+                    <h2>${escapeHtml(displayPermission.label)}</h2>
+                  </div>
+                  <span class="onboarding-permission__status${isReady ? " is-granted" : ""}">
+                    ${escapeHtml(statusText)}
                   </span>
                 </div>
-                <p class="permission-description">${escapeHtml(permission.description)}</p>
-                <p class="permission-activation">${escapeHtml(permission.activation)}</p>
-                <div class="permission-actions">
+                <p class="onboarding-permission__description">${escapeHtml(displayPermission.description)}</p>
+                <p class="onboarding-permission__activation">${escapeHtml(displayPermission.activation)}</p>
+                <div class="onboarding-permission__actions">
                   <button
                     type="button"
                     class="btn"
@@ -246,7 +359,7 @@ function renderPermissionsStep(state) {
                     data-permission-id="${escapeHtml(permission.id)}"
                     ${permission.status === "unsupported" ? "disabled" : ""}
                   >
-                    Request
+                    ${escapeHtml(requestLabel)}
                   </button>
                   <button
                     type="button"
@@ -262,9 +375,11 @@ function renderPermissionsStep(state) {
           })
           .join("")}
       </div>
-      <button type="button" class="btn" data-onboarding-action="refresh-permissions">
-        Refresh Permissions
-      </button>
+      <div class="onboarding-inline-actions">
+        <button type="button" class="btn" data-onboarding-action="refresh-permissions">
+          Refresh status
+        </button>
+      </div>
     </section>
   `;
 }
@@ -294,14 +409,19 @@ function renderNameStep(state) {
 function renderDoneStep(state) {
   const status = normalizeAuthStatus(state.authStatus);
   const permissions = normalizePermissions(state.permissions);
-  const microphone = permissions.find((permission) => permission.id === "microphone");
   return `
     <section class="onboarding-step" data-step="done">
       <p class="eyebrow">Ready</p>
       <h1>Leena is ready</h1>
-      <ul class="settings-list">
+      <p>Everything Leena needs for voice, screen awareness, and local control is ready.</p>
+      <ul class="onboarding-summary-list">
         <li>OpenAI: ${escapeHtml(status.connected ? status.authType : "not connected")}</li>
-        <li>Microphone: ${escapeHtml(microphone?.status ?? "unknown")}</li>
+        ${permissions
+          .map(
+            (permission) =>
+              `<li>${escapeHtml(permission.label)}: ${escapeHtml(formatPermissionStatus(permission.status))}</li>`,
+          )
+          .join("")}
         <li>Name: ${escapeHtml(state.name || "Skipped")}</li>
         <li>Hotkey: ${escapeHtml(formatHotkey(state.hotkey))}</li>
       </ul>
@@ -313,9 +433,9 @@ async function validateWelcomeStep() {
   return true;
 }
 
-async function validateAuthStep({ bridge, root, state }) {
+async function validateAuthStep({ bridge, formValues, root, state }) {
   const resolvedBridge = getDefaultBridge(bridge);
-  const apiKey = getFormValue(root, "apiKey");
+  const apiKey = getFormValue(root, "apiKey", formValues);
   if (apiKey) {
     state.authStatus = normalizeAuthStatus(await resolvedBridge.saveApiKey(apiKey));
   }
@@ -330,14 +450,17 @@ async function validatePermissionsStep({ bridge, state }) {
   const resolvedBridge = getDefaultBridge(bridge);
   state.permissions = normalizePermissions(await resolvedBridge.getOsPermissions());
   if (!hasRequiredPermissions(state.permissions)) {
-    throw new Error("Microphone access is required before Leena can use voice input.");
+    const missing = getMissingRequiredPermissions(state.permissions)
+      .map((permission) => permission.label)
+      .join(", ");
+    throw new Error(`Finish setup for: ${missing}.`);
   }
   return true;
 }
 
-async function validateNameStep({ bridge, root, state }) {
+async function validateNameStep({ bridge, formValues, root, state }) {
   const resolvedBridge = getDefaultBridge(bridge);
-  const name = getFormValue(root, "name");
+  const name = getFormValue(root, "name", formValues);
   state.name = name;
   if (!name) {
     return true;
@@ -466,30 +589,56 @@ export function createOnboardingFlow(options = {}) {
         return;
       }
       if (action === "request-permission") {
+        state.isBusy = true;
+        render();
         state.permissions = normalizePermissions(
           await bridge.requestOsPermission(target?.dataset?.permissionId),
         );
+        state.isBusy = false;
         render();
         return;
       }
       if (action === "open-permission-settings") {
+        state.isBusy = true;
+        render();
         await bridge.openOsPermissionSettings(target?.dataset?.permissionId);
+        state.isBusy = false;
         render();
         return;
       }
       if (action === "refresh-permissions") {
+        state.isBusy = true;
+        render();
         state.permissions = normalizePermissions(await bridge.getOsPermissions());
+        state.isBusy = false;
         render();
         return;
       }
       if (action === "oauth-login") {
+        state.isBusy = true;
+        render();
         state.authStatus = normalizeAuthStatus(await bridge.loginOpenAI());
         state.authStatus = normalizeAuthStatus(await bridge.getOpenAIStatus());
+        state.isBusy = false;
+        render();
+        return;
+      }
+      if (action === "save-api-key") {
+        const apiKey = getFormValue(mountedRoot, "apiKey");
+        if (!apiKey) {
+          throw new Error("Paste an OpenAI API key before saving.");
+        }
+        state.isBusy = true;
+        render();
+        state.authStatus = normalizeAuthStatus(await bridge.saveApiKey(apiKey));
+        state.authStatus = normalizeAuthStatus(await bridge.getOpenAIStatus());
+        state.isBusy = false;
         render();
         return;
       }
       await advance(action === "complete");
     } catch (error) {
+      state.isBusy = false;
       state.error = error instanceof Error ? error.message : String(error);
       render();
     }
@@ -497,10 +646,11 @@ export function createOnboardingFlow(options = {}) {
 
   async function advance(isCompleteAction = false) {
     const step = getStepById(state.currentStepId);
+    const formValues = snapshotFormValues(mountedRoot);
     state.isBusy = true;
     render();
     try {
-      await step.validate({ bridge, root: mountedRoot, state });
+      await step.validate({ bridge, formValues, root: mountedRoot, state });
       if (isCompleteAction || step.id === "done") {
         mountedRoot?.dispatchEvent?.(
           new CustomEvent("leena:onboarding-complete", { detail: { state: { ...state } } }),

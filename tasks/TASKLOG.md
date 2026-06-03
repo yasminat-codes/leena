@@ -406,3 +406,25 @@ _(wave execution entries appended below as the build runs)_
 - Opened PR #15 (`wave-14` -> `main`) after reviewer and advisor gates cleared; branch head `f89cc47`.
 - Requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated review-in-progress/trigger comments and a pending advisory status at merge-decision time; no actionable findings were available, so the advisory-only status did not block merge.
 - The repo still lacks `codex` and `codex-automation` labels, so no automation labels were applied.
+
+## 2026-06-03 — Wave 15 started
+
+- Cut clean branch/worktree `wave-15` from `origin/main` at `f730f6f` because the primary checkout is dirty/diverged and must remain untouched.
+- Baseline gates before implementation: `npm run check` passed after `npm install` restored the fresh worktree's local Biome binary; `node --test` passed 525/525.
+- Ran the required initial `kencode-search` pass before code. Electron Builder reference discovery surfaced mature electron-builder apps; persona/prompt searches did not return useful external matches, so task `073` must rely on existing local PersonaEngine, prompt, IPC, and profile-store contracts.
+- Moved tasks `073` and `111` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- File ownership is disjoint: task `073` owns identity/prompt/profile tests and its task file; task `111` owns final packaging outputs, `INSTALL.md`, `tasks/DELIVERABLE.md`, and its task file.
+
+## 2026-06-03 — Wave 15 summary
+
+- Completed task `073`: expanded PersonaEngine coverage to seven cases with stale active-id fallback and stored-persona normalization/deduplication/repair/clone-isolation tests, while verifying existing prompt composition, identity IPC, and agent profile tests.
+- Completed task `111`: regenerated the unsigned macOS DMG/ZIP with `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`, wrote `INSTALL.md`, and recorded artifact paths plus SHA-256 checksums in `tasks/DELIVERABLE.md`.
+- Parent structural verification passed: `hdiutil verify`, read-only DMG layout check (`Leena.app` plus Applications symlink), executable check, 21 packaged font assets in `app.asar`, four unpacked `@nut-tree-fork` native addon files, and matching ZIP extraction checks.
+- Independent parent gates passed: `npm run check`, full `node --test` (527/527), changed-file syntax check, `git diff --check`, WAL JSON parse, task-count audit, active-claims release, and task-artifact privacy scan.
+- Owner GUI launch remains a manual checklist in `tasks/DELIVERABLE.md`; no GUI launch result was fabricated.
+
+## 2026-06-03 — Wave 15 reviewer/advisor gate
+
+- Reviewer gate passed with no blockers. Warning only: stage the new deliverable docs and completed task files before commit.
+- Advisor gate passed with no release-readiness blockers. GUI launch remaining owner-manual is acceptable because the wave records it as a checklist and does not claim it as autonomous proof.
+- Carry forward for Wave 16: `dist/` remains gitignored, so the local full-feature DMG/ZIP are recorded by path and checksum but not committed; task `046` must record the separate MVP artifact clearly in `tasks/DELIVERABLE.md` without conflating it with task `111`.

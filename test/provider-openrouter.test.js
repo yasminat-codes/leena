@@ -198,6 +198,101 @@ test("streaming chat yields normalized SSE delta chunks and ignores comments", a
   assert.equal(chunks[1].finishReason, "stop");
 });
 
+test("streaming chat accumulates tool call deltas before yielding a tool call", async () => {
+  const provider = createProvider(async (_url, options) => {
+    assert.equal(JSON.parse(options.body).tool_choice, "auto");
+    return streamResponse(
+      [
+        'data: {"model":"openrouter/auto","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"list_tasks","arguments":"{\\"status\\""}}]}}]}',
+        "",
+        'data: {"model":"openrouter/auto","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":":\\"todo\\"}"}}]},"finish_reason":"tool_calls"}]}',
+        "",
+        "data: [DONE]",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  const stream = await provider.chat({
+    messages: [{ role: "user", content: "Use a tool" }],
+    stream: true,
+    tools: [{ type: "function", function: { name: "list_tasks" } }],
+    toolChoice: "auto",
+  });
+
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+
+  assert.deepEqual(chunks, [
+    {
+      content: "",
+      delta: "",
+      model: "openrouter/auto",
+      finishReason: "tool_calls",
+      usage: undefined,
+      toolCalls: [
+        {
+          id: "call-1",
+          type: "function",
+          function: {
+            name: "list_tasks",
+            arguments: '{"status":"todo"}',
+          },
+        },
+      ],
+    },
+  ]);
+});
+
+test("streaming chat flushes accumulated tool calls when DONE arrives without finish_reason", async () => {
+  const provider = createProvider(async () =>
+    streamResponse(
+      [
+        'data: {"model":"openrouter/auto","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"list_tasks","arguments":"{\\"status\\""}}]}}]}',
+        "",
+        'data: {"model":"openrouter/auto","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":":\\"todo\\"}"}}]}}]}',
+        "",
+        "data: [DONE]",
+        "",
+      ].join("\n"),
+    ),
+  );
+
+  const stream = await provider.chat({
+    messages: [{ role: "user", content: "Use a tool" }],
+    stream: true,
+    tools: [{ type: "function", function: { name: "list_tasks" } }],
+    toolChoice: "auto",
+  });
+
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+
+  assert.deepEqual(chunks, [
+    {
+      content: "",
+      delta: "",
+      model: "openrouter/auto",
+      finishReason: "tool_calls",
+      usage: undefined,
+      toolCalls: [
+        {
+          id: "call-1",
+          type: "function",
+          function: {
+            name: "list_tasks",
+            arguments: '{"status":"todo"}',
+          },
+        },
+      ],
+    },
+  ]);
+});
+
 test("getModels caches chat and embedding-capable models for one hour", async () => {
   let calls = 0;
   let currentTime = 1_000;

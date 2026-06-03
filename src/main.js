@@ -23,6 +23,7 @@ import {
 } from "electron";
 import electronUpdater from "electron-updater";
 import { PersonaEngine } from "./identity/persona-engine.js";
+import { registerChatHandlers } from "./ipc/chat-handlers.js";
 import { registerHotkeyHandlers } from "./ipc/hotkey.js";
 import {
   createAgentProfileIdentityAdapters,
@@ -38,6 +39,8 @@ import { createSafeStorageSecretCodec, registerProviderHandlers } from "./ipc/pr
 import { initMCPAutoConnect, registerMCPAutoConnectCleanup } from "./mcp/auto-connect.js";
 import { MCPClientManager } from "./mcp/client-manager.js";
 import { getServer as getStoredMCPServer, ServerStore } from "./mcp/server-store.js";
+import { SQLiteMemoryStore } from "./memory/index.js";
+import { createMemoryMiddleware } from "./memory/memory-middleware.js";
 import {
   computerUseBrowserDocsUrl,
   createOsPermissionSnapshot,
@@ -149,6 +152,8 @@ const agentProfileIdentityHandlers = createAgentProfileIdentityAdapters({
   loadAgentProfile,
   saveAgentProfile,
 });
+let memoryStore = null;
+let memoryMiddleware = null;
 
 process.on("uncaughtException", (error) => {
   reportGlobalError("process.uncaughtException", error);
@@ -464,6 +469,7 @@ async function createRealtimeProviderSession(options = {}) {
   }
 
   const profile = loadAgentProfile();
+  const memories = await getMemoryMiddleware().onSessionStart(profile);
   const provider = createRealtimeProvider(credentials);
   if (!provider) {
     return createNoRealtimeProviderResponse();
@@ -473,7 +479,7 @@ async function createRealtimeProviderSession(options = {}) {
     ...options,
     model: getProviderDefaultModel(provider, REALTIME, options.model),
     voice: profile.voice,
-    instructions: buildRealtimeInstructions({ profile }),
+    instructions: buildRealtimeInstructions({ profile, memories }),
     tools: await getRealtimeToolDefinitions(mcpClientManager),
   });
 }
@@ -571,12 +577,6 @@ ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
       message: "Tool name must be a non-empty string.",
     };
   }
-  const startedAt = Date.now();
-  await writeDiagnosticLog("tool.execute.start", {
-    tool: name,
-    args: sanitizeDiagnosticValue(args),
-    permissions: summarizePermissionSnapshot(await getOsPermissionStatus()),
-  });
   const isComputerUse = name === "computer_use_task";
   const abortController = isComputerUse ? new AbortController() : null;
   if (abortController) {
@@ -584,43 +584,33 @@ ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
     activeComputerUseController = abortController;
   }
   try {
-    const credentials = isComputerUse ? await getFreshOpenAICredentials() : null;
-    const screenshotOptions = {
-      desktopCapturer,
-      screen,
-      userDataPath: app.getPath("userData"),
-      logger: createToolLogger(name),
-      ...(credentials ? { openAI: { accessToken: credentials.accessToken } } : {}),
-    };
-    const result = await executeRealtimeTool(name, args, {
-      screenshot: screenshotOptions,
-      computerUse: {
-        ...(credentials
-          ? {
-              openAI: {
-                accessToken: credentials.accessToken,
-                accountId: credentials.accountId,
-              },
-            }
-          : {}),
-        originator: "ggcoder",
-        logger: createToolLogger(name),
-        desktopCapturer,
-        screen,
-        ensureOsControlAllowed,
-        signal: abortController?.signal,
-      },
-      session: {
-        cancelComputerUse,
-      },
-      fileSystem: {
-        rootPath: app.getPath("home"),
-      },
-      mcp: {
-        clientManager: mcpClientManager,
-        getServerConfig: getMCPServerConfigForPermission,
-      },
-    });
+    return await executeRealtimeToolWithAudit(name, args, { abortController });
+  } finally {
+    if (abortController && activeComputerUseController === abortController) {
+      activeComputerUseController = null;
+    }
+  }
+});
+
+ipcMain.handle("tools:cancel-computer-use", () => cancelComputerUse());
+
+function cancelComputerUse() {
+  if (activeComputerUseController) {
+    activeComputerUseController.abort();
+    return { cancelled: true };
+  }
+  return { cancelled: false };
+}
+
+async function executeRealtimeToolWithAudit(name, args = {}, options = {}) {
+  const startedAt = Date.now();
+  await writeDiagnosticLog("tool.execute.start", {
+    tool: name,
+    args: sanitizeDiagnosticValue(args),
+    permissions: summarizePermissionSnapshot(await getOsPermissionStatus()),
+  });
+  try {
+    const result = await executeRealtimeToolWithRuntimeOptions(name, args, options);
     await writeDiagnosticLog("tool.execute.finish", {
       tool: name,
       elapsedMs: Date.now() - startedAt,
@@ -642,21 +632,62 @@ ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
       status: "error",
       message: error instanceof Error ? error.message : "Tool execution failed.",
     };
+  }
+}
+
+async function executeRealtimeToolWithRuntimeOptions(name, args = {}, { abortController } = {}) {
+  const ownedAbortController =
+    name === "computer_use_task" && !abortController ? new AbortController() : null;
+  const toolAbortController = abortController ?? ownedAbortController;
+  if (ownedAbortController) {
+    activeComputerUseController?.abort();
+    activeComputerUseController = ownedAbortController;
+  }
+
+  try {
+    const credentials = name === "computer_use_task" ? await getFreshOpenAICredentials() : null;
+    const screenshotOptions = {
+      desktopCapturer,
+      screen,
+      userDataPath: app.getPath("userData"),
+      logger: createToolLogger(name),
+      ...(credentials ? { openAI: { accessToken: credentials.accessToken } } : {}),
+    };
+
+    return await executeRealtimeTool(name, args, {
+      screenshot: screenshotOptions,
+      computerUse: {
+        ...(credentials
+          ? {
+              openAI: {
+                accessToken: credentials.accessToken,
+                accountId: credentials.accountId,
+              },
+            }
+          : {}),
+        originator: "ggcoder",
+        logger: createToolLogger(name),
+        desktopCapturer,
+        screen,
+        ensureOsControlAllowed,
+        signal: toolAbortController?.signal,
+      },
+      session: {
+        cancelComputerUse,
+      },
+      fileSystem: {
+        rootPath: app.getPath("home"),
+      },
+      mcp: {
+        clientManager: mcpClientManager,
+        getServerConfig: getMCPServerConfigForPermission,
+      },
+    });
   } finally {
-    if (abortController && activeComputerUseController === abortController) {
+    if (ownedAbortController && activeComputerUseController === ownedAbortController) {
       activeComputerUseController = null;
     }
   }
-});
-
-ipcMain.handle("tools:cancel-computer-use", () => cancelComputerUse());
-
-function cancelComputerUse() {
-  if (activeComputerUseController) {
-    activeComputerUseController.abort();
-    return { cancelled: true };
-  }
-  return { cancelled: false };
 }
 
 app.whenReady().then(() => {
@@ -739,9 +770,15 @@ function shouldLaunchOnboarding() {
 function initializeFeatureHandlers() {
   registerLaunchOnLoginHandlers({ ipcMain, app, settingsStore: settingsStoreBridge });
   registerIdentityHandlers({ ipcMain, personaEngine });
-  registerMemoryHandlers({ ipcMain, providerRegistry: getRegistry() });
+  registerMemoryHandlers({ ipcMain, store: getMemoryStore() });
   registerProviderHandlers(ipcMain, {
     secretCodec: createSafeStorageSecretCodec(safeStorage),
+  });
+  registerChatHandlers({
+    ipcMain,
+    registry: getRegistry(),
+    executeTool: (name, args) => executeRealtimeToolWithAudit(name, args),
+    getToolDefinitions: () => getRealtimeToolDefinitions(mcpClientManager),
   });
   registerMCPHandlers({
     ipcMain,
@@ -762,6 +799,22 @@ function initializeFeatureHandlers() {
   if (!result.success) {
     safeConsole("warn", "Failed to register configured hotkey", result.error);
   }
+}
+
+function getMemoryStore() {
+  if (!memoryStore) {
+    memoryStore = new SQLiteMemoryStore({
+      providerRegistry: getRegistry(),
+    });
+  }
+  return memoryStore;
+}
+
+function getMemoryMiddleware() {
+  if (!memoryMiddleware) {
+    memoryMiddleware = createMemoryMiddleware(getMemoryStore());
+  }
+  return memoryMiddleware;
 }
 
 function initializeMCPAutoConnect() {

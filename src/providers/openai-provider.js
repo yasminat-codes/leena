@@ -427,6 +427,7 @@ async function createHttpError(response, label) {
 async function* parseChatStream(body, { model, provider }) {
   const decoder = new TextDecoder();
   let buffer = "";
+  const toolCallAccumulator = createStreamingToolCallAccumulator();
 
   for await (const chunk of body) {
     buffer += decoder.decode(chunk, { stream: true });
@@ -435,7 +436,7 @@ async function* parseChatStream(body, { model, provider }) {
     for (const line of lines) {
       const content = parseChatStreamLine(line, { model, provider });
       if (content !== undefined) {
-        yield content;
+        yield* normalizeParsedChatStreamChunk(content, toolCallAccumulator, model);
       }
     }
   }
@@ -444,8 +445,20 @@ async function* parseChatStream(body, { model, provider }) {
   if (buffer) {
     const content = parseChatStreamLine(buffer, { model, provider });
     if (content !== undefined) {
-      yield content;
+      yield* normalizeParsedChatStreamChunk(content, toolCallAccumulator, model);
     }
+  }
+
+  const remainingToolCalls = flushStreamingToolCalls(toolCallAccumulator);
+  if (remainingToolCalls.length > 0) {
+    yield {
+      content: "",
+      delta: "",
+      model,
+      finishReason: "tool_calls",
+      usage: undefined,
+      toolCalls: remainingToolCalls,
+    };
   }
 }
 
@@ -476,17 +489,104 @@ function parseChatStreamLine(line, { model, provider }) {
       model,
     });
   }
-  const content = parsed.choices?.[0]?.delta?.content;
-  if (typeof content !== "string" || content.length === 0) {
+  const choice = parsed.choices?.[0] ?? {};
+  const content = choice.delta?.content;
+  const delta = typeof content === "string" ? content : "";
+  const finishReason = choice.finish_reason;
+  const usage = normalizeUsage(parsed.usage);
+  const toolCallDeltas = Array.isArray(choice.delta?.tool_calls) ? choice.delta.tool_calls : [];
+
+  if (!delta && toolCallDeltas.length === 0 && !finishReason && !usage) {
     return undefined;
   }
   return {
-    content,
-    delta: content,
+    content: delta,
+    delta,
     model: typeof parsed.model === "string" ? parsed.model : model,
-    finishReason: parsed.choices?.[0]?.finish_reason,
-    usage: normalizeUsage(parsed.usage),
+    finishReason,
+    usage,
+    toolCallDeltas,
   };
+}
+
+function* normalizeParsedChatStreamChunk(chunk, toolCallAccumulator, fallbackModel) {
+  appendStreamingToolCallDeltas(toolCallAccumulator, chunk.toolCallDeltas);
+  const toolCalls =
+    chunk.finishReason === "tool_calls" ? flushStreamingToolCalls(toolCallAccumulator) : [];
+  const publicChunk = {
+    content: chunk.content,
+    delta: chunk.delta,
+    model: chunk.model,
+    finishReason: chunk.finishReason,
+    usage: chunk.usage,
+  };
+
+  if (toolCalls.length > 0) {
+    publicChunk.toolCalls = toolCalls;
+  }
+
+  if (publicChunk.delta || publicChunk.finishReason || publicChunk.usage || toolCalls.length > 0) {
+    yield {
+      ...publicChunk,
+      model: publicChunk.model ?? fallbackModel,
+    };
+  }
+}
+
+function createStreamingToolCallAccumulator() {
+  return new Map();
+}
+
+function appendStreamingToolCallDeltas(accumulator, deltas = []) {
+  if (!Array.isArray(deltas)) {
+    return;
+  }
+
+  for (const delta of deltas) {
+    if (!isRecord(delta)) {
+      continue;
+    }
+    const key = Number.isInteger(delta.index)
+      ? String(delta.index)
+      : typeof delta.id === "string"
+        ? delta.id
+        : String(accumulator.size);
+    const existing = accumulator.get(key) ?? {
+      id: "",
+      name: "",
+      arguments: "",
+      type: "function",
+    };
+    if (typeof delta.id === "string") {
+      existing.id = delta.id;
+    }
+    if (typeof delta.type === "string") {
+      existing.type = delta.type;
+    }
+    if (typeof delta.function?.name === "string") {
+      existing.name += delta.function.name;
+    }
+    if (typeof delta.function?.arguments === "string") {
+      existing.arguments += delta.function.arguments;
+    }
+    accumulator.set(key, existing);
+  }
+}
+
+function flushStreamingToolCalls(accumulator) {
+  const calls = [...accumulator.entries()]
+    .sort(([left], [right]) => Number(left) - Number(right))
+    .map(([, call]) => ({
+      id: call.id || undefined,
+      type: call.type || "function",
+      function: {
+        name: call.name,
+        arguments: call.arguments,
+      },
+    }))
+    .filter((call) => call.function.name);
+  accumulator.clear();
+  return calls;
 }
 
 function wrapProviderError(error, { label, provider, model }) {

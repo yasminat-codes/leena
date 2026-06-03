@@ -122,6 +122,44 @@ test("chat streaming returns an async iterator of normalized delta chunks", asyn
   assert.equal(parseJsonBody(fetchImpl.calls[0]).stream, true);
 });
 
+test("chat streaming accumulates tool call deltas before yielding a tool call", async () => {
+  const fetchImpl = createMockFetch([
+    streamResponse([
+      'data: {"model":"gpt-4o-mini","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"list_tasks","arguments":"{\\"status\\""}}]}}]}\n\n',
+      'data: {"model":"gpt-4o-mini","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":":\\"todo\\"}"}}]},"finish_reason":"tool_calls"}]}\n\n',
+      "data: [DONE]\n\n",
+    ]),
+  ]);
+  const provider = createOpenAIProvider({ apiKey, fetchImpl, retryOptions: testRetryOptions() });
+
+  const iterator = await provider.chat({
+    messages: [{ role: "user", content: "Use a tool" }],
+    model: "gpt-4o-mini",
+    stream: true,
+    tools: [{ type: "function", function: { name: "list_tasks" } }],
+  });
+
+  assert.deepEqual(await collectAsync(iterator), [
+    {
+      content: "",
+      delta: "",
+      model: "gpt-4o-mini",
+      finishReason: "tool_calls",
+      usage: undefined,
+      toolCalls: [
+        {
+          id: "call-1",
+          type: "function",
+          function: {
+            name: "list_tasks",
+            arguments: '{"status":"todo"}',
+          },
+        },
+      ],
+    },
+  ]);
+});
+
 test("getModels returns tagged OpenAI model metadata for settings selectors", async () => {
   const provider = createOpenAIProvider({ apiKey, fetchImpl: createMockFetch([]) });
 

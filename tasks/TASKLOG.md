@@ -299,3 +299,37 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate cleared with no blockers. Reviewer warnings: staging must be reconciled before commit, and realtime appears in the settings capability selector while runtime model selection still falls back through provider defaults; the realtime warning is non-blocking while only one OpenAI realtime model exists.
 - Advisor gate cleared with warnings only: reconcile staging before commit, keep the realtime selector/runtime-defaults mismatch as non-blocking for now, and release post-wave bookkeeping claims before commit.
 - Opened PR #13 (`wave-12` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted the generated "review in progress" and "Review triggered" responses with advisory status pending and no actionable findings available at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
+
+## 2026-06-03 — Wave 13 started
+
+- Cut clean branch/worktree `wave-13` from `origin/main` at `2f979ffe` because the primary checkout is dirty/diverged and must remain untouched.
+- Baseline gates before implementation: `node --test` passed 438/438; `npm run check` initially failed because this new worktree had no installed Biome binary, then passed after `npm install`.
+- Moved tasks `064`, `100`, `101`, `104`, and `106` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Ran required kencode-search before code. Curated references identified Vercel AI SDK/chatbot and OpenAI Agents SDK as production chat/tool-use sources; literal Electron `chat:send`/`memory:recall` matches were absent, so workers must use existing Leena IPC/provider/settings patterns plus narrower file context.
+- Shared lifecycle files are reserved for serialized parent integration: `src/main.js`, `src/preload.js`, `src/renderer/renderer.js`, and `test/wave13-integration.test.js`.
+
+## 2026-06-03 — Wave 13 summary
+
+- Completed tasks `064`, `100`, `101`, `104`, and `106`.
+- Added memory-aware realtime prompts and middleware, then completed the serialized parent integration so recalled memories are injected into realtime session instructions and transcript exchanges are stored best-effort.
+- Replaced Home, Activity, and Settings mock paths with live data loading, current bridge fallbacks, loading/empty states, provider/identity/settings persistence, wake graceful degradation, and focused screen-data tests.
+- Added text chat to the live Command Center with chat IPC handlers, preload send/chunk APIs, provider/model switching, streamed chat bubbles, standard realtime tool dispatch, and memory handoff storage.
+- Worker recovery found and fixed a text-chat provider/model switching bug before terminal bookkeeping.
+- Parent self-review also made chat-triggered `computer_use_task` calls cancelable through the same abort-controller path as voice/tool IPC calls.
+- Reviewer/advisor self-review found and fixed a provider parser gap where OpenAI/OpenRouter streamed `tool_calls` deltas were dropped before text chat could execute tools; provider regressions now cover split JSON argument deltas.
+- Final reviewer found blockers and they were fixed: text chat now advertises/executes only low/read-risk tools and runs a post-tool model turn; Activity has live `memory:get-episodes` across generated conversation ids; Launch on Login uses the dedicated OS side-effect bridge; recalled memory has an untrusted-data prompt boundary.
+- Final reviewer follow-up found one production async-definition gap and one task-artifact wording mismatch. Fixed by awaiting async MCP-merged chat tool definitions before low/read-risk filtering, adding focused regression coverage, and correcting task `101` from FTS5 wording to the implemented bounded SQLite `LIKE` search path.
+- Advisor found initial Command Center text chat bypassed configured chat-provider defaults by sending the first provider from the renderer list. Fixed by leaving provider/model unset until explicit user selection so `chat:send` resolves the main-process default, with focused regression coverage.
+- Independent parent gates passed after reviewer/advisor fixes: `npm run check`, `node --test` (483/483), changed JS `node --check`, focused Wave 13 integration tests, `git diff --check`, WAL JSON parse, task-count audit, active-claims audit, and task-artifact privacy scan.
+- Opened PR #14 (`wave-13` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit status was pending at merge-decision time with no actionable findings available; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
+- Wave 13 is terminal with no blocked tasks. Wake tasks `091`-`096` remain blocked independently and do not affect the deliverable path.
+
+## 2026-06-03 — Wave 13 reviewer-fix-2
+
+- Reviewer gate found four blockers after the first final-gate pass: renderer-forged chat tools/privileged roles could steer text chat toward local reads, chat-triggered tools bypassed standard diagnostics/activity/data refresh, OpenRouter could drop accumulated tool-call deltas at `[DONE]`, and `memory:get-episodes` allowed unbounded pagination/search.
+- Fixed text-chat privacy by ignoring renderer-supplied tool schemas, accepting only renderer `user`/`assistant` history roles, capping chat history/message size, and advertising only explicit default chat tools. `read_file` is denied even if emitted by the model.
+- Routed text-chat tool execution through `executeRealtimeToolWithAudit()` so chat-triggered tools get the same diagnostics, activity recording, and `data:changed` broadcasts as direct `tools:execute`.
+- Fixed OpenRouter streaming so `[DONE]` no longer prevents accumulated tool calls from flushing, and bounded memory episode reads with limit/page/query caps plus literal `LIKE` escaping.
+- Reviewer re-check found no blockers and one warning: the legacy `memory:get-episodes` fallback still returned all conversation rows. Closed it by applying the same capped pagination/search behavior to the fallback path and adding focused IPC coverage.
+- Focused gates passed: changed-file `node --check`, focused Biome, and `node --test test/text-chat.test.js test/provider-openrouter.test.js test/memory-ipc.test.js test/memory-sqlite.test.js test/wave13-integration.test.js` (45/45).
+- Full parent gates passed after reviewer-fix-2 and WAL tail repair: `npm run check`, `node --test` (488/488), active-claims audit, WAL JSON parse, task-count audit, `git diff --check`, and task-artifact privacy scan.

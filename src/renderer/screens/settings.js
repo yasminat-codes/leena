@@ -85,6 +85,24 @@ export const DEFAULT_APPEARANCE = Object.freeze({
   density: "comfortable",
 });
 
+export const GENERAL_SETTING_CONTROLS = Object.freeze([
+  Object.freeze({
+    key: "launchOnLogin",
+    label: "Launch on Login",
+    description: "Open Leena when the computer starts",
+  }),
+  Object.freeze({
+    key: "proactiveNudges",
+    label: "Proactive Nudges",
+    description: "Allow timely reminders and follow-ups",
+  }),
+  Object.freeze({
+    key: "notificationsEnabled",
+    label: "Notifications",
+    description: "Show local app notifications",
+  }),
+]);
+
 export const PROVIDER_SELECTOR_CAPABILITIES = Object.freeze([
   Object.freeze({ id: "chat", label: "Chat", settingKey: "provider:default:chat" }),
   Object.freeze({ id: "realtime", label: "Realtime", settingKey: "provider:default:realtime" }),
@@ -110,6 +128,14 @@ const STATUS_TONES = Object.freeze({
   missing: "danger",
 });
 const MODEL_SETTING_PREFIX = "provider";
+const ACTIVE_PERSONA_SETTING_KEY = "active_persona_id";
+const WAKE_UNAVAILABLE_MESSAGE =
+  "Wake controls are unavailable until the wake runtime and IPC bridge are installed.";
+const DEFAULT_PERSONA_STATE = Object.freeze({
+  id: "default",
+  name: "Leena",
+  tone: "warm, direct, conversational",
+});
 
 function escapeHtml(value) {
   return String(value)
@@ -175,16 +201,27 @@ function updateControlState(root, key, value) {
   }
 }
 
-export function applyAppearancePreference(root, key, value) {
+export function applyAppearancePreference(root, key, value, options = {}) {
   assertAppearancePreference(key, value);
+  const { persistLocalStorage = true } = options;
 
   const wrapper = resolveAppearanceRoot(root);
   if (wrapper?.dataset) {
     wrapper.dataset[key] = value;
   }
 
-  getStorage()?.setItem(APPEARANCE_STORAGE_KEYS[key], value);
+  if (persistLocalStorage) {
+    getStorage()?.setItem(APPEARANCE_STORAGE_KEYS[key], value);
+  }
   updateControlState(root, key, value);
+  return value;
+}
+
+export async function persistAppearancePreference(root, key, value, bridge = getLeenaBridge()) {
+  applyAppearancePreference(root, key, value, { persistLocalStorage: !hasSettingsBridge(bridge) });
+  if (hasSettingsBridge(bridge)) {
+    await writeSetting(bridge, key, value);
+  }
   return value;
 }
 
@@ -204,24 +241,221 @@ export function loadAppearancePreferences(root) {
   return loaded;
 }
 
-export function bindSettingsControls(root) {
+export function createSettingsScreenController(root, bridge = getLeenaBridge()) {
+  const state = {
+    activePersona: { ...DEFAULT_PERSONA_STATE },
+    personas: [],
+    profile: {},
+    settings: {},
+    wakeAvailable: hasWakeBridge(bridge),
+    wakeStatus: {
+      enabled: false,
+      muted: false,
+      running: false,
+      listening: false,
+    },
+  };
+
+  const controller = {
+    state,
+    async load() {
+      const data = await loadSettingsScreenData(root, bridge);
+      Object.assign(state, data);
+      return state;
+    },
+    async saveAppearance(key, value) {
+      await persistAppearancePreference(root, key, value, bridge);
+      state.settings[key] = value;
+      return value;
+    },
+    async saveSetting(key, value) {
+      await saveSettingsValue(root, bridge, key, value);
+      state.settings[key] = value;
+      return value;
+    },
+    async saveProfileName(name) {
+      const nextName = normalizeString(name);
+      const currentProfile =
+        (await callOptionalBridge(bridge?.getAgentProfile, bridge)) ?? state.profile ?? {};
+      state.profile = await callRequiredBridge(bridge?.setAgentProfile, bridge, {
+        ...currentProfile,
+        name: nextName,
+      });
+      applyIdentityState(root, state.profile, state.activePersona);
+      return state.profile;
+    },
+    async switchPersona(personaId) {
+      const normalizedPersonaId = normalizeString(personaId);
+      if (!normalizedPersonaId) {
+        return null;
+      }
+      const switchedPersona =
+        (await callRequiredBridge(
+          bridge?.identity?.switchPersona,
+          bridge?.identity,
+          normalizedPersonaId,
+        )) ??
+        state.personas.find((persona) => persona.id === normalizedPersonaId) ??
+        null;
+      state.activePersona = normalizePersona(switchedPersona) ?? state.activePersona;
+      const currentProfile =
+        (await callOptionalBridge(bridge?.getAgentProfile, bridge)) ?? state.profile ?? {};
+      if (typeof bridge?.setAgentProfile === "function") {
+        state.profile = await bridge.setAgentProfile({
+          ...currentProfile,
+          persona: normalizedPersonaId,
+          personaId: normalizedPersonaId,
+        });
+      } else {
+        state.profile = {
+          ...currentProfile,
+          persona: normalizedPersonaId,
+          personaId: normalizedPersonaId,
+        };
+      }
+      applyIdentityState(root, state.profile, state.activePersona);
+      applyPersonaOptions(root, state.personas, normalizedPersonaId);
+      return state.activePersona;
+    },
+    async setWakeEnabled(enabled) {
+      if (!hasWakeBridge(bridge)) {
+        applyWakeState(root, state.wakeStatus, false);
+        return null;
+      }
+      const result = await setWakeEnabled(bridge, enabled);
+      state.wakeStatus = normalizeWakeStatus({
+        ...state.wakeStatus,
+        ...(isRecord(result) ? result : {}),
+        enabled: Boolean(result?.enabled ?? enabled),
+      });
+      applyWakeState(root, state.wakeStatus, true);
+      return state.wakeStatus;
+    },
+    async setWakeMuted(muted) {
+      if (!hasWakeBridge(bridge)) {
+        applyWakeState(root, state.wakeStatus, false);
+        return null;
+      }
+      const result = await setWakeMuted(bridge, muted);
+      state.wakeStatus = normalizeWakeStatus({
+        ...state.wakeStatus,
+        ...(isRecord(result) ? result : {}),
+        muted: Boolean(result?.muted ?? muted),
+      });
+      applyWakeState(root, state.wakeStatus, true);
+      return state.wakeStatus;
+    },
+  };
+
+  return controller;
+}
+
+export async function loadSettingsScreenData(root, bridge = getLeenaBridge()) {
+  const settings = await readAllSettings(bridge);
+  applySettingsAppearance(root, settings);
+  applyGeneralSettings(root, settings);
+
+  const profile = normalizeProfile(
+    (await callOptionalBridge(bridge?.getAgentProfile, bridge)) ?? {},
+  );
+  const personas = normalizePersonas(
+    (await callOptionalBridge(bridge?.identity?.listPersonas, bridge?.identity)) ?? [],
+  );
+  const activePersonaId =
+    normalizeString(profile.personaId ?? profile.persona ?? settings[ACTIVE_PERSONA_SETTING_KEY]) ||
+    personas[0]?.id ||
+    DEFAULT_PERSONA_STATE.id;
+  const activePersona = normalizePersona(
+    profile.activePersona ?? personas.find((persona) => persona.id === activePersonaId),
+  ) ?? { ...DEFAULT_PERSONA_STATE, id: activePersonaId };
+  applyIdentityState(root, profile, activePersona);
+  applyPersonaOptions(root, personas, activePersona.id);
+
+  const wakeAvailable = hasWakeBridge(bridge);
+  const wakeStatus = wakeAvailable
+    ? normalizeWakeStatus(await getWakeStatus(bridge))
+    : normalizeWakeStatus({
+        enabled: settings.wakeEnabled,
+        muted: settings.wakeMuted,
+        running: false,
+        listening: false,
+      });
+  applyWakeState(root, wakeStatus, wakeAvailable);
+
+  return {
+    activePersona,
+    personas,
+    profile,
+    settings,
+    wakeAvailable,
+    wakeStatus,
+  };
+}
+
+export async function saveSettingsValue(root, bridge, key, value) {
+  const settingKey = normalizeString(key);
+  if (!settingKey) {
+    throw new Error("Setting key is required.");
+  }
+  const savedValue = await writeSetting(bridge, settingKey, value);
+  applyGeneralSetting(root, settingKey, savedValue);
+  return savedValue;
+}
+
+export function bindSettingsControls(root, bridge = getLeenaBridge()) {
   if (!root?.querySelectorAll) {
     return null;
   }
 
-  loadAppearancePreferences(root);
+  const controller = createSettingsScreenController(root, bridge);
+
+  if (hasSettingsBridge(bridge)) {
+    void controller.load().catch((error) => {
+      setSettingsStatus(root, `Settings unavailable: ${getErrorMessage(error)}`);
+    });
+  } else {
+    loadAppearancePreferences(root);
+    applyWakeState(root, { enabled: false, muted: false, running: false, listening: false }, false);
+  }
 
   for (const control of root.querySelectorAll("[data-appearance-key][data-appearance-value]")) {
     control.addEventListener("click", () => {
-      applyAppearancePreference(
-        root,
+      void controller.saveAppearance(
         control.dataset.appearanceKey,
         control.dataset.appearanceValue,
       );
     });
   }
 
-  bindProviderModelSelector(root);
+  for (const control of root.querySelectorAll("[data-settings-toggle]")) {
+    control.addEventListener("click", () => {
+      const key = control.dataset.settingsToggle;
+      const nextValue = control.getAttribute?.("aria-checked") !== "true";
+      void controller.saveSetting(key, nextValue);
+    });
+  }
+
+  root.querySelector?.("[data-agent-name]")?.addEventListener?.("change", (event) => {
+    void controller.saveProfileName(event.target?.value ?? "");
+  });
+
+  root.querySelector?.("[data-persona-select]")?.addEventListener?.("change", (event) => {
+    void controller.switchPersona(event.target?.value ?? "");
+  });
+
+  root.querySelector?.("[data-wake-enabled]")?.addEventListener?.("click", () => {
+    const button = root.querySelector?.("[data-wake-enabled]");
+    const enabled = button?.getAttribute?.("aria-checked") !== "true";
+    void controller.setWakeEnabled(enabled);
+  });
+
+  root.querySelector?.("[data-wake-muted]")?.addEventListener?.("click", () => {
+    const button = root.querySelector?.("[data-wake-muted]");
+    const muted = button?.getAttribute?.("aria-checked") !== "true";
+    void controller.setWakeMuted(muted);
+  });
+
+  bindProviderModelSelector(root, bridge);
   return root;
 }
 
@@ -727,15 +961,37 @@ function renderProviderModelSelectorContent(state) {
   `;
 }
 
-function renderFeatureToggle(feature) {
+function renderSwitchControl({
+  checked = false,
+  description = "",
+  disabled = false,
+  label,
+  toggleAttribute,
+  title = "",
+}) {
+  const disabledAttribute = disabled ? "disabled" : "";
+  const titleAttribute = title ? `title="${escapeHtml(title)}"` : "";
   return `
     <article class="row">
       <span class="row__txt">
-        <strong class="lx-body">${escapeHtml(feature.label)}</strong>
-        <span class="lx-sm">${feature.enabled ? "On" : "Off"}</span>
+        <strong class="lx-body">${escapeHtml(label)}</strong>
+        <span class="lx-sm" data-settings-toggle-status="${escapeHtml(
+          toggleAttribute,
+        )}">${escapeHtml(description || (checked ? "On" : "Off"))}</span>
       </span>
-      <button class="btn btn--ghost" type="button" role="switch" aria-checked="${String(feature.enabled)}">
-        ${feature.enabled ? "On" : "Off"}
+      <button
+        class="btn btn--ghost"
+        type="button"
+        role="switch" aria-checked="${String(checked)}"
+        ${
+          toggleAttribute.startsWith("wake:")
+            ? `data-wake-${escapeHtml(toggleAttribute.slice(5))}`
+            : `data-settings-toggle="${escapeHtml(toggleAttribute)}"`
+        }
+        ${disabledAttribute}
+        ${titleAttribute}
+      >
+        ${checked ? "On" : "Off"}
       </button>
     </article>
   `;
@@ -747,10 +1003,36 @@ export function renderSettings() {
       <section class="panel-glass settings-identity" aria-labelledby="settings-identity-title">
         <div class="orb settings-avatar" aria-hidden="true"></div>
         <span class="row__txt">
-          <h1 id="settings-identity-title" class="lx-h2">${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}</h1>
-          <span class="lx-sm text-dim">${escapeHtml(SETTINGS_MOCK_DATA.identity.email)}</span>
+          <h1 data-settings-identity-name id="settings-identity-title" class="lx-h2">${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}</h1>
+          <span data-settings-identity-email class="lx-sm text-dim">${escapeHtml(SETTINGS_MOCK_DATA.identity.email)}</span>
         </span>
         <button class="btn btn--ghost" type="button">Edit</button>
+        <label class="settings-field">
+          <span class="lx-sm">Your name</span>
+          <input
+            class="settings-input"
+            type="text"
+            data-agent-name
+            value="${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}"
+            autocomplete="name"
+          />
+        </label>
+        <label class="settings-field">
+          <span class="lx-sm">Persona</span>
+          <select class="settings-select" data-persona-select>
+            <option value="">Loading personas</option>
+          </select>
+        </label>
+        <label class="settings-field">
+          <span class="lx-sm">Tone</span>
+          <input
+            class="settings-input"
+            type="text"
+            data-persona-tone
+            value=""
+            readonly
+          />
+        </label>
       </section>
 
       <section class="card settings-card" aria-labelledby="settings-appearance-title">
@@ -769,9 +1051,36 @@ export function renderSettings() {
       </section>
 
       <section class="card settings-card" aria-labelledby="settings-features-title">
-        <h2 id="settings-features-title" class="lx-h2">Features</h2>
+        <div class="settings-card__head">
+          <h2 id="settings-features-title" class="lx-h2">Features</h2>
+          <span class="lx-sm text-dim" data-settings-status></span>
+        </div>
         <div class="settings-list">
-          ${SETTINGS_MOCK_DATA.features.map(renderFeatureToggle).join("")}
+          ${renderSwitchControl({
+            checked: false,
+            description: WAKE_UNAVAILABLE_MESSAGE,
+            disabled: true,
+            label: "Wake Word",
+            title: WAKE_UNAVAILABLE_MESSAGE,
+            toggleAttribute: "wake:enabled",
+          })}
+          ${renderSwitchControl({
+            checked: false,
+            description: "Muted until wake runtime is available",
+            disabled: true,
+            label: "Always Listening",
+            title: WAKE_UNAVAILABLE_MESSAGE,
+            toggleAttribute: "wake:muted",
+          })}
+          ${GENERAL_SETTING_CONTROLS.map((control) =>
+            renderSwitchControl({
+              checked: control.key === "notificationsEnabled",
+              description: control.description,
+              label: control.label,
+              toggleAttribute: control.key,
+            }),
+          ).join("")}
+          <p class="lx-sm text-dim" data-wake-status>${escapeHtml(WAKE_UNAVAILABLE_MESSAGE)}</p>
         </div>
       </section>
     </section>
@@ -1018,6 +1327,262 @@ function resolveProviderSelectorMount(root) {
 
 function getLeenaBridge() {
   return globalThis.window?.leena ?? globalThis.leena ?? null;
+}
+
+function hasSettingsBridge(bridge) {
+  return typeof bridge?.getAllSettings === "function" || typeof bridge?.invoke === "function";
+}
+
+function hasWakeBridge(bridge) {
+  return Boolean(
+    bridge?.wake &&
+      (typeof bridge.wake.getStatus === "function" || typeof bridge.invoke === "function") &&
+      (typeof bridge.wake.setEnabled === "function" || typeof bridge.invoke === "function") &&
+      (typeof bridge.wake.mute === "function" || typeof bridge.invoke === "function"),
+  );
+}
+
+async function readAllSettings(bridge) {
+  if (typeof bridge?.getAllSettings === "function") {
+    return normalizeSettingsRecord(await bridge.getAllSettings());
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeSettingsRecord(await bridge.invoke("settings:get-all"));
+  }
+  return {};
+}
+
+async function writeSetting(bridge, key, value) {
+  if (key === "launchOnLogin" && typeof bridge?.setLaunchOnLogin === "function") {
+    return bridge.setLaunchOnLogin(Boolean(value));
+  }
+  if (key === "launchOnLogin" && typeof bridge?.invoke === "function") {
+    return bridge.invoke("settings:set-launch-on-login", { enabled: Boolean(value) });
+  }
+  if (typeof bridge?.setSetting === "function") {
+    return bridge.setSetting(key, value);
+  }
+  if (typeof bridge?.invoke === "function") {
+    return bridge.invoke("settings:set", key, value);
+  }
+  return value;
+}
+
+async function getWakeStatus(bridge) {
+  if (typeof bridge?.wake?.getStatus === "function") {
+    return bridge.wake.getStatus();
+  }
+  if (typeof bridge?.invoke === "function") {
+    return bridge.invoke("wake:get-status");
+  }
+  return null;
+}
+
+async function setWakeEnabled(bridge, enabled) {
+  if (typeof bridge?.wake?.setEnabled === "function") {
+    return bridge.wake.setEnabled(Boolean(enabled));
+  }
+  if (typeof bridge?.invoke === "function") {
+    return bridge.invoke("wake:set-enabled", { enabled: Boolean(enabled) });
+  }
+  return { enabled: Boolean(enabled) };
+}
+
+async function setWakeMuted(bridge, muted) {
+  if (typeof bridge?.wake?.mute === "function") {
+    return bridge.wake.mute(Boolean(muted));
+  }
+  if (typeof bridge?.invoke === "function") {
+    return bridge.invoke("wake:mute", { muted: Boolean(muted) });
+  }
+  return { muted: Boolean(muted) };
+}
+
+async function callOptionalBridge(fn, receiver, ...args) {
+  if (typeof fn !== "function") {
+    return undefined;
+  }
+  return fn.apply(receiver, args);
+}
+
+async function callRequiredBridge(fn, receiver, ...args) {
+  if (typeof fn !== "function") {
+    throw new Error("Required settings bridge method is unavailable.");
+  }
+  return fn.apply(receiver, args);
+}
+
+function applySettingsAppearance(root, settings) {
+  for (const key of Object.keys(APPEARANCE_STORAGE_KEYS)) {
+    const value = getAppearanceValues(key).includes(settings[key])
+      ? settings[key]
+      : DEFAULT_APPEARANCE[key];
+    applyAppearancePreference(root, key, value, { persistLocalStorage: false });
+  }
+}
+
+function applyGeneralSettings(root, settings) {
+  for (const control of GENERAL_SETTING_CONTROLS) {
+    applyGeneralSetting(root, control.key, Boolean(settings[control.key]));
+  }
+}
+
+function applyGeneralSetting(root, key, value) {
+  const checked = Boolean(value);
+  for (const button of queryAll(root, `[data-settings-toggle="${key}"]`)) {
+    button.setAttribute?.("aria-checked", String(checked));
+    setNodeText(button, checked ? "On" : "Off");
+  }
+  for (const status of queryAll(root, `[data-settings-toggle-status="${key}"]`)) {
+    setNodeText(status, checked ? "On" : "Off");
+  }
+}
+
+function applyIdentityState(root, profile, activePersona) {
+  const normalizedProfile = normalizeProfile(profile);
+  const persona = normalizePersona(activePersona) ?? DEFAULT_PERSONA_STATE;
+  const displayName = normalizedProfile.name || SETTINGS_MOCK_DATA.identity.name;
+
+  setNodeText(queryOne(root, "[data-settings-identity-name]"), displayName);
+  setNodeText(queryOne(root, "[data-settings-identity-email]"), `Persona: ${persona.name}`);
+  setNodeValue(queryOne(root, "[data-agent-name]"), displayName);
+  setNodeValue(queryOne(root, "[data-persona-tone]"), persona.tone);
+}
+
+function applyPersonaOptions(root, personas, activePersonaId) {
+  const select = queryOne(root, "[data-persona-select]");
+  if (!select) {
+    return;
+  }
+  const normalizedPersonas = normalizePersonas(personas);
+  const options = normalizedPersonas.length > 0 ? normalizedPersonas : [DEFAULT_PERSONA_STATE];
+  select.innerHTML = options
+    .map(
+      (persona) =>
+        `<option value="${escapeHtml(persona.id)}" ${
+          persona.id === activePersonaId ? "selected" : ""
+        }>${escapeHtml(persona.name)}</option>`,
+    )
+    .join("");
+  setNodeValue(select, activePersonaId);
+}
+
+function applyWakeState(root, wakeStatus, wakeAvailable) {
+  const normalizedStatus = normalizeWakeStatus(wakeStatus);
+  updateWakeButton(root, "enabled", normalizedStatus.enabled, wakeAvailable);
+  updateWakeButton(root, "muted", normalizedStatus.muted, wakeAvailable);
+  setNodeText(
+    queryOne(root, "[data-wake-status]"),
+    wakeAvailable ? formatWakeStatus(normalizedStatus) : WAKE_UNAVAILABLE_MESSAGE,
+  );
+  for (const status of queryAll(root, '[data-settings-toggle-status="wake:enabled"]')) {
+    setNodeText(
+      status,
+      wakeAvailable
+        ? normalizedStatus.enabled
+          ? "Enabled"
+          : "Disabled"
+        : WAKE_UNAVAILABLE_MESSAGE,
+    );
+  }
+  for (const status of queryAll(root, '[data-settings-toggle-status="wake:muted"]')) {
+    setNodeText(
+      status,
+      wakeAvailable
+        ? normalizedStatus.muted
+          ? "Muted"
+          : "Not muted"
+        : "Muted until wake runtime is available",
+    );
+  }
+}
+
+function updateWakeButton(root, kind, checked, wakeAvailable) {
+  for (const button of queryAll(root, `[data-wake-${kind}]`)) {
+    button.setAttribute?.("aria-checked", String(Boolean(checked)));
+    setNodeText(button, checked ? "On" : "Off");
+    if (wakeAvailable) {
+      button.disabled = false;
+      button.removeAttribute?.("disabled");
+      button.removeAttribute?.("title");
+    } else {
+      button.disabled = true;
+      button.setAttribute?.("disabled", "");
+      button.setAttribute?.("title", WAKE_UNAVAILABLE_MESSAGE);
+    }
+  }
+}
+
+function formatWakeStatus(status) {
+  if (status.listening) {
+    return "Listening for wake phrase";
+  }
+  if (status.running) {
+    return status.muted ? "Wake runtime running, muted" : "Wake runtime ready";
+  }
+  return status.enabled ? "Wake enabled, waiting for runtime" : "Wake disabled";
+}
+
+function setSettingsStatus(root, message) {
+  setNodeText(queryOne(root, "[data-settings-status]"), message);
+}
+
+function queryOne(root, selector) {
+  return root?.querySelector?.(selector) ?? null;
+}
+
+function queryAll(root, selector) {
+  return Array.from(root?.querySelectorAll?.(selector) ?? []);
+}
+
+function setNodeText(node, value) {
+  if (node && "textContent" in node) {
+    node.textContent = String(value ?? "");
+  }
+}
+
+function setNodeValue(node, value) {
+  if (node && "value" in node) {
+    node.value = String(value ?? "");
+  }
+}
+
+function normalizeSettingsRecord(settings) {
+  return isRecord(settings) ? { ...settings } : {};
+}
+
+function normalizeProfile(profile) {
+  return isRecord(profile) ? { ...profile } : {};
+}
+
+function normalizePersonas(personas) {
+  return Array.isArray(personas)
+    ? personas.map((persona) => normalizePersona(persona)).filter(Boolean)
+    : [];
+}
+
+function normalizePersona(persona) {
+  if (!isRecord(persona)) {
+    return null;
+  }
+  const id = normalizeString(persona.id);
+  if (!id) {
+    return null;
+  }
+  return {
+    id,
+    name: normalizeString(persona.name) || id,
+    tone: normalizeString(persona.tone) || "",
+  };
+}
+
+function normalizeWakeStatus(status) {
+  return {
+    enabled: Boolean(status?.enabled),
+    muted: Boolean(status?.muted),
+    running: Boolean(status?.running),
+    listening: Boolean(status?.listening),
+  };
 }
 
 function normalizeProviders(providers) {

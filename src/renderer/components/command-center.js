@@ -1,3 +1,6 @@
+import { createChatBubble } from "./chat-bubble.js";
+import { createChatInput } from "./chat-input.js";
+
 export const COMMAND_CENTER_CSS_HREF = new URL("./command-center.css", import.meta.url).href;
 
 export const COMMAND_CENTER_VARIANTS = Object.freeze([
@@ -89,6 +92,12 @@ function createElement(tagName, className, textContent) {
   }
 
   return element;
+}
+
+function createOption(value, label) {
+  const option = createElement("option", null, label || value);
+  option.value = value;
+  return option;
 }
 
 function ensureCommandCenterCss() {
@@ -219,7 +228,126 @@ function formatToolPreview(tool) {
   return name;
 }
 
+function normalizeChatOptions(chat) {
+  if (chat === true) {
+    return { bridge: defaultChatBridge(), providers: [] };
+  }
+
+  if (!chat || typeof chat !== "object") {
+    return null;
+  }
+
+  return {
+    bridge: chat.bridge ?? defaultChatBridge(),
+    eventSource: chat.eventSource ?? chat.bridge ?? defaultChatBridge(),
+    providers: Array.isArray(chat.providers) ? chat.providers : [],
+    models: Array.isArray(chat.models) ? chat.models : [],
+    provider: typeof chat.provider === "string" ? chat.provider : "",
+    model: typeof chat.model === "string" ? chat.model : "",
+    conversationId:
+      typeof chat.conversationId === "string" && chat.conversationId
+        ? chat.conversationId
+        : createChatId("conversation"),
+  };
+}
+
+function defaultChatBridge() {
+  return globalThis.window?.leena ?? null;
+}
+
+function createChatId(kind) {
+  return `cc-chat-${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeProviderId(provider) {
+  return typeof provider === "string"
+    ? provider
+    : (provider?.id ?? provider?.name ?? provider?.provider ?? "");
+}
+
+function normalizeProviderLabel(provider) {
+  if (typeof provider === "string") {
+    return provider;
+  }
+  return provider?.displayName ?? provider?.name ?? provider?.id ?? "Provider";
+}
+
+function providerSupportsChat(provider) {
+  return (
+    typeof provider === "string" ||
+    provider?.capabilities?.chat === true ||
+    provider?.capabilities === undefined
+  );
+}
+
+function normalizeModelId(model) {
+  return typeof model === "string" ? model : (model?.id ?? model?.model ?? model?.name ?? "");
+}
+
+function normalizeModelLabel(model) {
+  if (typeof model === "string") {
+    return model;
+  }
+  return model?.displayName ?? model?.name ?? model?.model ?? model?.id ?? "Model";
+}
+
+function subscribeToChatChunks(source, callback) {
+  const handler = (payload) => callback(normalizeChatChunkPayload(payload));
+
+  if (!source) {
+    return () => {};
+  }
+
+  if (typeof source.onChatChunk === "function") {
+    const token = source.onChatChunk(handler);
+    return typeof source.offChatChunk === "function" ? () => source.offChatChunk(token) : () => {};
+  }
+
+  if (typeof source.addEventListener === "function") {
+    const listener = (event) => handler(event.detail ?? event);
+    source.addEventListener("chat:chunk", listener);
+    return () => source.removeEventListener?.("chat:chunk", listener);
+  }
+
+  if (typeof source.on === "function") {
+    const token = source.on("chat:chunk", handler);
+    return typeof source.off === "function" ? () => source.off("chat:chunk", token) : () => {};
+  }
+
+  return () => {};
+}
+
+function normalizeChatChunkPayload(payload) {
+  if (payload && typeof payload === "object" && "detail" in payload) {
+    return payload.detail;
+  }
+  return payload;
+}
+
+async function invokeChatBridge(bridge, payload) {
+  if (typeof bridge?.invoke === "function") {
+    return bridge.invoke("chat:send", payload);
+  }
+  if (typeof bridge?.chat?.send === "function") {
+    return bridge.chat.send(payload);
+  }
+  if (typeof bridge?.sendChat === "function") {
+    return bridge.sendChat(payload);
+  }
+  throw new Error("Text chat bridge is not available.");
+}
+
+function extractChatErrorMessage(error) {
+  const serialized = error?.error ?? error;
+  return (
+    serialized?.message ?? (error instanceof Error ? error.message : "") ?? "Text chat failed."
+  );
+}
+
 export class CommandCenter {
+  #chat = null;
+  #chatOptions = null;
+  #chatUnsubscribe = null;
   #container = null;
   #element = null;
   #sessionSnapshot = null;
@@ -234,10 +362,12 @@ export class CommandCenter {
     state = "idle",
     timer = "0:00",
     sessionStateManager = null,
+    chat = null,
   } = {}) {
     assertValue("variant", variant, COMMAND_CENTER_VARIANTS);
     assertValue("state", state, COMMAND_CENTER_STATES);
 
+    this.#chatOptions = normalizeChatOptions(chat);
     this.#variant = variant;
     this.#state = state;
     this.#timer = timer;
@@ -247,6 +377,10 @@ export class CommandCenter {
 
     if (sessionStateManager) {
       this.bindSessionStateManager(sessionStateManager);
+    }
+
+    if (this.#chatOptions) {
+      this.enableTextChat(this.#chatOptions);
     }
   }
 
@@ -275,6 +409,7 @@ export class CommandCenter {
 
   destroy() {
     this.unbindSessionStateManager();
+    this.disableTextChat();
 
     if (typeof this.#element.remove === "function") {
       this.#element.remove();
@@ -285,6 +420,90 @@ export class CommandCenter {
     }
 
     this.#container = null;
+    return this;
+  }
+
+  enableTextChat(options = {}) {
+    const normalized = normalizeChatOptions(options) ?? {
+      bridge: defaultChatBridge(),
+      eventSource: defaultChatBridge(),
+      providers: [],
+      models: [],
+      provider: "",
+      model: "",
+      conversationId: createChatId("conversation"),
+    };
+
+    if (this.#chat) {
+      return this;
+    }
+
+    const panel = createElement("section", "cc-chat");
+    panel.setAttribute("aria-label", "Text chat");
+
+    const header = createElement("div", "cc-chat__header");
+    const providerSelect = createElement("select", "cc-chat__select");
+    providerSelect.setAttribute("aria-label", "Chat provider");
+    const modelSelect = createElement("select", "cc-chat__select");
+    modelSelect.setAttribute("aria-label", "Chat model");
+    header.append(providerSelect, modelSelect);
+
+    const messages = createElement("div", "cc-chat__messages");
+    messages.setAttribute("role", "log");
+    messages.setAttribute("aria-live", "polite");
+
+    const input = createChatInput({
+      onSubmit: ({ message }) => void this.#sendTextChatMessage(message),
+    });
+
+    panel.append(header, messages, input.element);
+    this.#nodes.expanded.append(panel);
+
+    this.#chat = {
+      bridge: normalized.bridge,
+      conversationId: normalized.conversationId,
+      input,
+      messageById: new Map(),
+      messages,
+      model: normalized.model,
+      modelSelect,
+      panel,
+      pendingBubble: null,
+      pendingMessageId: "",
+      provider: normalized.provider,
+      providerSelect,
+    };
+
+    providerSelect.addEventListener("change", () => {
+      this.#chat.provider = providerSelect.value;
+      this.#chat.model = "";
+      void this.#loadChatModels();
+    });
+    modelSelect.addEventListener("change", () => {
+      this.#chat.model = modelSelect.value;
+    });
+
+    this.#chatUnsubscribe = subscribeToChatChunks(
+      normalized.eventSource ?? normalized.bridge,
+      (payload) => this.#handleChatChunk(payload),
+    );
+    this.#element.dataset.chat = "true";
+    void this.#loadChatProviders(normalized.providers, normalized.models);
+    return this;
+  }
+
+  disableTextChat() {
+    if (typeof this.#chatUnsubscribe === "function") {
+      this.#chatUnsubscribe();
+    }
+    this.#chatUnsubscribe = null;
+
+    if (this.#chat?.panel && typeof this.#chat.panel.remove === "function") {
+      this.#chat.panel.remove();
+    }
+
+    this.#chat = null;
+    delete this.#element.dataset.chat;
     return this;
   }
 
@@ -386,6 +605,7 @@ export class CommandCenter {
       preview,
       previewIcon,
       previewText,
+      expanded,
     };
 
     return root;
@@ -424,6 +644,185 @@ export class CommandCenter {
     this.#nodes.transcript.textContent = copy.transcript;
     this.#nodes.hint.textContent = copy.hint;
     this.#nodes.previewText.textContent = copy.preview;
+  }
+
+  async #loadChatProviders(initialProviders = [], initialModels = []) {
+    if (!this.#chat) {
+      return;
+    }
+
+    let providers = Array.isArray(initialProviders) ? initialProviders : [];
+    if (providers.length === 0 && typeof this.#chat.bridge?.providers?.list === "function") {
+      try {
+        providers = await this.#chat.bridge.providers.list();
+      } catch {
+        providers = [];
+      }
+    }
+
+    const chatProviders = providers.filter(providerSupportsChat);
+    this.#chat.providerSelect.replaceChildren(
+      createOption("", "Default provider"),
+      ...chatProviders.map((provider) =>
+        createOption(normalizeProviderId(provider), normalizeProviderLabel(provider)),
+      ),
+    );
+
+    if (chatProviders.length === 0) {
+      this.#chat.providerSelect.replaceChildren(createOption("", "No chat provider"));
+      this.#chat.providerSelect.disabled = true;
+      this.#chat.modelSelect.disabled = true;
+      return;
+    }
+
+    this.#chat.providerSelect.disabled = false;
+    const selectedProvider = chatProviders.some(
+      (provider) => normalizeProviderId(provider) === this.#chat.provider,
+    )
+      ? this.#chat.provider
+      : "";
+    this.#chat.provider = selectedProvider;
+    this.#chat.providerSelect.value = selectedProvider;
+    await this.#loadChatModels(initialModels);
+  }
+
+  async #loadChatModels(initialModels = []) {
+    if (!this.#chat) {
+      return;
+    }
+
+    let models = this.#chat.provider && Array.isArray(initialModels) ? initialModels : [];
+    if (
+      models.length === 0 &&
+      this.#chat.provider &&
+      typeof this.#chat.bridge?.providers?.getModels === "function"
+    ) {
+      try {
+        models = await this.#chat.bridge.providers.getModels(this.#chat.provider, "chat");
+      } catch {
+        models = [];
+      }
+    }
+
+    this.#chat.modelSelect.replaceChildren(
+      ...models.map((model) => createOption(normalizeModelId(model), normalizeModelLabel(model))),
+    );
+
+    if (models.length === 0) {
+      this.#chat.modelSelect.replaceChildren(createOption("", "Default model"));
+    }
+
+    const selectedModel =
+      this.#chat.model || (this.#chat.provider ? normalizeModelId(models[0]) : "") || "";
+    this.#chat.model = selectedModel;
+    this.#chat.modelSelect.value = selectedModel;
+    this.#chat.modelSelect.disabled = false;
+  }
+
+  async #sendTextChatMessage(message) {
+    if (!this.#chat) {
+      return;
+    }
+
+    const messageId = createChatId("message");
+    this.#appendChatBubble({
+      id: `${messageId}-user`,
+      role: "user",
+      content: message,
+    });
+    const assistantBubble = this.#appendChatBubble({
+      id: messageId,
+      role: "assistant",
+      content: "",
+      status: "Streaming",
+    });
+
+    this.#chat.pendingBubble = assistantBubble;
+    this.#chat.pendingMessageId = messageId;
+    this.#chat.input.setDisabled(true);
+
+    try {
+      const result = await invokeChatBridge(this.#chat.bridge, {
+        message,
+        provider: this.#chat.provider || undefined,
+        model: this.#chat.model || undefined,
+        conversationId: this.#chat.conversationId,
+        messageId,
+      });
+
+      if (result?.ok === false) {
+        assistantBubble.setStatus("Error").setContent(extractChatErrorMessage(result));
+      } else if (result?.content && !assistantBubble.content) {
+        assistantBubble.setContent(result.content).setStatus("");
+      }
+
+      await this.#rememberChatExchange(result);
+    } catch (error) {
+      assistantBubble.setStatus("Error").setContent(extractChatErrorMessage(error));
+    } finally {
+      this.#chat.input.setDisabled(false);
+      this.#chat.pendingBubble = null;
+      this.#chat.pendingMessageId = "";
+    }
+  }
+
+  #handleChatChunk(payload) {
+    if (!this.#chat || !payload || payload.conversationId !== this.#chat.conversationId) {
+      return;
+    }
+
+    const bubble =
+      this.#chat.messageById.get(payload.messageId) ?? this.#chat.pendingBubble ?? null;
+    if (!bubble) {
+      return;
+    }
+
+    if (payload.type === "delta") {
+      bubble.setContent(payload.content ?? `${bubble.content}${payload.delta ?? ""}`);
+      bubble.setStatus("Streaming");
+    } else if (payload.type === "tool_call") {
+      bubble.setStatus(`Running ${formatToolName(payload.toolCall?.name)}`);
+    } else if (payload.type === "tool_result") {
+      bubble.setStatus("Tool complete");
+    } else if (payload.type === "done") {
+      bubble.setContent(payload.content ?? bubble.content).setStatus("");
+    } else if (payload.type === "error") {
+      bubble.setContent(extractChatErrorMessage(payload)).setStatus("Error");
+    }
+
+    this.#scrollChatToBottom();
+  }
+
+  #appendChatBubble({ id, role, content, status = "" }) {
+    const bubble = createChatBubble({ role, content, status });
+    this.#chat.messages.append(bubble.element);
+    this.#chat.messageById.set(id, bubble);
+    this.#scrollChatToBottom();
+    return bubble;
+  }
+
+  async #rememberChatExchange(result) {
+    if (!result?.ok || !result.memory) {
+      return;
+    }
+
+    try {
+      if (typeof this.#chat.bridge?.memory?.remember === "function") {
+        await this.#chat.bridge.memory.remember(result.memory.text, result.memory.metadata);
+      } else if (typeof this.#chat.bridge?.invoke === "function") {
+        await this.#chat.bridge.invoke("memory:remember", result.memory);
+      }
+    } catch {
+      /* Memory storage must not block chat display. */
+    }
+  }
+
+  #scrollChatToBottom() {
+    if (!this.#chat?.messages) {
+      return;
+    }
+
+    this.#chat.messages.scrollTop = this.#chat.messages.scrollHeight ?? 0;
   }
 }
 

@@ -2,7 +2,7 @@
 id: "064"
 title: "Integrate memory into realtime prompts"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 16000
@@ -12,7 +12,8 @@ context_files:
   - src/memory/sqlite-memory-store.js
 skills: []
 tags: [phase-3, memory, prompts, realtime]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T05:05:41Z"
 created_at: "2026-06-01"
 ---
 
@@ -35,11 +36,11 @@ Memory without prompt integration is inert data. The user won't feel Leena "reme
 
 ## Acceptance Criteria
 
-- [ ] `buildRealtimeInstructions()` includes `# Memory Context` section when memories are provided
-- [ ] Memory middleware correctly calls recall on session start, remember on each exchange, consolidate on session end
-- [ ] Graceful degradation: no memory store → no crash, prompts work without memory section
-- [ ] Existing prompt tests still pass (no regression)
-- [ ] Consolidation triggers only when episodic count exceeds threshold (10)
+- [x] `buildRealtimeInstructions()` includes `# Memory Context` section when memories are provided
+- [x] Memory middleware correctly calls recall on session start, remember on each exchange, consolidate on session end
+- [x] Graceful degradation: no memory store -> no crash, prompts work without memory section
+- [x] Existing prompt tests still pass (no regression)
+- [x] Consolidation triggers only when episodic count exceeds threshold (10)
 
 ## Tests Required
 
@@ -61,11 +62,19 @@ Memory without prompt integration is inert data. The user won't feel Leena "reme
 
 ## Handoff Notes
 
-_Filled after completion._
+- `buildRealtimeInstructions({ memories })` now appends `# Memory Context` only when normalized recall results contain non-empty `entry.content`; each memory is formatted with a clamped two-decimal confidence score.
+- `createMemoryMiddleware(memoryStore)` provides async `onSessionStart(profile)`, `onExchange(conversationId, role, content)`, and `onSessionEnd(conversationId)` hooks. It recalls with the profile name/about query and limit 10, stores non-empty exchanges as episodic memories, and consolidates only when `getEpisodic(conversationId).length > 10`.
+- Shared lifecycle wiring was intentionally not added here because Worker 064 does not own `src/main.js`, `src/preload.js`, or `src/renderer/renderer.js`. Parent orchestration should instantiate the middleware at session setup, pass `await onSessionStart(profile)` into `buildRealtimeInstructions({ profile, memories })`, call `onExchange` after user/assistant turns, and call `onSessionEnd` on disconnect.
+- Verification at 2026-06-03T05:11:25Z: `node --check src/realtime/prompts.js`, `node --check src/memory/memory-middleware.js`, `node --check test/prompts.test.js`, `node --check test/memory-middleware.test.js`, `npm run check`, `node --test`, and targeted `git diff --check` passed.
+- Parent integration completed the shared lifecycle wiring: `src/main.js` now injects recalled memories into `buildRealtimeInstructions({ profile, memories })`, `src/renderer/renderer.js` stores realtime transcript exchanges through the memory bridge, and `test/wave13-integration.test.js` pins the wiring.
+- Reviewer fix added an explicit untrusted-data boundary to recalled memories so remembered transcript text cannot override system, persona, runtime, tool, or safety instructions.
+- Final independent verification at 2026-06-03T06:12:24Z passed: `npm run check`, full `node --test` (474/474), changed JS `node --check`, focused Wave 13 integration tests, and `git diff --check`.
+- Reviewer-fix verification at 2026-06-03T06:37:44Z passed: `npm run check`, full `node --test` (481/481), focused prompt tests, and `git diff --check`.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Required shell command `kencode-search` was not installed on PATH (`zsh: command not found: kencode-search`). Used the available `mcp__kencode_search.searchCode` connector before edits; the repo-specific `buildRealtimeInstructions({` anchor returned no public matches, so local file context was used as source of truth.
+- Reviewer found recalled memories were injected without a clear untrusted-data boundary; fixed by adding explicit memory-as-data instructions and regression coverage.
 
 ## Self-Annealing Contract
 

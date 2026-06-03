@@ -166,6 +166,67 @@ test("getEpisodic returns one conversation ordered by creation and row id", asyn
   });
 });
 
+test("getEpisodes returns paginated live history across conversations", async () => {
+  await withMemoryDb(async (filePath) => {
+    const store = new SQLiteMemoryStore({ dbPath: filePath });
+
+    await store.remember("Default conversation note", {
+      conversationId: "default",
+      role: "user",
+    });
+    await store.remember("Generated chat conversation note", {
+      conversationId: "chat-conversation-1",
+      role: "assistant",
+    });
+    await store.remember("Realtime generated conversation note", {
+      conversationId: "realtime-1",
+      role: "assistant",
+    });
+
+    const firstPage = store.getEpisodes({ limit: 2, page: 1 });
+    assert.equal(firstPage.total, 3);
+    assert.equal(firstPage.hasMore, true);
+    assert.equal(firstPage.entries.length, 2);
+    assert.deepEqual(
+      firstPage.entries.map((entry) => entry.conversationId),
+      ["realtime-1", "chat-conversation-1"],
+    );
+
+    const searched = store.getEpisodes({ limit: 5, page: 1, query: "Generated chat" });
+    assert.equal(searched.total, 1);
+    assert.equal(searched.entries[0].conversationId, "chat-conversation-1");
+
+    store.close();
+  });
+});
+
+test("getEpisodes clamps page and limit and escapes literal LIKE wildcards", async () => {
+  await withMemoryDb(async (filePath) => {
+    const store = new SQLiteMemoryStore({ dbPath: filePath });
+
+    await store.remember("Budget is 100% confirmed.", {
+      conversationId: "percent",
+      role: "user",
+    });
+    await store.remember("Budget is 1000 confirmed.", {
+      conversationId: "plain",
+      role: "user",
+    });
+
+    const wildcardSearch = store.getEpisodes({ limit: 500, page: 1, query: "100%" });
+    assert.equal(wildcardSearch.limit, 50);
+    assert.equal(wildcardSearch.total, 1);
+    assert.equal(wildcardSearch.entries[0].conversationId, "percent");
+
+    const boundedPage = store.getEpisodes({ limit: 500, page: 999 });
+    assert.equal(boundedPage.limit, 50);
+    assert.equal(boundedPage.page, 500);
+    assert.equal(boundedPage.entries.length, 0);
+
+    store.close();
+  });
+});
+
 test("consolidate creates semantic facts with embeddings and source episode links", async () => {
   await withMemoryDb(async (filePath) => {
     const embeddings = new MockEmbeddingProvider({

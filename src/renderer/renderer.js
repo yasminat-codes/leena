@@ -92,6 +92,8 @@ let selectedMicId = null;
 // While the welcome greeting plays we mute the mic so laptop speakers can't
 // echo it back and trigger a self-reply; this holds the safety-unmute timer.
 let welcomeMicGuardTimer = null;
+let realtimeConversationId = "";
+let realtimeMemoryKeys = new Set();
 const realtimeToolHandler = createRealtimeToolHandler({
   executeTool: (name, args) => window.leena.executeRealtimeTool(name, args),
   sendEvent: sendRealtimeDataChannelEvent,
@@ -128,6 +130,7 @@ function mountLiveCommandCenter() {
   liveCommandCenter = createCommandCenter({
     variant: "compact",
     sessionStateManager,
+    chat: { bridge: window.leena, eventSource: window.leena },
   });
   liveCommandCenter.mount(liveCommandCenterMount);
   appShellElement.dataset.commandCenter = "live";
@@ -663,6 +666,8 @@ async function startCall() {
   setStatus("Starting…");
   setMode("connecting");
   emitSessionState("thinking", { connected: true });
+  realtimeConversationId = createRealtimeConversationId();
+  realtimeMemoryKeys = new Set();
   await writeRendererDiagnostic("call.start", {
     mediaDevicesAvailable: Boolean(navigator.mediaDevices?.getUserMedia),
   });
@@ -802,6 +807,7 @@ async function stopCall() {
   waitingSound.reset();
 
   realtimeToolHandler.reset();
+  finalizeRealtimeMemorySession();
   hideToolActivity();
   remoteAudioElement.srcObject = null;
   setCallActive(false, { inactiveWindowMode: "panel" });
@@ -815,6 +821,7 @@ async function stopCall() {
 
 async function handleRealtimeEvent(event) {
   playbackTracker.observe(event);
+  void rememberRealtimeExchange(event);
   // The welcome greeting finished playing through the speakers — safe to listen.
   if (welcomeMicGuardTimer !== null && event.type === "output_audio_buffer.stopped") {
     endWelcomeMicGuard();
@@ -892,6 +899,118 @@ function interruptAssistantPlayback() {
   for (const event of events) {
     sendRealtimeDataChannelEvent(event);
   }
+}
+
+function createRealtimeConversationId() {
+  return `realtime-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function rememberRealtimeExchange(event) {
+  if (!realtimeConversationId || typeof window.leena.memory?.remember !== "function") {
+    return;
+  }
+
+  const exchange = extractRealtimeExchange(event);
+  if (!exchange) {
+    return;
+  }
+  const memoryKey = `${exchange.role}:${exchange.content}`;
+  if (realtimeMemoryKeys.has(memoryKey)) {
+    return;
+  }
+  realtimeMemoryKeys.add(memoryKey);
+
+  try {
+    await window.leena.memory.remember(exchange.content, {
+      conversationId: realtimeConversationId,
+      role: exchange.role,
+      kind: "realtime_exchange",
+      eventType: event.type,
+    });
+  } catch (error) {
+    await writeRendererDiagnostic("memory.realtime.remember_failed", formatRendererError(error));
+  }
+}
+
+function finalizeRealtimeMemorySession() {
+  if (!realtimeConversationId) {
+    return;
+  }
+
+  const conversationId = realtimeConversationId;
+  realtimeConversationId = "";
+  realtimeMemoryKeys = new Set();
+
+  if (typeof window.leena.memory?.consolidate !== "function") {
+    return;
+  }
+
+  void maybeConsolidateRealtimeMemory(conversationId).catch((error) => {
+    void writeRendererDiagnostic("memory.realtime.consolidate_failed", formatRendererError(error));
+  });
+}
+
+async function maybeConsolidateRealtimeMemory(conversationId) {
+  if (typeof window.leena.memory?.getConversation === "function") {
+    const episodes = await window.leena.memory.getConversation(conversationId);
+    if (Array.isArray(episodes) && episodes.length <= 10) {
+      return null;
+    }
+  }
+
+  return window.leena.memory.consolidate();
+}
+
+function extractRealtimeExchange(event) {
+  const type = event?.type;
+  if (typeof type !== "string") {
+    return null;
+  }
+
+  if (
+    type === "conversation.item.input_audio_transcription.completed" ||
+    type === "input_audio_transcription.completed"
+  ) {
+    return buildRealtimeExchange("user", event.transcript ?? event.item?.transcript);
+  }
+
+  if (
+    type === "response.output_audio_transcript.done" ||
+    type === "response.audio_transcript.done" ||
+    type === "response.output_text.done" ||
+    type === "response.text.done"
+  ) {
+    return buildRealtimeExchange("assistant", event.transcript ?? event.text ?? event.content);
+  }
+
+  if (type === "response.done") {
+    return buildRealtimeExchange("assistant", extractResponseDoneText(event.response));
+  }
+
+  return null;
+}
+
+function buildRealtimeExchange(role, content) {
+  const normalized = typeof content === "string" ? content.trim() : "";
+  return normalized ? { role, content: normalized } : null;
+}
+
+function extractResponseDoneText(response) {
+  const output = Array.isArray(response?.output) ? response.output : [];
+  const parts = [];
+
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const part of content) {
+      if (typeof part?.transcript === "string") {
+        parts.push(part.transcript);
+      } else if (typeof part?.text === "string") {
+        parts.push(part.text);
+      }
+    }
+  }
+
+  return parts.join("\n").trim();
 }
 
 async function writeRendererDiagnostic(event, details = {}) {

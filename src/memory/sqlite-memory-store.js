@@ -6,6 +6,9 @@ const DEFAULT_CONVERSATION_ID = "default";
 const DEFAULT_ROLE = "user";
 const VALID_ROLES = new Set(["system", "user", "assistant", "tool"]);
 const VECTOR_PREFILTER_LIMIT = 1000;
+const MAX_EPISODES_LIMIT = 50;
+const MAX_EPISODES_PAGE = 500;
+const MAX_EPISODES_QUERY_LENGTH = 200;
 
 export class SQLiteMemoryStore extends MemoryStore {
   constructor({ dbPath = getDatabasePath(), providerRegistry = null } = {}) {
@@ -97,6 +100,47 @@ export class SQLiteMemoryStore extends MemoryStore {
       )
       .all(normalizeConversationId({ conversationId }))
       .map((row) => mapEpisodicRow(row));
+  }
+
+  getEpisodes(options = {}) {
+    this.assertOpen();
+    const limit = normalizeBoundedPositiveInteger(
+      options.limit ?? 20,
+      MAX_EPISODES_LIMIT,
+      "episodes limit",
+    );
+    const page = normalizeBoundedPositiveInteger(
+      options.page ?? 1,
+      MAX_EPISODES_PAGE,
+      "episodes page",
+    );
+    const query = limitText(normalizeContent(options.query).trim(), MAX_EPISODES_QUERY_LENGTH);
+    const offset = (page - 1) * limit;
+    const whereClause = query ? "WHERE content LIKE ? ESCAPE '\\'" : "";
+    const queryParams = query ? [`%${escapeLikePattern(query)}%`] : [];
+    const total = this.db
+      .prepare(`SELECT COUNT(*) AS count FROM memories_episodic ${whereClause}`)
+      .get(...queryParams).count;
+    const entries = this.db
+      .prepare(
+        `
+          SELECT id, conversation_id, role, content, embedding, created_at, metadata
+          FROM memories_episodic
+          ${whereClause}
+          ORDER BY created_at DESC, id DESC
+          LIMIT ? OFFSET ?
+        `,
+      )
+      .all(...queryParams, limit, offset)
+      .map((row) => mapEpisodicRow(row));
+
+    return {
+      entries,
+      hasMore: total > page * limit,
+      limit,
+      page,
+      total,
+    };
   }
 
   async consolidate() {
@@ -563,6 +607,22 @@ function normalizeLimit(limit) {
     return 0;
   }
   return Math.floor(parsed);
+}
+
+function normalizeBoundedPositiveInteger(value, maxValue, label) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new TypeError(`Memory ${label} must be a positive integer.`);
+  }
+  return Math.min(Math.floor(parsed), maxValue);
+}
+
+function limitText(value, maxLength) {
+  return value.length > maxLength ? value.slice(0, maxLength) : value;
+}
+
+function escapeLikePattern(value) {
+  return value.replace(/[\\%_]/g, "\\$&");
 }
 
 function countRows(db, tableName) {

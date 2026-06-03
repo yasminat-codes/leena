@@ -509,3 +509,4 @@
 - Storage work added additive memory tables/indexes, central `mcp_servers` schema, `ServerStore` CRUD, and auto-connect filtering.
 - MCP tools now merge into realtime tool definitions and execute through namespaced routing plus the Wave 09 permission helpers; missing/stale metadata fails closed.
 - Parent verification passed: `npm run check`, `node --test` (329/329), changed JS syntax checks, `git diff --check`, `npm run build:mac:dir`, `npm run build:mac`, mounted DMG layout check, ZIP app check, and packaged tray asset check.
+- CodeRabbit advisory was requested on PR #11. It posted the generated "Review triggered" response and left the advisory CodeRabbit status pending at merge-decision time, with no actionable findings available; advisory status did not block merge.

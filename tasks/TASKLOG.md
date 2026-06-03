@@ -428,3 +428,9 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate passed with no blockers. Warning only: stage the new deliverable docs and completed task files before commit.
 - Advisor gate passed with no release-readiness blockers. GUI launch remaining owner-manual is acceptable because the wave records it as a checklist and does not claim it as autonomous proof.
 - Carry forward for Wave 16: `dist/` remains gitignored, so the local full-feature DMG/ZIP are recorded by path and checksum but not committed; task `046` must record the separate MVP artifact clearly in `tasks/DELIVERABLE.md` without conflating it with task `111`.
+
+## 2026-06-03 — Wave 15 PR and CodeRabbit advisory
+
+- Opened PR #16 (`wave-15` -> `main`) after reviewer and advisor gates cleared; branch head `7770c13`.
+- Requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated trigger/review-in-progress comments and a pending advisory status at merge-decision time; no actionable findings were available, so the advisory-only status did not block merge.
+- The repo still lacks `codex` and `codex-automation` labels, so no automation labels were applied.

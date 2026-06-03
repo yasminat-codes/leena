@@ -782,4 +782,5 @@
 - Independent parent gates passed: `npm run check`, full `node --test` (527/527), changed-file syntax check, `git diff --check`, WAL parse, task-count audit, active-claims audit, and task-artifact privacy scan.
 - CodeRabbit remains advisory-only; request it after reviewer/advisor gates clear and before merge.
 - Reviewer and advisor cleared Wave 15 with warnings only. Wave 16 must keep the MVP artifact lane distinct from the full-feature artifact and should not imply the ignored `dist/` binaries are committed to the PR.
+- PR #16 CodeRabbit state at merge decision: generated trigger/review-in-progress comments only, pending advisory status, and no actionable findings available. Advisory status must not block Wave 15 merge.
 - **WAL ref:** tasks/.wal/wal.jsonl

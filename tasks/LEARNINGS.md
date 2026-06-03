@@ -784,3 +784,29 @@
 - Reviewer and advisor cleared Wave 15 with warnings only. Wave 16 must keep the MVP artifact lane distinct from the full-feature artifact and should not imply the ignored `dist/` binaries are committed to the PR.
 - PR #16 CodeRabbit state at merge decision: generated trigger/review-in-progress comments only, pending advisory status, and no actionable findings available. Advisory status must not block Wave 15 merge.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 16 — 046 — Build-smoke unsigned convention assertion
+- **Symptom:** The first `node --test` after adding `test/build-smoke.test.js` failed because the new test asserted the exact combined unsigned command string before the task evidence was finalized.
+- **Root cause:** The repo keeps `CSC_IDENTITY_AUTO_DISCOVERY=false` as the invocation convention rather than baking the environment variable into `package.json`'s `build:mac` script.
+- **Fix:** The smoke test now checks the Electron Builder mac target/config in `package.json` and verifies the task-owned MVP artifact convention separately.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 16 — 046 — Deliverable manifest lane separation
+- **Symptom:** The initial MVP manifest update replaced the earlier final-artifact manifest instead of showing the standard builder outputs and MVP named copies distinctly.
+- **Root cause:** Task `046` owns the guaranteed MVP lane, but `npm run build:mac` regenerates the standard `dist/Leena-0.1.0-*` output paths before copying them to MVP names.
+- **Fix:** `tasks/DELIVERABLE.md` now records both standard builder output paths and MVP named deliverables with current hashes, while explicitly noting that `dist/` binaries are build outputs and not implied committed files.
+- **Rule added?:** yes — deliverable manifests must preserve distinct artifact lanes when a later build regenerates shared output paths.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 16 — summary
+- Completed task `046`.
+- `test/build-smoke.test.js` now pins the mac `dmg` + `zip` target, hardened/unsigned-compatible package config, `@nut-tree-fork` asar unpacking, and task-owned MVP artifact naming/manual GUI convention.
+- The unsigned macOS build was regenerated with `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`, then copied to `dist/Leena-MVP.dmg` and `dist/Leena-MVP.zip`.
+- `tasks/DELIVERABLE.md` records current SHA-256 values for both the standard builder outputs and MVP named copies: DMG `622285f88cee98384c905c70412c794fe21f6bed03683ad85c72c64ee293be8c`; ZIP `f4897055756ec344ac883d5bc34a3d5a22485267e017c2df5417d16cf46043f6`.
+- Headless packaging verification passed for the MVP DMG and ZIP: valid DMG checksum and image info, drag-to-Applications layout, executable app bundle, 21 packaged font assets, and four unpacked `@nut-tree-fork` native addon files.
+- Independent parent gates passed: `npm run check`, full `node --test` (529/529), build-smoke focused gates, `git diff --check`, WAL parse, task-count audit, active-claims audit, and task-artifact privacy scan.
+- Owner GUI launch-smoke remains a manual checklist, not an autonomous gate.
+- Reviewer and advisor cleared Wave 16 with warnings only. Final handoff must state the build is unsigned/ad-hoc, not notarized, and not GUI-launched; `dist/` artifacts are ignored local build outputs.
+- PR #17 CodeRabbit state at merge decision: generated rate-limit/usage-credit comment only, GitHub status `SUCCESS`, and no actionable findings available. Advisory status must not block Wave 16 merge.
+- **WAL ref:** tasks/.wal/wal.jsonl

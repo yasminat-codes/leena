@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
-
+import { normalizeHotkeyAccelerator } from "../src/hotkey-accelerator.js";
 import {
   createHotkeyController,
   DEFAULT_HOTKEY_ACCELERATOR,
@@ -148,34 +148,53 @@ test("registers the default CommandOrControl+Shift+L hotkey from settings defaul
 });
 
 test("uses a persisted hotkey accelerator when present", () => {
-  const storedAccelerator = "CommandOrControl+Option+L";
+  const storedAccelerator = "Command+Option+L";
+  const normalizedAccelerator = "CommandOrControl+Alt+L";
   const { controller, globalShortcut } = createHarness({
     settings: { [HOTKEY_SETTING_KEY]: storedAccelerator },
   });
 
-  assert.equal(controller.readConfiguredHotkey(), storedAccelerator);
-  assert.equal(controller.registerConfiguredHotkey().accelerator, storedAccelerator);
-  assert.deepEqual(globalShortcut.registerCalls, [storedAccelerator]);
+  assert.equal(controller.readConfiguredHotkey(), normalizedAccelerator);
+  assert.equal(controller.registerConfiguredHotkey().accelerator, normalizedAccelerator);
+  assert.deepEqual(globalShortcut.registerCalls, [normalizedAccelerator]);
+});
+
+test("hotkey accelerator normalization rejects bare or shift-only global keys", () => {
+  assert.equal(normalizeHotkeyAccelerator("Cmd + Option + q"), "CommandOrControl+Alt+Q");
+  assert.equal(normalizeHotkeyAccelerator("Control+Alt+Space"), "Control+Alt+Space");
+
+  for (const accelerator of ["A", "Escape", "Shift+A", "Shift+F1"]) {
+    assert.throws(
+      () => normalizeHotkeyAccelerator(accelerator),
+      /Hotkey must include Command, Control, or Option/,
+    );
+  }
 });
 
 test("reconfiguring hotkey unregisters the old shortcut and persists the new value", () => {
   const { controller, globalShortcut, settingsStore } = createHarness();
-  const nextAccelerator = "CommandOrControl+Shift+Space";
+  const nextAccelerator = "Command+Option+Space";
+  const normalizedAccelerator = "CommandOrControl+Alt+Space";
   controller.registerConfiguredHotkey();
 
   const result = controller.setHotkey(nextAccelerator);
 
   assert.deepEqual(result, {
-    accelerator: nextAccelerator,
+    accelerator: normalizedAccelerator,
     changed: true,
     previousAccelerator: DEFAULT_HOTKEY_ACCELERATOR,
     success: true,
   });
   assert.deepEqual(globalShortcut.unregisterCalls, [DEFAULT_HOTKEY_ACCELERATOR]);
-  assert.deepEqual(globalShortcut.registerCalls, [DEFAULT_HOTKEY_ACCELERATOR, nextAccelerator]);
+  assert.deepEqual(globalShortcut.registerCalls, [
+    DEFAULT_HOTKEY_ACCELERATOR,
+    normalizedAccelerator,
+  ]);
   assert.equal(globalShortcut.callbacks.has(DEFAULT_HOTKEY_ACCELERATOR), false);
-  assert.equal(globalShortcut.callbacks.has(nextAccelerator), true);
-  assert.deepEqual(settingsStore.writes, [{ key: HOTKEY_SETTING_KEY, value: nextAccelerator }]);
+  assert.equal(globalShortcut.callbacks.has(normalizedAccelerator), true);
+  assert.deepEqual(settingsStore.writes, [
+    { key: HOTKEY_SETTING_KEY, value: normalizedAccelerator },
+  ]);
 });
 
 test("conflicting hotkey reconfiguration returns an error without losing the old shortcut", () => {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createAcceleratorFromKeyboardEvent,
   createProviderModelSelectorController,
   createSettingsScreenController,
   loadSettingsScreenData,
@@ -101,6 +102,9 @@ function createSettingsDom() {
   const identityName = new TestElement({ selectors: ["[data-settings-identity-name]"] });
   const identityEmail = new TestElement({ selectors: ["[data-settings-identity-email]"] });
   const agentName = new TestElement({ selectors: ["[data-agent-name]"] });
+  const hotkeyDisplay = new TestElement({ selectors: ["[data-hotkey-display]"] });
+  const hotkeyInput = new TestElement({ selectors: ["[data-hotkey-input]"] });
+  const hotkeyStatus = new TestElement({ selectors: ["[data-hotkey-status]"] });
   const personaSelect = new TestElement({ selectors: ["[data-persona-select]"] });
   const personaTone = new TestElement({ selectors: ["[data-persona-tone]"] });
   const wakeStatus = new TestElement({ selectors: ["[data-wake-status]"] });
@@ -134,6 +138,9 @@ function createSettingsDom() {
     identityName,
     identityEmail,
     agentName,
+    hotkeyDisplay,
+    hotkeyInput,
+    hotkeyStatus,
     personaSelect,
     personaTone,
     wakeStatus,
@@ -150,6 +157,9 @@ function createSettingsDom() {
   return {
     agentName,
     densityCompact,
+    hotkeyDisplay,
+    hotkeyInput,
+    hotkeyStatus,
     identityEmail,
     identityName,
     launchStatus,
@@ -172,6 +182,7 @@ function createBridge() {
   const settings = {
     active_persona_id: "coach",
     density: "compact",
+    hotkey: "CommandOrControl+Shift+L",
     launchOnLogin: true,
     notificationsEnabled: true,
     proactiveNudges: false,
@@ -201,6 +212,10 @@ function createBridge() {
       calls.push({ type: "getAllSettings" });
       return { ...settings };
     },
+    getHotkey: async () => {
+      calls.push({ type: "getHotkey" });
+      return settings.hotkey;
+    },
     identity: {
       listPersonas: async () => {
         calls.push({ type: "listPersonas" });
@@ -227,6 +242,18 @@ function createBridge() {
       calls.push({ enabled, type: "setLaunchOnLogin" });
       settings.launchOnLogin = enabled;
       return enabled;
+    },
+    setHotkey: async (accelerator) => {
+      calls.push({ accelerator, type: "setHotkey" });
+      if (accelerator === "CommandOrControl+Alt+L") {
+        return {
+          accelerator,
+          error: "Hotkey is already in use.",
+          success: false,
+        };
+      }
+      settings.hotkey = accelerator;
+      return { accelerator, success: true };
     },
     setSetting: async (key, value) => {
       calls.push({ key, type: "setSetting", value });
@@ -439,6 +466,10 @@ test("loadSettingsScreenData populates appearance, profile, persona, general, an
   assert.equal(dom.identityName.textContent, "Yasmine");
   assert.equal(dom.identityEmail.textContent, "Persona: Coach");
   assert.equal(dom.agentName.value, "Yasmine");
+  assert.equal(state.hotkey, "CommandOrControl+Shift+L");
+  assert.equal(dom.hotkeyInput.value, "CommandOrControl+Shift+L");
+  assert.equal(dom.hotkeyDisplay.textContent, "Cmd+Shift+L");
+  assert.equal(dom.hotkeyStatus.textContent, "");
   assert.equal(dom.personaSelect.value, "coach");
   assert.match(dom.personaSelect.innerHTML, /value="coach" selected/);
   assert.equal(dom.personaTone.value, "focused coach");
@@ -451,7 +482,7 @@ test("loadSettingsScreenData populates appearance, profile, persona, general, an
   assert.equal(localStorageWrites, 0);
   assert.deepEqual(
     bridge.calls.map((call) => call.type),
-    ["getAllSettings", "getAgentProfile", "listPersonas"],
+    ["getAllSettings", "getHotkey", "getAgentProfile", "listPersonas"],
   );
 });
 
@@ -468,19 +499,30 @@ test("settings controller saves appearance, general settings, profile name, and 
   await controller.load();
   await controller.saveAppearance("theme", "light");
   await controller.saveSetting("launchOnLogin", false);
+  await controller.saveHotkey("Command+Option+Space");
   await controller.saveProfileName("Maya");
   await controller.switchPersona("default");
 
   assert.equal(dom.wrapper.dataset.theme, "light");
   assert.equal(dom.launchToggle.getAttribute("aria-checked"), "false");
+  assert.equal(controller.state.hotkey, "CommandOrControl+Alt+Space");
+  assert.equal(dom.hotkeyInput.value, "CommandOrControl+Alt+Space");
+  assert.equal(dom.hotkeyDisplay.textContent, "Cmd+Option+Space");
   assert.equal(dom.identityName.textContent, "Maya");
   assert.equal(dom.personaSelect.value, "default");
   assert.deepEqual(
     bridge.calls
       .filter((call) =>
-        ["setSetting", "setLaunchOnLogin", "setAgentProfile", "switchPersona"].includes(call.type),
+        [
+          "setSetting",
+          "setLaunchOnLogin",
+          "setHotkey",
+          "setAgentProfile",
+          "switchPersona",
+        ].includes(call.type),
       )
       .map((call) => ({
+        accelerator: call.accelerator,
         enabled: call.enabled,
         key: call.key,
         personaId: call.personaId,
@@ -489,6 +531,7 @@ test("settings controller saves appearance, general settings, profile name, and 
       })),
     [
       {
+        accelerator: undefined,
         enabled: undefined,
         key: "theme",
         personaId: undefined,
@@ -496,6 +539,7 @@ test("settings controller saves appearance, general settings, profile name, and 
         value: "light",
       },
       {
+        accelerator: undefined,
         enabled: false,
         key: undefined,
         personaId: undefined,
@@ -503,6 +547,15 @@ test("settings controller saves appearance, general settings, profile name, and 
         value: undefined,
       },
       {
+        accelerator: "CommandOrControl+Alt+Space",
+        enabled: undefined,
+        key: undefined,
+        personaId: undefined,
+        type: "setHotkey",
+        value: undefined,
+      },
+      {
+        accelerator: undefined,
         enabled: undefined,
         key: undefined,
         personaId: undefined,
@@ -510,6 +563,7 @@ test("settings controller saves appearance, general settings, profile name, and 
         value: undefined,
       },
       {
+        accelerator: undefined,
         enabled: undefined,
         key: undefined,
         personaId: "default",
@@ -517,6 +571,7 @@ test("settings controller saves appearance, general settings, profile name, and 
         value: undefined,
       },
       {
+        accelerator: undefined,
         enabled: undefined,
         key: undefined,
         personaId: undefined,
@@ -535,6 +590,59 @@ test("settings controller saves appearance, general settings, profile name, and 
     ),
     true,
   );
+});
+
+test("settings controller keeps the current shortcut when a hotkey registration fails", async () => {
+  const dom = createSettingsDom();
+  const bridge = createBridge();
+  const controller = createSettingsScreenController(dom.root, bridge);
+
+  await controller.load();
+  const result = await controller.saveHotkey("Command+Option+L");
+
+  assert.deepEqual(result, {
+    accelerator: "CommandOrControl+Alt+L",
+    error: "Hotkey is already in use.",
+    success: false,
+  });
+  assert.equal(controller.state.hotkey, "CommandOrControl+Shift+L");
+  assert.equal(dom.hotkeyInput.value, "CommandOrControl+Alt+L");
+  assert.equal(dom.hotkeyDisplay.textContent, "Cmd+Shift+L");
+  assert.equal(dom.hotkeyStatus.textContent, "Hotkey is already in use.");
+});
+
+test("settings controller fails hotkey saves when runtime registration is unavailable", async () => {
+  const dom = createSettingsDom();
+  const bridge = createBridge();
+  delete bridge.setHotkey;
+  const controller = createSettingsScreenController(dom.root, bridge);
+
+  await controller.load();
+  const result = await controller.saveHotkey("Command+Option+Space");
+
+  assert.deepEqual(result, {
+    accelerator: "Command+Option+Space",
+    error: "Hotkey controls are unavailable.",
+    success: false,
+  });
+  assert.equal(controller.state.hotkey, "CommandOrControl+Shift+L");
+  assert.equal(dom.hotkeyInput.value, "Command+Option+Space");
+  assert.equal(dom.hotkeyDisplay.textContent, "Cmd+Shift+L");
+  assert.equal(dom.hotkeyStatus.textContent, "Hotkey controls are unavailable.");
+  assert.equal(
+    bridge.calls.some((call) => call.type === "setSetting" && call.key === "hotkey"),
+    false,
+  );
+});
+
+test("keyboard recorder converts literal Space events into Electron accelerators", () => {
+  const accelerator = createAcceleratorFromKeyboardEvent({
+    altKey: true,
+    key: " ",
+    metaKey: true,
+  });
+
+  assert.equal(accelerator, "CommandOrControl+Alt+Space");
 });
 
 test("wake controls degrade gracefully when the wake bridge is absent", async () => {

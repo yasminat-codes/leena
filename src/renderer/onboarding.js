@@ -1,3 +1,5 @@
+import { DEFAULT_HOTKEY_ACCELERATOR, formatHotkeyAccelerator } from "../hotkey-accelerator.js";
+
 const STEP_IDS = Object.freeze(["welcome", "auth", "permissions", "name", "done"]);
 const DISPLAY_PERMISSION_IDS = Object.freeze(["microphone", "screen", "accessibility"]);
 const REQUIRED_PERMISSION_IDS = Object.freeze(["microphone"]);
@@ -24,7 +26,7 @@ const permissionFallbacks = Object.freeze({
 });
 
 export const ONBOARDING_SETTING_KEY = "onboardingCompleted";
-export const ONBOARDING_HOTKEY_DEFAULT = "CommandOrControl+Shift+L";
+export const ONBOARDING_HOTKEY_DEFAULT = DEFAULT_HOTKEY_ACCELERATOR;
 
 export function createInitialOnboardingState(overrides = {}) {
   return {
@@ -95,11 +97,7 @@ export function hasRequiredPermissions(permissions) {
 }
 
 export function formatHotkey(hotkey = ONBOARDING_HOTKEY_DEFAULT) {
-  return String(hotkey)
-    .replace("CommandOrControl", "Cmd")
-    .replace("Command", "Cmd")
-    .replace("Control", "Ctrl")
-    .replace(/\s*\+\s*/g, "+");
+  return formatHotkeyAccelerator(hotkey);
 }
 
 export function escapeHtml(value) {

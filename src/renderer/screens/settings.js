@@ -1,3 +1,9 @@
+import {
+  DEFAULT_HOTKEY_ACCELERATOR,
+  formatHotkeyAccelerator,
+  normalizeHotkeyAccelerator,
+} from "../../hotkey-accelerator.js";
+
 export const APPEARANCE_STORAGE_KEYS = Object.freeze({
   theme: "leena-theme",
   treatment: "leena-treatment",
@@ -247,6 +253,7 @@ export function createSettingsScreenController(root, bridge = getLeenaBridge()) 
     personas: [],
     profile: {},
     settings: {},
+    hotkey: DEFAULT_HOTKEY_ACCELERATOR,
     wakeAvailable: hasWakeBridge(bridge),
     wakeStatus: {
       enabled: false,
@@ -272,6 +279,35 @@ export function createSettingsScreenController(root, bridge = getLeenaBridge()) 
       await saveSettingsValue(root, bridge, key, value);
       state.settings[key] = value;
       return value;
+    },
+    async saveHotkey(accelerator) {
+      const previousHotkey = state.hotkey || DEFAULT_HOTKEY_ACCELERATOR;
+      try {
+        const normalizedAccelerator = normalizeHotkeyAccelerator(accelerator);
+        const result = await writeHotkey(bridge, normalizedAccelerator);
+        if (result.success === false) {
+          applyHotkeyState(root, previousHotkey, result);
+          return result;
+        }
+
+        const savedAccelerator = normalizeHotkeyOrDefault(
+          result.accelerator,
+          normalizedAccelerator,
+        );
+        state.hotkey = savedAccelerator;
+        state.settings.hotkey = savedAccelerator;
+        const savedResult = { ...result, accelerator: savedAccelerator, success: true };
+        applyHotkeyState(root, savedAccelerator, savedResult);
+        return savedResult;
+      } catch (error) {
+        const failure = {
+          accelerator: String(accelerator ?? ""),
+          error: getErrorMessage(error),
+          success: false,
+        };
+        applyHotkeyState(root, previousHotkey, failure);
+        return failure;
+      }
     },
     async saveProfileName(name) {
       const nextName = normalizeString(name);
@@ -361,6 +397,9 @@ export async function loadSettingsScreenData(root, bridge = getLeenaBridge()) {
   applySettingsAppearance(root, settings);
   applyGeneralSettings(root, settings);
 
+  const hotkey = await readHotkey(bridge, settings.hotkey);
+  applyHotkeyState(root, hotkey);
+
   const profile = normalizeProfile(
     (await callOptionalBridge(bridge?.getAgentProfile, bridge)) ?? {},
   );
@@ -390,6 +429,7 @@ export async function loadSettingsScreenData(root, bridge = getLeenaBridge()) {
 
   return {
     activePersona,
+    hotkey,
     personas,
     profile,
     settings,
@@ -421,6 +461,7 @@ export function bindSettingsControls(root, bridge = getLeenaBridge()) {
     });
   } else {
     loadAppearancePreferences(root);
+    applyHotkeyState(root, DEFAULT_HOTKEY_ACCELERATOR);
     applyWakeState(root, { enabled: false, muted: false, running: false, listening: false }, false);
   }
 
@@ -461,8 +502,58 @@ export function bindSettingsControls(root, bridge = getLeenaBridge()) {
     void controller.setWakeMuted(muted);
   });
 
+  bindHotkeyControls(root, controller);
   bindProviderModelSelector(root, bridge);
   return root;
+}
+
+function bindHotkeyControls(root, controller) {
+  const input = queryOne(root, "[data-hotkey-input]");
+  const saveButton = queryOne(root, "[data-hotkey-save]");
+  const defaultButton = queryOne(root, "[data-hotkey-default]");
+  const recordButton = queryOne(root, "[data-hotkey-record]");
+  let recording = false;
+
+  saveButton?.addEventListener?.("click", () => {
+    void controller.saveHotkey(input?.value ?? "");
+  });
+
+  defaultButton?.addEventListener?.("click", () => {
+    setNodeValue(input, DEFAULT_HOTKEY_ACCELERATOR);
+    applyHotkeyPreview(root, DEFAULT_HOTKEY_ACCELERATOR);
+    void controller.saveHotkey(DEFAULT_HOTKEY_ACCELERATOR);
+  });
+
+  recordButton?.addEventListener?.("click", () => {
+    recording = true;
+    setNodeText(queryOne(root, "[data-hotkey-status]"), "Press shortcut");
+    input?.focus?.();
+  });
+
+  input?.addEventListener?.("input", () => {
+    applyHotkeyPreview(root, input.value);
+  });
+
+  input?.addEventListener?.("keydown", (event) => {
+    if (!recording && event.key === "Enter") {
+      event.preventDefault?.();
+      void controller.saveHotkey(input.value);
+      return;
+    }
+
+    if (!recording) {
+      return;
+    }
+
+    event.preventDefault?.();
+    const accelerator = createAcceleratorFromKeyboardEvent(event);
+    if (!accelerator) {
+      return;
+    }
+    recording = false;
+    setNodeValue(input, accelerator);
+    applyHotkeyPreview(root, accelerator);
+  });
 }
 
 export function bindProviderModelSelector(root, bridge = getLeenaBridge()) {
@@ -1003,6 +1094,38 @@ function renderSwitchControl({
   `;
 }
 
+function renderHotkeySettings() {
+  return `
+      <section class="card settings-card" aria-labelledby="settings-hotkey-title">
+        <div class="settings-card__head">
+          <h2 id="settings-hotkey-title" class="lx-h2">Keyboard Shortcut</h2>
+          <span class="lx-sm text-dim" data-hotkey-display>${escapeHtml(
+            formatHotkeyAccelerator(DEFAULT_HOTKEY_ACCELERATOR),
+          )}</span>
+        </div>
+        <div class="settings-hotkey-row">
+          <label class="settings-field">
+            <span class="lx-sm">Shortcut</span>
+            <input
+              class="settings-input"
+              type="text"
+              data-hotkey-input
+              value="${escapeHtml(DEFAULT_HOTKEY_ACCELERATOR)}"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+          <div class="settings-provider-actions settings-hotkey-actions">
+            <button class="btn btn--ghost" type="button" data-hotkey-record>Record</button>
+            <button class="btn btn--ghost" type="button" data-hotkey-default>Default</button>
+            <button class="btn btn--primary" type="button" data-hotkey-save>Save</button>
+          </div>
+        </div>
+        <p class="lx-sm settings-status" data-hotkey-status></p>
+      </section>
+  `;
+}
+
 export function renderSettings() {
   return `
     <section class="settings-screen" aria-label="Settings">
@@ -1047,6 +1170,8 @@ export function renderSettings() {
         ${renderSegmentedControl("treatment", "Treatment", SETTINGS_MOCK_DATA.appearance.treatment)}
         ${renderSegmentedControl("density", "Density", SETTINGS_MOCK_DATA.appearance.density)}
       </section>
+
+      ${renderHotkeySettings()}
 
       <section class="card settings-card" aria-labelledby="settings-providers-title">
         <div class="settings-card__head">
@@ -1374,6 +1499,37 @@ async function writeSetting(bridge, key, value) {
   return value;
 }
 
+async function readHotkey(bridge, fallback = DEFAULT_HOTKEY_ACCELERATOR) {
+  const fallbackAccelerator = normalizeHotkeyOrDefault(fallback);
+  if (typeof bridge?.getHotkey === "function") {
+    return normalizeHotkeyOrDefault(await bridge.getHotkey(), fallbackAccelerator);
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeHotkeyOrDefault(
+      await bridge.invoke("settings:get-hotkey"),
+      fallbackAccelerator,
+    );
+  }
+  return fallbackAccelerator;
+}
+
+async function writeHotkey(bridge, accelerator) {
+  const normalizedAccelerator = normalizeHotkeyAccelerator(accelerator);
+  if (typeof bridge?.setHotkey === "function") {
+    return normalizeHotkeyResult(
+      await bridge.setHotkey(normalizedAccelerator),
+      normalizedAccelerator,
+    );
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeHotkeyResult(
+      await bridge.invoke("settings:set-hotkey", { accelerator: normalizedAccelerator }),
+      normalizedAccelerator,
+    );
+  }
+  throw new Error("Hotkey controls are unavailable.");
+}
+
 async function getWakeStatus(bridge) {
   if (typeof bridge?.wake?.getStatus === "function") {
     return bridge.wake.getStatus();
@@ -1430,6 +1586,44 @@ function applySettingsAppearance(root, settings) {
 function applyGeneralSettings(root, settings) {
   for (const control of GENERAL_SETTING_CONTROLS) {
     applyGeneralSetting(root, control.key, Boolean(settings[control.key]));
+  }
+}
+
+function applyHotkeyState(root, accelerator, result = null) {
+  const normalizedAccelerator = normalizeHotkeyOrDefault(accelerator);
+  const failed = result?.success === false;
+  const inputValue =
+    failed && typeof result?.accelerator === "string" ? result.accelerator : normalizedAccelerator;
+
+  setNodeValue(queryOne(root, "[data-hotkey-input]"), inputValue);
+  setNodeText(
+    queryOne(root, "[data-hotkey-display]"),
+    formatHotkeyAccelerator(normalizedAccelerator),
+  );
+
+  const status = queryOne(root, "[data-hotkey-status]");
+  if (!status) {
+    return;
+  }
+  if (!result) {
+    setNodeText(status, "");
+  } else if (failed) {
+    setNodeText(status, result.error ?? "Shortcut unavailable");
+  } else {
+    setNodeText(status, "Shortcut saved");
+  }
+}
+
+function applyHotkeyPreview(root, accelerator) {
+  try {
+    const normalizedAccelerator = normalizeHotkeyAccelerator(accelerator);
+    setNodeText(
+      queryOne(root, "[data-hotkey-display]"),
+      formatHotkeyAccelerator(normalizedAccelerator),
+    );
+    setNodeText(queryOne(root, "[data-hotkey-status]"), "");
+  } catch (error) {
+    setNodeText(queryOne(root, "[data-hotkey-status]"), getErrorMessage(error));
   }
 }
 
@@ -1564,6 +1758,64 @@ function setNodeValue(node, value) {
 
 function normalizeSettingsRecord(settings) {
   return isRecord(settings) ? { ...settings } : {};
+}
+
+function normalizeHotkeyResult(result, fallbackAccelerator) {
+  if (isRecord(result)) {
+    return {
+      ...result,
+      accelerator: normalizeHotkeyOrDefault(result.accelerator, fallbackAccelerator),
+      success: result.success !== false,
+    };
+  }
+  return {
+    accelerator: normalizeHotkeyOrDefault(result, fallbackAccelerator),
+    success: true,
+  };
+}
+
+function normalizeHotkeyOrDefault(accelerator, fallback = DEFAULT_HOTKEY_ACCELERATOR) {
+  try {
+    return normalizeHotkeyAccelerator(accelerator);
+  } catch {
+    return fallback === accelerator
+      ? DEFAULT_HOTKEY_ACCELERATOR
+      : normalizeHotkeyOrDefault(fallback);
+  }
+}
+
+export function createAcceleratorFromKeyboardEvent(event) {
+  if (!event?.key || isModifierKey(event.key)) {
+    return "";
+  }
+
+  const parts = [];
+  if (event.metaKey) {
+    parts.push("CommandOrControl");
+  } else if (event.ctrlKey) {
+    parts.push("Control");
+  }
+  if (event.altKey) {
+    parts.push("Alt");
+  }
+  if (event.shiftKey) {
+    parts.push("Shift");
+  }
+  parts.push(normalizeKeyboardEventKey(event.key));
+
+  try {
+    return normalizeHotkeyAccelerator(parts.join("+"));
+  } catch {
+    return "";
+  }
+}
+
+function isModifierKey(key) {
+  return ["Alt", "Control", "Meta", "Shift"].includes(key);
+}
+
+function normalizeKeyboardEventKey(key) {
+  return key === " " ? "Space" : key;
 }
 
 function normalizeProfile(profile) {

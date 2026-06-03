@@ -178,6 +178,7 @@ test("completion helpers read, set, and reset the onboardingCompleted setting", 
   assert.equal(await resetOnboarding(bridge), false);
   assert.equal(settings.get(ONBOARDING_SETTING_KEY), false);
   assert.equal(formatHotkey("CommandOrControl+Shift+L"), "Cmd+Shift+L");
+  assert.equal(formatHotkey("Control+Alt+Space"), "Ctrl+Option+Space");
 });
 
 test("runtime bootstrap mounts onboarding before the main app shell on first launch", () => {

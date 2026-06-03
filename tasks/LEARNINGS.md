@@ -821,4 +821,5 @@
 - Reviewer cleared Wave 17 with warnings only. Wave 18 must dispatch by dependency eligibility, not as one blind seven-task parallel group: run `124`, `125`, `126`, `133`, and `142` first when file claims permit, then `131` after `126`, then `135` after `131`.
 - The Wave 17 voice baseline artifact is an idle dock snapshot despite the `voice-dock-start` filename. Treat it as visual baseline only; task `142` and task `144` still own actual Starting/Listening/Error state coverage.
 - Advisor cleared Wave 17 with warnings only. Before PR, use `git add -A` from the wave worktree so untracked task files, screenshot artifacts, wave ledgers, and the baseline harness are all included.
+- PR #21 CodeRabbit state at merge decision: review requested, CodeRabbit acknowledged and was processing with pending advisory status, and no actionable findings were available. Advisory status must not block Wave 17 merge.
 - **WAL ref:** tasks/.wal/wal.jsonl

@@ -497,3 +497,10 @@ _(wave execution entries appended below as the build runs)_
 - Advisor confirmed Wave 17 stayed inside research/proof/contract scope, with no implementation drift into UI, Composio, MCP, or Mac access behavior.
 - Advisor confirmed task contracts are adequate for downstream waves and bookkeeping is consistent at `pending=23`, `in-progress=0`, `completed=70`, `blocked=6`, with empty active claims.
 - Advisory warning recorded: all untracked Wave 17 outputs must be staged before PR so artifacts and task files are included in the branch.
+
+## 2026-06-03 — Wave 17 PR and CodeRabbit
+
+- Opened PR #21 (`wave-17` -> `main`) after reviewer and advisor gates passed.
+- Requested CodeRabbit review with `@coderabbitai review`.
+- CodeRabbit acknowledged the request and began processing the PR; its status was `PENDING` with no actionable findings available at merge-decision time. Per wave protocol, CodeRabbit is advisory-only and does not block merge.
+- The repo does not have `codex` or `codex-automation` labels, so no automation labels were applied.

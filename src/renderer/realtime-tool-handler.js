@@ -70,12 +70,12 @@ export function createRealtimeToolHandler({
         return true;
       }
 
-      onToolStart?.(toolCall.name);
+      onToolStart?.(toolCall.name, toolCall.arguments);
       let result;
       try {
         result = await executeToolSafely(executeTool, toolCall.name, toolCall.arguments);
       } finally {
-        onToolEnd?.(toolCall.name);
+        onToolEnd?.(toolCall.name, result);
       }
       if (isRecord(result?.realtimeInput)) {
         sendRealtimeToolOutput(sendEvent, toolCall.callId, createRealtimeImageToolOutput(result), {

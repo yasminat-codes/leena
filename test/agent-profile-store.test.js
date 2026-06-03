@@ -7,8 +7,8 @@ import { loadAgentProfile, saveAgentProfile } from "../src/realtime/tools/agent-
 import { closeDatabase } from "../src/realtime/tools/database.js";
 
 async function withProfileDb(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-agent-"));
-  const filePath = path.join(directory, "brah.db");
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-agent-"));
+  const filePath = path.join(directory, "lena.db");
   try {
     await callback(filePath);
   } finally {

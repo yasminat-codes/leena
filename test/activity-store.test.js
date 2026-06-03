@@ -12,7 +12,7 @@ import {
 import { closeDatabase } from "../src/realtime/tools/database.js";
 
 async function withActivityFile(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-activity-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-activity-"));
   const filePath = path.join(directory, "activity", "log.db");
   try {
     await callback(filePath);

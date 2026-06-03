@@ -7,7 +7,7 @@ import { executeRealtimeTool } from "../src/realtime/tools/index.js";
 import { getRealtimeToolDefinitions } from "../src/realtime/tools/tool-schemas.js";
 
 async function withToolHarness(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-tools-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-tools-"));
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     const parsedUrl = new URL(url);

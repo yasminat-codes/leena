@@ -17,6 +17,6 @@ test("command center demo mode is gated by trusted app development IPC", () => {
 
   assert.match(main, /ipcMain\.handle\("app:is-development", \(\) => isDevelopment\)/);
   assert.match(preload, /isDevelopment: \(\) => ipcRenderer\.invoke\("app:is-development"\)/);
-  assert.match(renderer, /window\.brah\.isDevelopment\(\)\.then/);
+  assert.match(renderer, /window\.leena\.isDevelopment\(\)\.then/);
   assert.doesNotMatch(renderer, /location\.protocol\s*===\s*["']file:/);
 });

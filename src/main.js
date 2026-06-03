@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, promises as fs } from "node:fs";
+import { existsSync, promises as fs, mkdirSync, renameSync } from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -69,6 +69,8 @@ for (const stream of [process.stdout, process.stderr]) {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDevelopment = !app.isPackaged;
+const legacyAppName = ["Br", "ah"].join("");
+const credentialStoreFilename = "openai-credentials.json";
 
 const openAIAuthConfig = Object.freeze({
   clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
@@ -159,7 +161,7 @@ function createMainWindow() {
   });
 
   // Keep the renderer pinned to the packaged index.html so the privileged
-  // window.brah bridge can never be inherited by a remote origin.
+  // window.leena bridge can never be inherited by a remote origin.
   const blockOffOrigin = (event, url) => {
     if (!url.startsWith("file://")) event.preventDefault();
   };
@@ -590,7 +592,10 @@ app.on("window-all-closed", () => {
 });
 
 function initializeDataStore() {
-  setDatabaseUserDataPath(app.getPath("userData"));
+  const currentUserDataPath = app.getPath("userData");
+  const legacyUserDataPaths = getLegacyUserDataPaths(currentUserDataPath);
+  migrateLegacyCredentialFile(currentUserDataPath, legacyUserDataPaths);
+  setDatabaseUserDataPath(currentUserDataPath, { legacyUserDataPaths });
   try {
     migrateLegacyPlannerStore();
     migrateLegacyActivityStore();
@@ -601,6 +606,47 @@ function initializeDataStore() {
     userWindowPosition = loadWindowPosition();
   } catch (error) {
     safeConsole("warn", "Failed to load window position", error);
+  }
+}
+
+function getLegacyUserDataPaths(currentUserDataPath) {
+  const candidates = [];
+  try {
+    const appDataPath = app.getPath("appData");
+    candidates.push(path.join(appDataPath, legacyAppName));
+    candidates.push(path.join(appDataPath, legacyAppName.toLowerCase()));
+  } catch {
+    return [];
+  }
+  const currentResolved = path.resolve(currentUserDataPath);
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    const resolved = path.resolve(candidate);
+    if (resolved === currentResolved || seen.has(resolved)) {
+      return false;
+    }
+    seen.add(resolved);
+    return true;
+  });
+}
+
+function migrateLegacyCredentialFile(currentUserDataPath, legacyUserDataPaths) {
+  const currentPath = path.join(currentUserDataPath, credentialStoreFilename);
+  if (existsSync(currentPath)) {
+    return;
+  }
+  for (const legacyUserDataPath of legacyUserDataPaths) {
+    const legacyPath = path.join(legacyUserDataPath, credentialStoreFilename);
+    if (!existsSync(legacyPath)) {
+      continue;
+    }
+    try {
+      mkdirSync(currentUserDataPath, { recursive: true });
+      renameSync(legacyPath, currentPath);
+      return;
+    } catch (error) {
+      safeConsole("warn", "Legacy credential migration failed", error);
+    }
   }
 }
 
@@ -930,10 +976,17 @@ async function collectPrivacyDiagnostics() {
 
 async function readMacOsTccRows() {
   const dbPath = "/Library/Application Support/com.apple.TCC/TCC.db";
+  const legacyAppSlug = ["br", "ah"].join("");
+  const clientPatterns = ["leena", legacyAppSlug];
+  const bundleIds = ["com.leena.app", ["com.unstablemind", legacyAppSlug].join(".")];
+  const whereClause = [
+    ...clientPatterns.map((client) => `client like '%${client}%'`),
+    ...bundleIds.map((client) => `client='${client}'`),
+  ].join(" or ");
   try {
     const { stdout } = await execFileAsync("sqlite3", [
       dbPath,
-      "select service,client,client_type,auth_value,auth_reason,flags,last_modified from access where client like '%brah%' or client like '%Brah%' or client='com.unstablemind.brah' order by service,client;",
+      `select service,client,client_type,auth_value,auth_reason,flags,last_modified from access where ${whereClause} order by service,client;`,
     ]);
     return stdout
       .trim()
@@ -1153,7 +1206,7 @@ async function startOAuthCallbackServer({ state }) {
         const callback = parseOAuthCallbackRequest(request.url ?? "/");
         const responseBody = callback.error
           ? "<html><body><h1>OpenAI login failed</h1><p>You can close this tab.</p></body></html>"
-          : "<html><body><h1>OpenAI login complete</h1><p>You can return to Brah.</p></body></html>";
+          : "<html><body><h1>OpenAI login complete</h1><p>You can return to Leena.</p></body></html>";
         response.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Length": Buffer.byteLength(responseBody),

@@ -11,8 +11,8 @@ import {
 } from "../src/realtime/tools/microphone-store.js";
 
 async function withStore(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-mic-"));
-  const filePath = path.join(directory, "brah.db");
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-mic-"));
+  const filePath = path.join(directory, "lena.db");
   try {
     await callback(filePath);
   } finally {

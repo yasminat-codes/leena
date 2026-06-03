@@ -2,7 +2,7 @@
 id: "032"
 title: "Global rename: Brah → Leena"
 type: refactor
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 18000
@@ -17,7 +17,9 @@ context_files:
   - README.md
 skills: []
 tags: [phase-1, rename, breaking-change]
-attempts: 0
+attempts: 3
+claim_started: "2026-06-02T23:02:41Z"
+completed_at: "2026-06-02T23:28:44Z"
 created_at: "2026-06-01"
 ---
 
@@ -59,10 +61,13 @@ The app is being rebranded from Brah to Leena. Every downstream task depends on 
 - Build output changes from `Brah.app` to `Leena.app`
 
 ## Handoff Notes
-<!-- Filled after completion -->
+Global product identity now uses Leena in package metadata, preload bridge, renderer calls, user-facing strings, and docs. The SQLite default path is `lena.db`; opening the default database migrates an existing same-directory legacy DB and sidecar files before connecting, and startup passes the old Electron user-data root so real installs can migrate from the prior support directory. Startup also moves `openai-credentials.json` from the old user-data root when the new Leena credential file does not exist. Reviewer-hardening tests now cover cross-root DB migration, SQLite WAL/SHM sidecar migration with uncheckpointed rows, and credential migration from the old Electron support root. Verification passed: old-name grep over `src/ test/ package.json README.md CLAUDE.md` returned no matches, `npm run check` passed, focused migration/auth tests passed, changed JS syntax checks passed, WAL parse passed, and `git diff --check` passed.
 
 ## Errors Encountered
-<!-- Filled if errors occur -->
+- `test/rename-migration.test.js` initially compared a null-prototype SQLite row directly to a plain object; fixed by spreading the row before `assert.deepEqual`.
+- Biome initially requested wrapping in `src/realtime/tools/screenshot-tools.js` and `test/rename-migration.test.js`; fixed by applying the formatter-compatible wrapping.
+- Reviewer found the first migration only handled an adjacent legacy DB under the new Leena user-data root; fixed by passing old Electron user-data root candidates into database migration, adding cross-root DB coverage, and migrating the encrypted OpenAI credential file at startup.
+- Reviewer-hardening coverage added a WAL/SHM sidecar migration test so uncheckpointed legacy SQLite data cannot be lost during the cross-root rename migration.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

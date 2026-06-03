@@ -11,8 +11,8 @@ import {
 } from "../src/realtime/tools/window-state-store.js";
 
 async function withStore(callback) {
-  const directory = await mkdtemp(path.join(tmpdir(), "brah-window-"));
-  const filePath = path.join(directory, "brah.db");
+  const directory = await mkdtemp(path.join(tmpdir(), "leena-window-"));
+  const filePath = path.join(directory, "lena.db");
   try {
     await callback(filePath);
   } finally {

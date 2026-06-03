@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path, { dirname, join } from "node:path";
 import test from "node:test";
@@ -25,6 +25,27 @@ function extractAuthTail(source) {
   return source.slice(start, end);
 }
 
+function extractRenameMigrationTail(source) {
+  const constantsStart = source.indexOf("const legacyAppName");
+  assert.notEqual(constantsStart, -1, "main.js must define the legacy app name");
+  const constantsEnd = source.indexOf("const openAIAuthConfig", constantsStart);
+  assert.notEqual(constantsEnd, -1, "main.js must define auth config after rename constants");
+
+  const pathsStart = source.indexOf("function getLegacyUserDataPaths(");
+  assert.notEqual(pathsStart, -1, "main.js must define legacy user-data path discovery");
+  const pathsEnd = findFunctionEnd(source, pathsStart);
+
+  const credentialsStart = source.indexOf("function migrateLegacyCredentialFile(");
+  assert.notEqual(credentialsStart, -1, "main.js must define legacy credential migration");
+  const credentialsEnd = findFunctionEnd(source, credentialsStart);
+
+  return [
+    source.slice(constantsStart, constantsEnd),
+    source.slice(pathsStart, pathsEnd),
+    source.slice(credentialsStart, credentialsEnd),
+  ].join("\n");
+}
+
 function findFunctionEnd(source, start) {
   const bodyStart = source.indexOf("{", start);
   assert.notEqual(bodyStart, -1, "function body start not found");
@@ -44,7 +65,7 @@ function findFunctionEnd(source, start) {
 }
 
 async function createAuthHarness() {
-  const userDataPath = await mkdtemp(path.join(tmpdir(), "brah-auth-path-"));
+  const userDataPath = await mkdtemp(path.join(tmpdir(), "leena-auth-path-"));
   const refreshCalls = [];
   const encryptedPayloads = [];
   const diagnostics = [];
@@ -174,6 +195,10 @@ test("OpenAI API-key IPC path and auth type are wired in the main process", () =
   assert.match(main, /const\s+API_KEY_EXPIRES_AT\s*=\s*Number\.MAX_SAFE_INTEGER/);
   assert.match(main, /expiresAt:\s*(API_KEY_EXPIRES_AT|Infinity|Number\.MAX_SAFE_INTEGER)/);
   assert.match(main, /saveOpenAICredentials\(\s*credentials\s*\)/);
+  assert.match(main, /function\s+getLegacyUserDataPaths/);
+  assert.match(main, /app\.getPath\("appData"\)/);
+  assert.match(main, /function\s+migrateLegacyCredentialFile/);
+  assert.match(main, /const\s+credentialStoreFilename\s*=\s*"openai-credentials\.json"/);
   assert.match(
     main,
     /if\s*\(\s*isOpenAIApiKeyCredentials\(credentials\)\s*\)\s*\{\s*return credentials/,
@@ -187,7 +212,63 @@ test("OpenAI API-key IPC path and auth type are wired in the main process", () =
   assert.match(main, /"none"/);
 });
 
-test("preload exposes API-key auth helpers on window.brah", () => {
+test("OpenAI credential file migrates from the legacy Electron user-data root", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "leena-auth-rename-"));
+  const appDataPath = path.join(root, "Application Support");
+  const currentUserDataPath = path.join(appDataPath, "Leena");
+  const legacyUserDataPath = path.join(appDataPath, ["Br", "ah"].join(""));
+  const legacyCredentialPath = path.join(legacyUserDataPath, "openai-credentials.json");
+  const currentCredentialPath = path.join(currentUserDataPath, "openai-credentials.json");
+  const legacyPayload = JSON.stringify({ data: "encrypted-legacy-credentials" });
+
+  try {
+    await mkdir(legacyUserDataPath, { recursive: true });
+    await writeFile(legacyCredentialPath, legacyPayload);
+
+    const warnings = [];
+    const context = {
+      app: {
+        getPath(name) {
+          assert.equal(name, "appData");
+          return appDataPath;
+        },
+      },
+      existsSync,
+      mkdirSync,
+      path,
+      renameSync,
+      safeConsole(level, message, error) {
+        warnings.push({ level, message, error });
+      },
+    };
+    vm.createContext(context);
+    vm.runInContext(
+      `${extractRenameMigrationTail(readProjectFile("src", "main.js"))}
+globalThis.__renameMigration = {
+  getLegacyUserDataPaths,
+  migrateLegacyCredentialFile,
+};`,
+      context,
+      { filename: "src/main.js.rename-migration-harness" },
+    );
+
+    const legacyPaths = [...context.__renameMigration.getLegacyUserDataPaths(currentUserDataPath)];
+    assert.deepEqual(legacyPaths, [
+      legacyUserDataPath,
+      path.join(appDataPath, ["br", "ah"].join("")),
+    ]);
+
+    context.__renameMigration.migrateLegacyCredentialFile(currentUserDataPath, legacyPaths);
+
+    assert.equal(await readFile(currentCredentialPath, "utf8"), legacyPayload);
+    assert.equal(existsSync(legacyCredentialPath), false);
+    assert.deepEqual(warnings, []);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("preload exposes API-key auth helpers on window.leena", () => {
   const preload = readProjectFile("src", "preload.js");
 
   assert.match(

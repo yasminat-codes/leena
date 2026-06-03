@@ -2,7 +2,7 @@
 id: "105"
 title: "Command Center driven by real session state"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 18000
@@ -13,7 +13,9 @@ context_files:
   - src/realtime/tools/index.js
 skills: []
 tags: [phase-7, ui, wire-live, command-center]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T23:02:41Z"
+completed_at: "2026-06-02T23:28:44Z"
 created_at: "2026-06-01"
 ---
 
@@ -52,10 +54,10 @@ The Command Center is Leena's primary interaction surface — the orb, pill, com
 - Downstream: task 106 (text chat) adds text input to the Command Center using this same state manager
 
 ## Handoff Notes
-[Filled after completion]
+Added `SessionStateManager` and bound it to Command Center instances. The renderer now mounts a live compact Command Center by default, dispatches real Realtime session/tool/done/error events from the data-channel flow, and lets the development Ctrl+D demo temporarily replace the live center. Preload also exposes `onRealtimeStateChanged`, `onRealtimeToolExecuting`, `onRealtimeResponseComplete`, and `onRealtimeError` hooks for main-process push events. Verification passed: `npm run check`, `node --test` 291/291, focused session-state tests, changed JS syntax checks, WAL parse, old-name grep, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+Parallel rename integration left one old bridge reference in `src/renderer/session-state.js` and no live renderer mount. Fixed by switching the default bridge to `window.leena`, adding preload listener hooks, emitting DOM `realtime:*` events from the renderer, and mounting a live Command Center from `renderer.js`.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

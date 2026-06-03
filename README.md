@@ -1,4 +1,4 @@
-# 🎙️ Brah
+# 🎙️ Leena
 
 <p align="center">
   <strong>Your AI that actually sees and does.</strong>
@@ -10,7 +10,7 @@
   <a href="https://skool.com/kenkai"><img src="https://img.shields.io/badge/Skool-Community-7C3AED?style=for-the-badge" alt="Skool"></a>
 </p>
 
-**Brah** is a desktop voice assistant that lives in the corner of your screen. Talk to it and it listens, looks at your screen, controls your computer, and gets things done, all in realtime through the OpenAI Realtime API.
+**Leena** is a desktop voice assistant that lives in the corner of your screen. Talk to it and it listens, looks at your screen, controls your computer, and gets things done, all in realtime through the OpenAI Realtime API.
 
 It's not just a chatbot. It takes screenshots and reasons about what's on screen, drives your mouse and keyboard, automates the browser, and manages your tasks and calendar, hands-free.
 
@@ -18,7 +18,7 @@ It's not just a chatbot. It takes screenshots and reasons about what's on screen
 
 ## 🧠 Why this exists
 
-Most voice assistants can talk but can't *do*. Brah closes that gap: it sees your actual screen, controls your actual computer, and runs real tools, so a conversation turns into action instead of just suggestions.
+Most voice assistants can talk but can't *do*. Leena closes that gap: it sees your actual screen, controls your actual computer, and runs real tools, so a conversation turns into action instead of just suggestions.
 
 ---
 
@@ -46,8 +46,8 @@ Pulls live information and reads pages on demand.
 ## 🚀 Getting started
 
 ```bash
-git clone https://github.com/KenKaiii/brah.git
-cd brah
+git clone https://github.com/KenKaiii/leena.git
+cd leena
 npm install
 npm start
 ```

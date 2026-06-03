@@ -14,7 +14,7 @@ const taskStatusLabels = Object.freeze({
 });
 
 function getDefaultBridge() {
-  return typeof window === "undefined" ? null : window.brah;
+  return typeof window === "undefined" ? null : window.leena;
 }
 
 function escapeHtml(value) {

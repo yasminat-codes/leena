@@ -2,7 +2,7 @@
 id: "092"
 title: "openWakeWord engine implementation"
 type: feature
-status: pending
+status: blocked
 priority: high
 complexity: L
 estimated_tokens: 22000
@@ -13,7 +13,9 @@ context_files:
   - plans/spike-results-wake.md
 skills: []
 tags: [phase-6, wake-word, onnx, wasm]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-02T23:02:41Z"
+blocked_at: "2026-06-02T23:28:44Z"
 created_at: "2026-06-01"
 ---
 
@@ -55,10 +57,12 @@ This is the actual wake word detection runtime. It turns the abstract WakeEngine
 - `onnxruntime-web` added to package.json dependencies
 
 ## Handoff Notes
-[Filled after completion]
+Blocked by dependency `091`. The required trained `src/wake/models/hey-lena.onnx` file is absent, `plans/spike-results-wake.md` records no selected threshold, no FA/hr, no FR%, no model size, and no latency because no real ambient/positive corpus exists. Implementing `OpenWakeWordEngine` now would fabricate the safety gate. Task can resume only after a real model plus one-hour ambient and 50-positive utterance corpus are measured, or after a product decision switches to the documented Porcupine/hotkey fallback.
 
 ## Errors Encountered
-[Filled if errors occur]
+- `src/wake/models/hey-lena.onnx` does not exist.
+- No one-hour ambient corpus or 50-positive "Hey Leena" corpus exists.
+- `plans/spike-results-wake.md` explicitly says Task 092 should stay blocked until real model/corpus measurement is available.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

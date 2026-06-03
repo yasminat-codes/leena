@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld("leena", {
   memory: {
     remember: (text, metadata) => ipcRenderer.invoke("memory:remember", { text, metadata }),
     recall: (query, limit) => ipcRenderer.invoke("memory:recall", { query, limit }),
+    getEpisodes: (options) => ipcRenderer.invoke("memory:get-episodes", options),
     getConversation: (conversationId) =>
       ipcRenderer.invoke("memory:get-conversation", { conversationId }),
     consolidate: () => ipcRenderer.invoke("memory:consolidate"),
@@ -55,6 +56,12 @@ contextBridge.exposeInMainWorld("leena", {
     getModels: (providerId, capability) =>
       ipcRenderer.invoke("providers:get-models", providerId, capability),
   },
+  chat: {
+    send: (payload) => ipcRenderer.invoke("chat:send", payload),
+  },
+  sendChat: (payload) => ipcRenderer.invoke("chat:send", payload),
+  onChatChunk: (callback) => onIpc("chat:chunk", callback),
+  offChatChunk: (listener) => offIpc("chat:chunk", listener),
   ollama: {
     pullModel: (model) => ipcRenderer.invoke("ollama:pull-model", { model }),
     onPullProgress: (callback) => onIpc("ollama:pull-progress", callback),

@@ -23,6 +23,7 @@ function createMockMemoryStore(overrides = {}) {
   const calls = {
     remember: [],
     recall: [],
+    getEpisodes: [],
     getConversation: [],
     getEpisodic: [],
     consolidate: 0,
@@ -74,6 +75,30 @@ function createMockMemoryStore(overrides = {}) {
         ]
       );
     },
+    getEpisodes(options) {
+      calls.getEpisodes.push(options);
+      if (overrides.getEpisodes instanceof Error) {
+        throw overrides.getEpisodes;
+      }
+      return (
+        overrides.getEpisodes ?? {
+          entries: [
+            {
+              id: "episode-live",
+              conversationId: "conversation-live",
+              role: "assistant",
+              content: "Live history entry",
+              createdAt: "2026-06-03T00:00:00.000Z",
+              type: "episodic",
+            },
+          ],
+          hasMore: false,
+          limit: options.limit,
+          page: options.page,
+          total: 1,
+        }
+      );
+    },
     getEpisodic(conversationId) {
       calls.getEpisodic.push(conversationId);
       if (overrides.getEpisodic instanceof Error) {
@@ -107,6 +132,10 @@ test("registerMemoryHandlers wires every memory IPC channel", () => {
   assert.deepEqual(registration.channels, MEMORY_IPC_CHANNELS);
   assert.deepEqual([...ipcMain.handlers.keys()], Object.values(MEMORY_IPC_CHANNELS));
   assert.equal(ipcMain.handlers.get(MEMORY_IPC_CHANNELS.remember), registration.handlers.remember);
+  assert.equal(
+    ipcMain.handlers.get(MEMORY_IPC_CHANNELS.getEpisodes),
+    registration.handlers.getEpisodes,
+  );
   assert.equal(
     ipcMain.handlers.get(MEMORY_IPC_CHANNELS.getConversation),
     registration.handlers.getConversation,
@@ -159,6 +188,86 @@ test("recall validates query and limit before delegation", async () => {
     error: "Memory recall query must be a non-empty string.",
   });
   assert.equal(store.calls.recall.length, 2);
+});
+
+test("get-episodes validates pagination and delegates to live memory history", async () => {
+  const store = createMockMemoryStore();
+  const { getEpisodes } = createMemoryIpcHandlers({ store });
+
+  const result = await getEpisodes(null, { limit: 10, page: 2, query: " launch " });
+
+  assert.equal(result.entries[0].conversationId, "conversation-live");
+  assert.deepEqual(store.calls.getEpisodes, [{ limit: 10, page: 2, query: "launch" }]);
+  assert.deepEqual(await getEpisodes(null, { limit: 0, page: 1 }), {
+    error: "Memory episodes limit must be a positive integer.",
+  });
+  assert.deepEqual(await getEpisodes(null, { limit: 10, page: 0 }), {
+    error: "Memory episodes page must be a positive integer.",
+  });
+});
+
+test("get-episodes clamps renderer-supplied pagination and query size", async () => {
+  const store = createMockMemoryStore();
+  const { getEpisodes } = createMemoryIpcHandlers({ store });
+  const longQuery = ` ${"a".repeat(240)} `;
+
+  await getEpisodes(null, { limit: 500, page: 999, query: longQuery });
+
+  assert.deepEqual(store.calls.getEpisodes.at(-1), {
+    limit: 50,
+    page: 500,
+    query: "a".repeat(200),
+  });
+});
+
+test("get-episodes fallback paginates and filters bounded conversation entries", async () => {
+  const store = createMockMemoryStore({
+    getConversation: [
+      {
+        id: "episode-1",
+        conversationId: "fallback",
+        role: "user",
+        content: "Alpha launch note",
+      },
+      {
+        id: "episode-2",
+        conversationId: "fallback",
+        role: "assistant",
+        content: "Beta launch note",
+      },
+      {
+        id: "episode-3",
+        conversationId: "fallback",
+        role: "user",
+        content: "Alpha follow-up",
+      },
+    ],
+  });
+  delete store.getEpisodes;
+  const { getEpisodes } = createMemoryIpcHandlers({ store });
+
+  const result = await getEpisodes(null, {
+    conversationId: "fallback",
+    limit: 1,
+    page: 2,
+    query: "alpha",
+  });
+
+  assert.deepEqual(store.calls.getConversation, ["fallback"]);
+  assert.deepEqual(result, {
+    entries: [
+      {
+        id: "episode-3",
+        conversationId: "fallback",
+        role: "user",
+        content: "Alpha follow-up",
+      },
+    ],
+    hasMore: false,
+    limit: 1,
+    page: 2,
+    total: 2,
+  });
 });
 
 test("get-conversation validates input and prefers explicit store getConversation", async () => {

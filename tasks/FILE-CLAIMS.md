@@ -21,6 +21,13 @@
 
 ## Claim History
 
+- 2026-06-03T07:36:10Z — Released Wave 13 WAL tail repair claims after appending the physical-tail terminal checkpoint and re-running focused hardening gates (45/45), `npm run check`, full `node --test` (488/488), WAL/count/claim/privacy audits, and `git diff --check`.
+- 2026-06-03T07:18:49Z — Released Wave 13 reviewer-fix-2 claims: chat IPC history/tool hardening, audited chat-triggered tool execution, OpenRouter `[DONE]` tool-call flush, and bounded/escaped `memory:get-episodes`; focused gates and full `node --test` (487/487) passed.
+- 2026-06-03T07:03:23Z — Released Wave 13 advisor-fix claims for task `106`: Command Center text chat now leaves provider/model unset until explicit user selection so `chat:send` honors the configured main-process chat default; focused text-chat gate passed.
+- 2026-06-03T06:49:46Z — Released Wave 13 final reviewer-fix claims for task `106` and task `101`: awaited async MCP-merged chat tool definitions before low/read-risk filtering, added regression coverage, and corrected Activity task search wording from FTS5 to indexed SQLite `LIKE`.
+- 2026-06-03T06:37:44Z — Released Wave 13 reviewer-blocker claims for tasks `064`, `101`, `104`, and `106`: chat tool risk limiting/follow-up turns, live `memory:get-episodes`, Launch on Login side effects, and untrusted memory prompt boundary; `npm run check` and `node --test` (481/481) passed.
+- 2026-06-03T06:23:18Z — Released Wave 13 reviewer-fix claims for task `106`: `src/providers/openai-provider.js`, `src/providers/openrouter-provider.js`, `test/provider-openai.test.js`, and `test/provider-openrouter.test.js`; focused provider/text-chat gates passed after preserving streamed tool-call deltas.
+- 2026-06-03T06:12:24Z — Released Wave 13 claims for tasks `064`, `100`, `101`, `104`, `106`, and serialized parent integration after full parent gates passed: `npm run check`, `node --test` (474/474), changed JS `node --check`, focused Wave 13 tests, and `git diff --check`.
 - 2026-06-03T04:36:29Z — Released Wave 12 CodeRabbit advisory bookkeeping claims after recording PR #13 pending advisory status and confirming no repo `codex`/`codex-automation` labels exist.
 - 2026-06-03T04:34:57Z — Released Wave 12 post-wave bookkeeping claims after recording reviewer/advisor gates, wave summary, and learnings; staging reconciliation remains a git-index step only.
 - 2026-06-03T04:24:04Z — Released Wave 12 claims for tasks `040`, `054`, `056`, `063`, `072`, `103`, blocked tasks `095`/`096`, and serialized main/preload integration after full parent gates passed and terminal task moves completed.

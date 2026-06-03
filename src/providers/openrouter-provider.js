@@ -257,6 +257,8 @@ async function* parseOpenRouterStream(body, fallbackModel) {
 
   const decoder = new TextDecoder();
   let buffer = "";
+  let sawDone = false;
+  const toolCallAccumulator = createStreamingToolCallAccumulator();
 
   for await (const chunk of iterateBody(body)) {
     buffer += typeof chunk === "string" ? chunk : decoder.decode(chunk, { stream: true });
@@ -268,44 +270,134 @@ async function* parseOpenRouterStream(body, fallbackModel) {
         continue;
       }
       if (parsed === "[DONE]") {
-        return;
+        sawDone = true;
+        buffer = "";
+        break;
       }
       const payload = parseJsonChunk(parsed);
       const choice = payload.choices?.[0];
       const delta = choice?.delta?.content ?? "";
       const finishReason = choice?.finish_reason;
       const usage = normalizeUsage(payload.usage);
-      if (delta || finishReason || usage) {
+      const toolCallDeltas = Array.isArray(choice?.delta?.tool_calls)
+        ? choice.delta.tool_calls
+        : [];
+      appendStreamingToolCallDeltas(toolCallAccumulator, toolCallDeltas);
+      const toolCalls =
+        finishReason === "tool_calls" ? flushStreamingToolCalls(toolCallAccumulator) : [];
+      if (delta || finishReason || usage || toolCalls.length > 0) {
         yield {
           content: delta,
           delta,
           model: payload.model ?? fallbackModel,
           finishReason,
           usage,
+          ...(toolCalls.length > 0 ? { toolCalls } : {}),
         };
       }
     }
+    if (sawDone) {
+      break;
+    }
   }
 
-  buffer += decoder.decode();
-  if (buffer.trim()) {
+  if (!sawDone) {
+    buffer += decoder.decode();
+  }
+  if (!sawDone && buffer.trim()) {
     const parsed = parseSseEvent(buffer);
     if (parsed && parsed !== "[DONE]") {
       const payload = parseJsonChunk(parsed);
       const choice = payload.choices?.[0];
       const delta = choice?.delta?.content ?? "";
       const usage = normalizeUsage(payload.usage);
-      if (delta || choice?.finish_reason || usage) {
+      const finishReason = choice?.finish_reason;
+      const toolCallDeltas = Array.isArray(choice?.delta?.tool_calls)
+        ? choice.delta.tool_calls
+        : [];
+      appendStreamingToolCallDeltas(toolCallAccumulator, toolCallDeltas);
+      const toolCalls =
+        finishReason === "tool_calls" ? flushStreamingToolCalls(toolCallAccumulator) : [];
+      if (delta || finishReason || usage || toolCalls.length > 0) {
         yield {
           content: delta,
           delta,
           model: payload.model ?? fallbackModel,
-          finishReason: choice?.finish_reason,
+          finishReason,
           usage,
+          ...(toolCalls.length > 0 ? { toolCalls } : {}),
         };
       }
     }
   }
+
+  const remainingToolCalls = flushStreamingToolCalls(toolCallAccumulator);
+  if (remainingToolCalls.length > 0) {
+    yield {
+      content: "",
+      delta: "",
+      model: fallbackModel,
+      finishReason: "tool_calls",
+      usage: undefined,
+      toolCalls: remainingToolCalls,
+    };
+  }
+}
+
+function createStreamingToolCallAccumulator() {
+  return new Map();
+}
+
+function appendStreamingToolCallDeltas(accumulator, deltas = []) {
+  if (!Array.isArray(deltas)) {
+    return;
+  }
+
+  for (const delta of deltas) {
+    if (!isRecord(delta)) {
+      continue;
+    }
+    const key = Number.isInteger(delta.index)
+      ? String(delta.index)
+      : typeof delta.id === "string"
+        ? delta.id
+        : String(accumulator.size);
+    const existing = accumulator.get(key) ?? {
+      id: "",
+      name: "",
+      arguments: "",
+      type: "function",
+    };
+    if (typeof delta.id === "string") {
+      existing.id = delta.id;
+    }
+    if (typeof delta.type === "string") {
+      existing.type = delta.type;
+    }
+    if (typeof delta.function?.name === "string") {
+      existing.name += delta.function.name;
+    }
+    if (typeof delta.function?.arguments === "string") {
+      existing.arguments += delta.function.arguments;
+    }
+    accumulator.set(key, existing);
+  }
+}
+
+function flushStreamingToolCalls(accumulator) {
+  const calls = [...accumulator.entries()]
+    .sort(([left], [right]) => Number(left) - Number(right))
+    .map(([, call]) => ({
+      id: call.id || undefined,
+      type: call.type || "function",
+      function: {
+        name: call.name,
+        arguments: call.arguments,
+      },
+    }))
+    .filter((call) => call.function.name);
+  accumulator.clear();
+  return calls;
 }
 
 async function* iterateBody(body) {

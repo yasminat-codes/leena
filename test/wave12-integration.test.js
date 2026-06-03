@@ -19,10 +19,8 @@ test("Wave 12 memory and identity handlers are registered in main", () => {
   );
   assert.ok(mainSource.includes("createAgentProfileIdentityAdapters"));
   assert.ok(mainSource.includes("registerIdentityHandlers"));
-  assert.match(
-    mainSource,
-    /registerMemoryHandlers\(\{ ipcMain, providerRegistry: getRegistry\(\) \}\);/,
-  );
+  assert.match(mainSource, /registerMemoryHandlers\(\{ ipcMain, store: getMemoryStore\(\) \}\);/);
+  assert.match(mainSource, /new SQLiteMemoryStore\(\{\s*providerRegistry: getRegistry\(\),\s*\}\)/);
   assert.match(mainSource, /new PersonaEngine\(\{ settingsStore: settingsStoreBridge \}\)/);
   assert.match(mainSource, /registerIdentityHandlers\(\{ ipcMain, personaEngine \}\);/);
 });

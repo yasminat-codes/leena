@@ -531,3 +531,128 @@
 - Parent verification passed: `npm run check`, `node --test` (438/438), changed JS syntax checks, `git diff --check`, WAL parse, active-claims audit, task counts, task-artifact privacy scan, and primary-checkout contamination check.
 - Reviewer gate cleared with no blockers. The realtime provider/model selector warning is non-blocking for now because runtime selection still uses provider defaults and there is only one OpenAI realtime model.
 - CodeRabbit advisory was requested on PR #13. It posted generated pending/triggered responses with no actionable findings available at merge-decision time; advisory status did not block merge.
+
+### Fix — Wave 13 — integration — Text chat and memory lifecycle wiring
+- **Symptom:** Worker slices and full tests were green, but shared lifecycle files still did not register `chat:send`, expose preload chat chunk listeners, mount live text chat, or inject recalled memories into realtime session prompts.
+- **Root cause:** Tasks `064` and `106` correctly left shared `src/main.js`, `src/preload.js`, and `src/renderer/renderer.js` to the orchestrator, but the interrupted run had not completed the serialized parent integration before the first green gate.
+- **Fix:** Added shared memory store/middleware integration in `src/main.js`, registered `registerChatHandlers()`, exposed `chat.send`/`sendChat`/`onChatChunk`/`offChatChunk` in `src/preload.js`, mounted Command Center chat in `src/renderer/renderer.js`, recorded realtime transcript memories best-effort, and added `test/wave13-integration.test.js`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — 106 — Provider switch model reset
+- **Symptom:** Text chat could retain the previous provider's selected model after the user switched chat providers.
+- **Root cause:** The Command Center chat controller reused the existing `model` field when loading model options for the newly selected provider.
+- **Fix:** Cleared the selected model on provider change, honored initial chat models only on first render, fetched the selected provider's chat models, and added focused regression coverage in `test/text-chat.test.js`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — integration — Cancelable chat computer-use tools
+- **Symptom:** Text-chat tool calls reused the realtime tool dispatcher but did not allocate an abort controller for `computer_use_task` unless the caller supplied one, so `tools:cancel-computer-use` could not cancel a computer-use task launched from chat.
+- **Root cause:** The shared runtime tool helper initially extracted the IPC handler's option construction but left abort-controller ownership at the caller boundary.
+- **Fix:** `executeRealtimeToolWithRuntimeOptions()` now creates, registers, and cleans up an owned abort controller for chat-triggered `computer_use_task` calls while preserving the existing IPC-owned controller path.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — 106 — Streamed provider tool-call deltas
+- **Symptom:** Text chat exposed the standard tool dispatcher, but OpenAI/OpenRouter streaming providers dropped `tool_calls` SSE deltas before `chat:send` could execute them.
+- **Root cause:** Provider stream parsers only yielded content/finish/usage chunks; tool-call deltas were ignored while parsing provider-specific SSE payloads.
+- **Fix:** Accumulated streamed `tool_calls` deltas in the OpenAI and OpenRouter parsers, flushed complete tool calls at `finish_reason: "tool_calls"`, and added provider regression tests for split JSON argument deltas.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer — Text chat tool safety and final answers
+- **Symptom:** Text chat could advertise/execute the full realtime tool set and returned no user-facing answer after providers emitted tool calls that required a follow-up turn.
+- **Root cause:** `chat:send` converted all realtime tool schemas without applying permission metadata, executed model-selected tool names directly, and stopped after the first provider stream.
+- **Fix:** Restricted default text-chat tools to low/read-risk permission levels, denied unsafe/unadvertised tool calls with a model-visible permission result, appended tool result messages, and ran a second provider call for the final answer.
+- **Rule added?:** yes — text chat must not expose or execute write/network/screen/sensitive/destructive/unknown tools without an explicit permission design.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer — Live Activity history across conversations
+- **Symptom:** Activity could not show generated chat/realtime conversation history because the exact `memory:get-episodes` IPC channel did not exist and fallback only read the `default` conversation.
+- **Root cause:** The renderer implemented the preferred adapter before the main/preload/SQLite alias was wired.
+- **Fix:** Added `SQLiteMemoryStore.getEpisodes({ page, limit, query })`, registered `memory:get-episodes`, exposed `window.leena.memory.getEpisodes()`, and added cross-conversation pagination/search coverage.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer — Launch on Login side effect
+- **Symptom:** The Settings Launch on Login toggle persisted a boolean but did not immediately apply the OS login item.
+- **Root cause:** General toggles all routed through generic settings persistence even though Launch on Login has a dedicated main-process side-effect channel.
+- **Fix:** `launchOnLogin` writes now prefer `window.leena.setLaunchOnLogin(bool)` or `settings:set-launch-on-login` before falling back to generic `settings:set`, with controller coverage.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer — Recalled memory prompt boundary
+- **Symptom:** Recalled memory text was placed in realtime instructions without explicitly telling the model to treat it as untrusted data.
+- **Root cause:** Memory context formatting listed facts and relevance guidance but did not protect against prompt-like content stored from transcripts.
+- **Fix:** Added an explicit memory-as-data boundary that forbids following commands inside memory text or overriding higher-priority instructions, plus regression coverage with malicious memory text.
+- **Rule added?:** yes — recalled memory in prompts must be labeled as untrusted data.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer — Async MCP tool definitions in text chat
+- **Symptom:** Text chat could advertise zero tools in production when MCP integration was present.
+- **Root cause:** `getRealtimeToolDefinitions(mcpClientManager)` returns an async MCP-merged definition list, but `chat:send` passed the unresolved promise into the synchronous chat tool normalizer.
+- **Fix:** Awaited request/default tool definitions before applying the low/read-risk chat filter, added text-chat regression coverage for async tool definitions, and corrected task `101` documentation to match the actual bounded SQLite `LIKE` search path.
+- **Rule added?:** yes — text chat must resolve async MCP-merged tool definitions before filtering or advertising tools.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — advisor — Default chat provider preservation
+- **Symptom:** Command Center text chat sent the first renderer-listed chat provider even when the user had not chosen a provider.
+- **Root cause:** Provider loading treated the first option as selected state, bypassing `chat:send`'s main-process `ProviderRegistry` default-provider resolution.
+- **Fix:** Added a blank default-provider option, kept provider/model unset until explicit user selection, and added a regression proving initial sends omit provider/model while explicit selection still sends them.
+- **Rule added?:** yes — renderer provider lists must not override persisted provider defaults unless the user explicitly selects a provider.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 13 — summary
+- Completed tasks `064`, `100`, `101`, `104`, and `106`.
+- Realtime prompts now inject recalled memories through `buildRealtimeInstructions({ profile, memories })`; realtime transcript exchanges are recorded as episodic memories best-effort and consolidated only after the conversation threshold.
+- Home, Activity, and Settings now render live data through current `window.leena` bridge contracts with loading/empty states and graceful fallbacks instead of production fixture rows.
+- Text chat is available inside the live Command Center with provider/model selection, streaming response chunks, markdown-safe bubbles, shared realtime tool dispatch, and memory handoff storage.
+- OpenAI/OpenRouter streamed tool-call deltas now reach text chat as complete tool calls, including split JSON argument chunks.
+- Text-chat tools are now low/read-risk by default, unsafe model-selected tools are denied, and tool-call results get a follow-up model turn for the final response.
+- Text chat now awaits async MCP-merged tool definitions before applying the low/read-risk filter, so live MCP integration does not drop advertised safe tools.
+- Command Center text chat preserves the configured main-process default chat provider/model until the user explicitly selects an override.
+- Activity now has a real `memory:get-episodes` / `window.leena.memory.getEpisodes()` path backed by SQLite pagination/search across generated conversation ids.
+- Settings Launch on Login now applies the OS login item through the dedicated launch bridge, and recalled prompt memory is explicitly treated as untrusted data.
+- Chat-triggered computer-use tool calls now participate in the same cancellation path as voice/tool IPC calls.
+- Parent integration coverage now pins chat handler registration, preload chat APIs, live Command Center text chat, and memory-aware realtime session wiring.
+- Independent parent gates passed after reviewer/advisor fixes: `npm run check`, `node --test` (483/483), changed JS `node --check`, focused Wave 13/provider/text-chat/memory/settings/prompt tests, `git diff --check`, WAL JSON parse, task counts, active-claims audit, and task-artifact privacy scan.
+- CodeRabbit advisory was requested on PR #14. Its GitHub status was pending at merge-decision time with no actionable findings available; advisory status did not block merge. GitHub labels `codex` and `codex-automation` are not present in this repo.
+
+### Fix — Wave 13 — reviewer-fix-2 — Chat IPC privacy boundary
+- **Symptom:** Reviewer found renderer code could submit privileged chat `system`/`tool` messages or forged tool schemas and steer default text chat toward auto-approved local file reads.
+- **Root cause:** `chat:send` accepted renderer-supplied history roles and renderer-supplied tool definitions, and its low/read-risk filter included generic local file reads.
+- **Fix:** Text chat now ignores renderer-supplied tool schemas, accepts only renderer `user`/`assistant` history roles, caps history/message size, and advertises only an explicit default chat-tool allowlist. `read_file` remains denied even when a model emits it.
+- **Rule added?:** yes — renderer-supplied chat payloads must not define tools or privileged message roles, and default text-chat tools must use an explicit allowlist instead of permission level alone.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer-fix-2 — Chat tool audit path
+- **Symptom:** Reviewer found chat-triggered tool execution bypassed the standard `tools:execute` diagnostics, activity recording, and `data:changed` refresh path.
+- **Root cause:** Wave 13 registered text chat with the lower-level runtime tool helper directly.
+- **Fix:** Added `executeRealtimeToolWithAudit()` and registered text chat against it, preserving diagnostics, tool activity, and data refresh broadcasts for chat-triggered tools.
+- **Rule added?:** yes — alternate tool callers must route through the same audit/activity/refresh wrapper as direct tool IPC.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer-fix-2 — OpenRouter DONE tool-call flush
+- **Symptom:** Reviewer found OpenRouter streamed tool-call deltas could be dropped when `[DONE]` arrived without a `finish_reason: "tool_calls"` event.
+- **Root cause:** The parser returned immediately on `[DONE]`, making the accumulator flush unreachable.
+- **Fix:** `[DONE]` now stops stream parsing without returning from the generator, allowing accumulated tool calls to flush. Added regression coverage for DONE-only tool-call termination.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer-fix-2 — Memory episodes bounds
+- **Symptom:** Reviewer found `memory:get-episodes` accepted unbounded renderer page/limit values and wildcard-heavy `LIKE` searches.
+- **Root cause:** IPC validation and direct store access trusted positive integers and interpolated unescaped `%query%` patterns.
+- **Fix:** Clamped episode page/limit/query size in IPC and store code, escaped `LIKE` wildcards with an explicit escape clause, and added IPC/store regression coverage.
+- **Rule added?:** yes — renderer-exposed paginated SQLite reads must cap limit/page/query size and escape literal LIKE input.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 13 — reviewer-fix-2 — Memory fallback pagination
+- **Symptom:** Reviewer re-check found the legacy `memory:get-episodes` fallback for stores without `getEpisodes()` still returned all conversation rows and ignored search.
+- **Root cause:** The fallback path reused `getConversation()` directly after the main SQLite path was bounded.
+- **Fix:** The fallback now reuses the same capped IPC args, filters bounded conversation entries by query, paginates the result, and returns the same `{ entries, total, hasMore, limit, page }` shape. Added focused IPC regression coverage.
+- **Rule added?:** yes — fallback IPC paths need the same resource bounds as the primary production path.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Wave 13 reviewer-fix-2 — verification
+- Independent gates after the hardening fixes passed: changed-file `node --check`, focused Biome, focused `node --test` (45/45), full `npm run check`, full `node --test` (488/488), active-claims audit, WAL JSON parse, task-count audit, `git diff --check`, and task-artifact privacy scan.
+- Reviewer found the WAL physical tail was stale after a late advisory checkpoint. Appending a fresh terminal checkpoint at the physical tail is the correct repair; do not leave older advisory/bookkeeping entries after the latest gate entry.

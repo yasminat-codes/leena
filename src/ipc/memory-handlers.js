@@ -5,10 +5,15 @@ import { getDatabasePath } from "../realtime/tools/database.js";
 export const MEMORY_IPC_CHANNELS = Object.freeze({
   remember: "memory:remember",
   recall: "memory:recall",
+  getEpisodes: "memory:get-episodes",
   getConversation: "memory:get-conversation",
   consolidate: "memory:consolidate",
   stats: "memory:stats",
 });
+
+const MAX_EPISODES_LIMIT = 50;
+const MAX_EPISODES_PAGE = 500;
+const MAX_EPISODES_QUERY_LENGTH = 200;
 
 export function registerMemoryHandlers({ ipcMain, ...options } = {}) {
   if (!ipcMain || typeof ipcMain.handle !== "function") {
@@ -18,6 +23,7 @@ export function registerMemoryHandlers({ ipcMain, ...options } = {}) {
   const handlers = createMemoryIpcHandlers(options);
   ipcMain.handle(MEMORY_IPC_CHANNELS.remember, handlers.remember);
   ipcMain.handle(MEMORY_IPC_CHANNELS.recall, handlers.recall);
+  ipcMain.handle(MEMORY_IPC_CHANNELS.getEpisodes, handlers.getEpisodes);
   ipcMain.handle(MEMORY_IPC_CHANNELS.getConversation, handlers.getConversation);
   ipcMain.handle(MEMORY_IPC_CHANNELS.consolidate, handlers.consolidate);
   ipcMain.handle(MEMORY_IPC_CHANNELS.stats, handlers.stats);
@@ -37,6 +43,7 @@ export function createMemoryIpcHandlers(options = {}) {
       rememberMemory(store, payload, metadata),
     ),
     recall: wrapMemoryIpcHandler((_event, payload, limit) => recallMemory(store, payload, limit)),
+    getEpisodes: wrapMemoryIpcHandler((_event, payload) => getEpisodes(store, payload)),
     getConversation: wrapMemoryIpcHandler((_event, payload) => getConversation(store, payload)),
     consolidate: wrapMemoryIpcHandler(() => consolidateMemory(store)),
     stats: wrapMemoryIpcHandler(() => getMemoryStats(store)),
@@ -72,6 +79,30 @@ function getConversation(store, payload) {
   const getConversationEntries =
     typeof store.getConversation === "function" ? store.getConversation : store.getEpisodic;
   return getConversationEntries.call(store, conversationId);
+}
+
+function getEpisodes(store, payload) {
+  const options = parseEpisodesArgs(payload);
+  if (typeof store.getEpisodes === "function") {
+    return store.getEpisodes(options);
+  }
+  const conversationId =
+    isRecord(payload) && typeof payload.conversationId === "string"
+      ? payload.conversationId
+      : "default";
+  const entries = getConversation(store, { conversationId });
+  const filteredEntries = options.query
+    ? entries.filter((entry) => episodeMatchesQuery(entry, options.query))
+    : entries;
+  const offset = (options.page - 1) * options.limit;
+  const pageEntries = filteredEntries.slice(offset, offset + options.limit);
+  return {
+    entries: pageEntries,
+    hasMore: filteredEntries.length > offset + options.limit,
+    limit: options.limit,
+    page: options.page,
+    total: filteredEntries.length,
+  };
 }
 
 async function consolidateMemory(store) {
@@ -136,6 +167,26 @@ function parseConversationId(payload) {
   return normalizeNonEmptyString(payload.conversationId, "Memory conversationId");
 }
 
+function parseEpisodesArgs(payload) {
+  const record = isRecord(payload) ? payload : {};
+  return {
+    limit: normalizeBoundedPositiveInteger(
+      record.limit ?? 20,
+      "Memory episodes limit",
+      MAX_EPISODES_LIMIT,
+    ),
+    page: normalizeBoundedPositiveInteger(
+      record.page ?? 1,
+      "Memory episodes page",
+      MAX_EPISODES_PAGE,
+    ),
+    query: limitText(
+      typeof record.query === "string" ? record.query.trim() : "",
+      MAX_EPISODES_QUERY_LENGTH,
+    ),
+  };
+}
+
 function normalizeMetadata(metadata = {}) {
   if (metadata === undefined) {
     return {};
@@ -154,6 +205,30 @@ function normalizeLimit(limit = 5) {
     throw new TypeError("Memory recall limit must be a positive integer.");
   }
   return limit;
+}
+
+function normalizePositiveInteger(value, label) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new TypeError(`${label} must be a positive integer.`);
+  }
+  return value;
+}
+
+function normalizeBoundedPositiveInteger(value, label, maxValue) {
+  const normalized = normalizePositiveInteger(value, label);
+  return Math.min(normalized, maxValue);
+}
+
+function limitText(value, maxLength) {
+  return value.length > maxLength ? value.slice(0, maxLength) : value;
+}
+
+function episodeMatchesQuery(entry, query) {
+  const haystack = [entry?.content, entry?.role, entry?.conversationId, entry?.conversation_id]
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query.toLowerCase());
 }
 
 function normalizeNewFactsCount(result) {
@@ -186,8 +261,14 @@ function assertMemoryStore(store) {
   assertStoreMethod(store, "remember");
   assertStoreMethod(store, "recall");
   assertStoreMethod(store, "consolidate");
-  if (typeof store.getConversation !== "function" && typeof store.getEpisodic !== "function") {
-    throw new TypeError("Memory store getConversation or getEpisodic method is required.");
+  if (
+    typeof store.getEpisodes !== "function" &&
+    typeof store.getConversation !== "function" &&
+    typeof store.getEpisodic !== "function"
+  ) {
+    throw new TypeError(
+      "Memory store getEpisodes, getConversation, or getEpisodic method is required.",
+    );
   }
   if (typeof store.stats !== "function" && typeof store.getStats !== "function") {
     throw new TypeError("Memory store stats or getStats method is required.");

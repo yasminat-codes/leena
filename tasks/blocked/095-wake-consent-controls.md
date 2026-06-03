@@ -2,7 +2,7 @@
 id: "095"
 title: "Wake word consent and tray integration"
 type: feature
-status: pending
+status: blocked
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -12,7 +12,9 @@ context_files:
   - plans/phases/phase-5-wake-word.md
 skills: []
 tags: [phase-6, wake-word, privacy, consent, tray]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T04:02:39Z"
+blocked_at: "2026-06-03T04:02:39Z"
 created_at: "2026-06-01"
 ---
 
@@ -56,10 +58,10 @@ Always-on mic listening is a significant privacy surface (R-6). Users must expli
 - Phase 7 UI wiring will show wake status in the command center
 
 ## Handoff Notes
-[Filled after completion]
+- Blocked in Wave 12 because dependencies `093` and `094` are blocked by the missing wake coordinator/IPC chain over absent openWakeWord assets and metrics. Do not implement consent/tray controls over a nonexistent wake runtime without real wake evidence or an explicit fallback decision.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Dependency chain blocked: `091` lacks a trained `hey-lena.onnx`, ambient/positive corpora, and measured FA/hr/FR/latency; `092`, `093`, and `094` are blocked from that missing evidence.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

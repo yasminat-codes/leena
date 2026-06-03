@@ -279,3 +279,22 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer re-check passed with warnings only: future MCP UI should reconcile `mcp:changed` vs `mcp:status-changed`, pending task `103` still has stale bridge prose, and the 380px panel minimum needs visual smoke when resizable UI becomes user-facing.
 - Advisor gate cleared with warnings only: task `094`/wake chain remains blocked until real wake assets/metrics or an explicit fallback, package build is ad-hoc signed without notarization, and CodeRabbit remains advisory-only.
 - Opened PR #12 (`wave-11` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit status was pending at merge-decision time with no actionable findings available; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
+
+## 2026-06-03 — Wave 12 started
+
+- Cut clean branch/worktree `wave-12` from `origin/main` at `8a29a57` because the primary checkout is dirty/diverged and must remain untouched.
+- Moved tasks `040`, `054`, `056`, `063`, `072`, and `103` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Blocked tasks `095` and `096` immediately because upstream wake tasks `092`, `093`, and `094` are blocked by missing real wake assets, metrics, coordinator, and IPC runtime. Wake remains decoupled from the MVP/final DMG path.
+- Ran the required initial `kencode-search` pass before implementation. No tight curated/live reference matched the exact Electron provider/settings/memory/wake mix, so workers must rely on local production patterns and continue with file-specific context searches before editing.
+- Reserved shared `src/main.js` and `src/preload.js` for serialized Wave 12 integration after task-owned workers finish, avoiding parallel writes between memory and identity IPC tasks.
+
+## 2026-06-03 — Wave 12 summary
+
+- Completed tasks `040`, `054`, `056`, `063`, `072`, and `103`; blocked tasks `095` and `096` because the upstream wake engine/coordinator/IPC chain still lacks real wake assets, metrics, and runtime implementation.
+- Settings now includes a live provider/model selector with provider cards, config modal, test connection, capability-filtered model choices, refresh, and Ollama pull progress handling.
+- Provider-layer integration and stress coverage now exercises mocked default routing, fallback behavior, response/stream shape consistency, provider error metadata, model capability tags, and registry churn.
+- Memory and identity IPC now have standalone handler modules, focused tests, serialized `src/main.js` registration, `src/preload.js` bridges, and a Wave 12 integration test pinning the main/preload contracts.
+- Integrations screen now loads real MCP servers through the current `window.leena.mcp` bridge, renders live status/tool counts, validates add-server drafts, wires add/remove/connect/disconnect, and reconciles `mcp:status-changed` plus `mcp:changed` events.
+- Parent gates passed: `npm run check`, `node --test` (438/438), changed JS `node --check`, `git diff --check`, WAL JSON parse, task count audit, active-claims audit, task-artifact privacy scan, and primary-checkout contamination check.
+- Reviewer gate cleared with no blockers. Reviewer warnings: staging must be reconciled before commit, and realtime appears in the settings capability selector while runtime model selection still falls back through provider defaults; the realtime warning is non-blocking while only one OpenAI realtime model exists.
+- Advisor gate cleared with warnings only: reconcile staging before commit, keep the realtime selector/runtime-defaults mismatch as non-blocking for now, and release post-wave bookkeeping claims before commit.

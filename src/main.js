@@ -22,12 +22,18 @@ import {
   Tray,
 } from "electron";
 import electronUpdater from "electron-updater";
+import { PersonaEngine } from "./identity/persona-engine.js";
 import { registerHotkeyHandlers } from "./ipc/hotkey.js";
+import {
+  createAgentProfileIdentityAdapters,
+  registerIdentityHandlers,
+} from "./ipc/identity-handlers.js";
 import {
   applyLaunchOnLoginAtStartup,
   registerLaunchOnLoginHandlers,
 } from "./ipc/launch-on-login.js";
 import { registerMCPHandlers } from "./ipc/mcp-handlers.js";
+import { registerMemoryHandlers } from "./ipc/memory-handlers.js";
 import { createSafeStorageSecretCodec, registerProviderHandlers } from "./ipc/provider-handlers.js";
 import { initMCPAutoConnect, registerMCPAutoConnectCleanup } from "./mcp/auto-connect.js";
 import { MCPClientManager } from "./mcp/client-manager.js";
@@ -137,6 +143,12 @@ const settingsStoreBridge = {
   getString,
   setSetting,
 };
+const personaEngine = new PersonaEngine({ settingsStore: settingsStoreBridge });
+const agentProfileIdentityHandlers = createAgentProfileIdentityAdapters({
+  personaEngine,
+  loadAgentProfile,
+  saveAgentProfile,
+});
 
 process.on("uncaughtException", (error) => {
   reportGlobalError("process.uncaughtException", error);
@@ -466,8 +478,8 @@ async function createRealtimeProviderSession(options = {}) {
   });
 }
 
-ipcMain.handle("agent:get-profile", () => loadAgentProfile());
-ipcMain.handle("agent:set-profile", (_event, profile) => saveAgentProfile(profile));
+ipcMain.handle("agent:get-profile", agentProfileIdentityHandlers.getAgentProfile);
+ipcMain.handle("agent:set-profile", agentProfileIdentityHandlers.setAgentProfile);
 ipcMain.handle("audio:get-microphone", () => loadMicrophoneDeviceId());
 ipcMain.handle("audio:set-microphone", (_event, deviceId) => saveMicrophoneDeviceId(deviceId));
 ipcMain.handle("settings:get", (_event, key, defaultValue) => getSetting(key, defaultValue));
@@ -726,6 +738,8 @@ function shouldLaunchOnboarding() {
 
 function initializeFeatureHandlers() {
   registerLaunchOnLoginHandlers({ ipcMain, app, settingsStore: settingsStoreBridge });
+  registerIdentityHandlers({ ipcMain, personaEngine });
+  registerMemoryHandlers({ ipcMain, providerRegistry: getRegistry() });
   registerProviderHandlers(ipcMain, {
     secretCodec: createSafeStorageSecretCodec(safeStorage),
   });

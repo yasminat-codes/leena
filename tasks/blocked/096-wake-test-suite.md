@@ -2,7 +2,7 @@
 id: "096"
 title: "Wake word comprehensive test suite"
 type: test
-status: pending
+status: blocked
 priority: high
 complexity: M
 estimated_tokens: 16000
@@ -14,7 +14,9 @@ context_files:
   - test/wake-engine.test.js
 skills: []
 tags: [phase-6, wake-word, testing]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T04:02:39Z"
+blocked_at: "2026-06-03T04:02:39Z"
 created_at: "2026-06-01"
 ---
 
@@ -59,10 +61,10 @@ Wake word is always-on and privacy-sensitive. A bug here means either false acti
 - Test mocks establish the expected shapes that downstream UI code can rely on
 
 ## Handoff Notes
-[Filled after completion]
+- Blocked in Wave 12 because dependencies `092`, `093`, and `094` are blocked. Comprehensive wake tests cannot honestly validate an absent openWakeWord engine, coordinator, or IPC path without real wake assets/metrics or an explicit fallback decision.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Dependency chain blocked: no trained wake model, selected threshold, real audio corpus, coordinator implementation, or IPC implementation exists.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

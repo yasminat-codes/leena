@@ -2,7 +2,7 @@
 id: "072"
 title: "Identity IPC channels"
 type: feature
-status: pending
+status: completed
 priority: medium
 complexity: S
 estimated_tokens: 10000
@@ -13,7 +13,9 @@ context_files:
   - src/identity/persona-engine.js
 skills: []
 tags: [phase-4, identity, ipc]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T04:02:39Z"
+completed_at: "2026-06-03T04:24:04Z"
 created_at: "2026-06-01"
 ---
 
@@ -36,12 +38,12 @@ The renderer needs to display persona options in the settings UI, let users crea
 
 ## Acceptance Criteria
 
-- [ ] 5 new IPC channels registered (list, switch, create, update, delete)
-- [ ] `agent:get-profile` extended to include active persona
-- [ ] `agent:set-profile` extended to accept personaId
-- [ ] Preload bridge exposes `window.leena.identity.*`
-- [ ] Delete default persona returns structured error
-- [ ] All tests pass
+- [x] 5 new IPC channels registered by standalone `registerIdentityHandlers`
+- [x] Agent profile adapter exposes `personaId` and full `activePersona`
+- [x] Agent profile adapter accepts `personaId` and legacy `persona` id strings
+- [x] Preload bridge exposes `window.leena.identity.*`
+- [x] Delete default persona returns structured error
+- [x] All tests pass
 
 ## Tests Required
 
@@ -49,9 +51,10 @@ The renderer needs to display persona options in the settings UI, let users crea
 
 ## Outputs
 
-- `src/main.js` — modified (PersonaEngine init + IPC handlers)
-- `src/preload.js` — modified (identity bridge methods)
-- `test/identity-ipc.test.js` — new
+- `src/ipc/identity-handlers.js` — new standalone identity IPC module plus agent-profile adapter helpers
+- `test/identity-ipc.test.js` — new focused coverage for registration, delegation, structured errors, and profile compatibility
+- `src/main.js` — parent integration registers identity handlers and profile adapters
+- `src/preload.js` — parent integration exposes `window.leena.identity.*`
 
 ## Interface Contracts
 
@@ -61,11 +64,17 @@ The renderer needs to display persona options in the settings UI, let users crea
 
 ## Handoff Notes
 
-_Filled after completion._
+- Parent main-process integration should instantiate `PersonaEngine` with the settings store, then call `registerIdentityHandlers({ ipcMain, personaEngine })`.
+- Parent should replace the current direct `agent:get-profile` / `agent:set-profile` handlers with `createAgentProfileIdentityAdapters({ personaEngine, loadAgentProfile, saveAgentProfile })`.
+- Profile adapter behavior is intentionally backward compatible for current renderer callers: `profile.persona` stays a string id, `profile.personaId` mirrors the active id, and `profile.activePersona` carries the full PersonaEngine record.
+- Parent preload integration should add `window.leena.identity.{ listPersonas, switchPersona, createPersona, updatePersona, deletePersona }` wrappers around the five `identity:*` channels.
+- `identity:delete-persona` returns `{ ok: true, id, deleted }` on success and `{ ok: false, id, error }` on failure. Default deletion uses error code `IDENTITY_DEFAULT_PERSONA_PROTECTED`.
+- Parent integration complete: `src/main.js` now registers identity handlers and adapts `agent:get-profile` / `agent:set-profile`; `src/preload.js` exposes the identity bridge; `test/wave12-integration.test.js` pins both contracts.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Early worker gates saw concurrent Wave 12 renderer edits. Parent verification later passed full `npm run check` plus `node --test`.
+- Initial patch was accidentally applied to the primary checkout by the patch tool default path; the two untracked files were removed immediately and verified absent from the primary checkout.
 
 ## Self-Annealing Contract
 

@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-03T01:24:00Z — Released Wave 10 claims for tasks `033`, `035`, `038`, `061`, `081`, `085`, shared main/preload/database integration, and blocked task `093` after full parent gates, build verification, and task terminal moves completed.
 - 2026-06-02T23:28:44Z — Released Wave 09 claims for tasks `032`, `083`, `092`, and `105` after rename, MCP permission gate, live Command Center state, and wake dependency-block verification reached terminal state with full gates passing.
 - 2026-06-02T22:18:40Z — Released Wave 08 claims for tasks `031`, `055`, `082`, and the shared integration files after API-key auth, provider-backed realtime session creation, and MCP schema conversion reached terminal state with focused verification passing.
 - 2026-06-02T22:11:22Z — Released task `091` wake-spike claims after documenting the blocked model/audio-corpus state, adding a real openWakeWord WAV evaluation harness, and refusing to fabricate FA/FR metrics.

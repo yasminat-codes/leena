@@ -2,7 +2,7 @@
 id: "033"
 title: "Switch build from dir to dmg + zip"
 type: build
-status: pending
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 8000
@@ -13,7 +13,9 @@ context_files:
   - build/entitlements.mac.inherit.plist
 skills: []
 tags: [phase-1, build, distribution, dmg]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+completed_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -45,9 +47,9 @@ The final deliverable is a `.dmg` users can download and install. The current `d
 - Manual: verify `xattr -cr` bypass works on the unsigned .app
 
 ## Outputs
-- Modified: `package.json` (targets, scripts, publish config)
+- Modified: `package.json` (mac targets now `dmg` + `zip`, added `build:mac:dir`, updated `open:mac`, GitHub publish config, and packaged `build/tray/**` assets)
 - New: `GATEKEEPER-BYPASS.md`
-- Build artifacts: `dist/Leena-*.dmg`, `dist/Leena-*.zip`
+- Build artifacts verified: `dist/Leena-0.1.0-arm64.dmg`, `dist/Leena-0.1.0-arm64-mac.zip`, and `dist/mac-arm64/Leena.app`
 
 ## Interface Contracts
 - Task 039 (design system packaging): depends on build target being configured
@@ -55,10 +57,14 @@ The final deliverable is a `.dmg` users can download and install. The current `d
 - Final distribution task: builds on this — produces the final .dmg
 
 ## Handoff Notes
-<!-- Filled after completion -->
+- `npm run build:mac:dir` passed and produced `dist/mac-arm64/Leena.app`.
+- `npm run build:mac` passed and produced the DMG/ZIP plus blockmaps.
+- Mounted `dist/Leena-0.1.0-arm64.dmg`; the volume contains `Leena.app` and an `Applications` symlink.
+- `npx asar list dist/mac-arm64/Leena.app/Contents/Resources/app.asar` confirms all six tray icon assets are packaged under `/build/tray/`.
+- Final parent gates passed: `npm run check`, `node --test` (329/329), changed JS syntax checks, `git diff --check`, and package build-config probe.
 
 ## Errors Encountered
-<!-- Filled if errors occur -->
+- Initial repo-wide gates failed while other Wave 10 slices were still unfinished; parent re-ran after integration and all gates passed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

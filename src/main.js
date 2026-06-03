@@ -12,12 +12,17 @@ import {
   BrowserWindow,
   desktopCapturer,
   ipcMain,
+  Menu,
+  nativeImage,
   safeStorage,
   screen,
   shell,
   systemPreferences,
+  Tray,
 } from "electron";
 import electronUpdater from "electron-updater";
+import { MCPClientManager } from "./mcp/client-manager.js";
+import { getServer as getStoredMCPServer } from "./mcp/server-store.js";
 import {
   computerUseBrowserDocsUrl,
   createOsPermissionSnapshot,
@@ -50,6 +55,8 @@ import {
   updateTaskStatus,
 } from "./realtime/tools/planner-store.js";
 import { loadWindowPosition, saveWindowPosition } from "./realtime/tools/window-state-store.js";
+import { getAllSettings, getSetting, setSetting } from "./settings-store.js";
+import { createTrayController } from "./tray.js";
 import { redactSensitiveText, serializeError } from "./utils/errors.js";
 
 const { autoUpdater } = electronUpdater;
@@ -95,6 +102,7 @@ const windowModes = Object.freeze({
 
 let mainWindow;
 let windowMode = "panel";
+let trayController = null;
 let windowFadeTimer = null;
 let windowFadeResolve = null;
 let activeComputerUseController = null;
@@ -106,6 +114,7 @@ let suppressMoveSave = false;
 let moveSaveTimer = null;
 // Set while we resize the window ourselves, so the resize guard ignores it.
 let suppressBoundsGuard = false;
+const mcpClientManager = new MCPClientManager();
 
 process.on("uncaughtException", (error) => {
   reportGlobalError("process.uncaughtException", error);
@@ -420,7 +429,7 @@ async function createRealtimeProviderSession(options = {}) {
     model: getProviderDefaultModel(provider, REALTIME, options.model),
     voice: profile.voice,
     instructions: buildRealtimeInstructions({ profile }),
-    tools: getRealtimeToolDefinitions(),
+    tools: await getRealtimeToolDefinitions(mcpClientManager),
   });
 }
 
@@ -428,6 +437,13 @@ ipcMain.handle("agent:get-profile", () => loadAgentProfile());
 ipcMain.handle("agent:set-profile", (_event, profile) => saveAgentProfile(profile));
 ipcMain.handle("audio:get-microphone", () => loadMicrophoneDeviceId());
 ipcMain.handle("audio:set-microphone", (_event, deviceId) => saveMicrophoneDeviceId(deviceId));
+ipcMain.handle("settings:get", (_event, key, defaultValue) => getSetting(key, defaultValue));
+ipcMain.handle("settings:set", (_event, key, value) => {
+  const saved = setSetting(key, value);
+  broadcastDataChanged("settings", { type: "settings", key });
+  return saved;
+});
+ipcMain.handle("settings:get-all", () => getAllSettings());
 
 ipcMain.handle("planner:list-tasks", () => listTasks());
 ipcMain.handle("planner:list-calendar", () => listCalendarItems());
@@ -453,6 +469,8 @@ ipcMain.handle("window:minimize", () => {
   mainWindow.minimize();
   return true;
 });
+ipcMain.handle("tray:set-state", (_event, state) => setRuntimeTrayState(state));
+ipcMain.handle("tray:get-state", () => trayController?.getCurrentState() ?? "idle");
 ipcMain.handle("app:quit", () => {
   app.quit();
   return true;
@@ -470,7 +488,7 @@ ipcMain.handle("diagnostics:write", async (_event, event, details = {}) => {
   return { ok: true };
 });
 ipcMain.handle("diagnostics:privacy", async () => collectPrivacyDiagnostics());
-ipcMain.handle("tools:get-definitions", () => getRealtimeToolDefinitions());
+ipcMain.handle("tools:get-definitions", () => getRealtimeToolDefinitions(mcpClientManager));
 ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
   if (typeof name !== "string" || !name.trim()) {
     return {
@@ -523,6 +541,10 @@ ipcMain.handle("tools:execute", async (_event, name, args = {}) => {
       fileSystem: {
         rootPath: app.getPath("home"),
       },
+      mcp: {
+        clientManager: mcpClientManager,
+        getServerConfig: getMCPServerConfigForPermission,
+      },
     });
     await writeDiagnosticLog("tool.execute.finish", {
       tool: name,
@@ -567,6 +589,7 @@ app.whenReady().then(() => {
   void startDiagnosticSession();
   wireUpdateEvents();
   createMainWindow();
+  initializeTray();
 
   if (!isDevelopment) {
     autoUpdater.checkForUpdatesAndNotify();
@@ -607,6 +630,55 @@ function initializeDataStore() {
   } catch (error) {
     safeConsole("warn", "Failed to load window position", error);
   }
+}
+
+function initializeTray() {
+  if (trayController) {
+    return trayController;
+  }
+  trayController = createTrayController({
+    Tray,
+    Menu,
+    nativeImage,
+    app,
+    getMainWindow: () => mainWindow,
+    setWindowMode: setMainWindowMode,
+  });
+  trayController.createTray();
+  trayController.wireWindowCloseToTray();
+  return trayController;
+}
+
+function setRuntimeTrayState(state) {
+  try {
+    if (!trayController) {
+      initializeTray();
+    }
+    if (trayController.getCurrentState() === "muted" && state !== "muted") {
+      return "muted";
+    }
+    return trayController.setTrayState(state);
+  } catch (error) {
+    safeConsole("warn", "Failed to set tray state", error);
+    return trayController?.getCurrentState() ?? "idle";
+  }
+}
+
+async function getMCPServerConfigForPermission(serverId) {
+  const storedServer = getStoredMCPServer(serverId);
+  let tools = [];
+  try {
+    tools = await mcpClientManager.listTools(serverId);
+  } catch {
+    tools = [];
+  }
+  return {
+    ...(storedServer ?? {}),
+    serverId: storedServer?.id ?? serverId,
+    name: storedServer?.name ?? serverId,
+    permission_level: storedServer?.permission_level ?? "confirm",
+    tools,
+  };
 }
 
 function getLegacyUserDataPaths(currentUserDataPath) {
@@ -654,11 +726,11 @@ function getDiagnosticLogPath() {
   return path.join(app.getPath("userData"), "diagnostics.log");
 }
 
-function broadcastDataChanged(category) {
+function broadcastDataChanged(category, details = {}) {
   if (!category || !mainWindow || mainWindow.isDestroyed()) {
     return;
   }
-  mainWindow.webContents.send("data:changed", { category });
+  mainWindow.webContents.send("data:changed", { category, ...details });
 }
 
 function reportGlobalError(event, error) {

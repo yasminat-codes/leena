@@ -2,7 +2,7 @@
 id: "035"
 title: "System tray / menubar icon"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -13,7 +13,9 @@ context_files:
   - src/renderer/index.html
 skills: []
 tags: [phase-1, tray, menubar, macos]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+completed_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -46,7 +48,10 @@ Desktop assistants must be always-available. The tray icon provides persistent a
 - New: `build/tray/iconTemplate.png`, `iconTemplate@2x.png`, `-muted` variants, `-active` variants
 - Modified: `src/main.js` (tray creation, close-to-tray, state management)
 - Modified: `src/preload.js` (tray action listener)
+- Modified: `src/renderer/renderer.js` (runtime tray state updates from listening/speaking/idle modes)
+- New: `src/tray.js`
 - New: `test/tray.test.js`
+- New: `test/wave10-integration.test.js`
 
 ## Interface Contracts
 - Task 037 (onboarding): "Settings" tray action opens settings view
@@ -55,10 +60,16 @@ Desktop assistants must be always-available. The tray icon provides persistent a
 - Phase 6 (UI wire): tray state driven by real session events
 
 ## Handoff Notes
-<!-- Filled after completion -->
+- `src/tray.js` owns the injectable tray controller. `src/main.js` wires it with Electron `Tray`, `Menu`, `nativeImage`, `app`, the current `mainWindow`, and `setMainWindowMode`.
+- Close-to-tray is active through `wireWindowCloseToTray()`. `before-quit` marks real shutdown, so Cmd+Q and "Quit Leena" still quit.
+- Preload exposes `setTrayState`, `getTrayState`, `onTrayAction`, `offTrayAction`, `onTrayStateChanged`, and `offTrayStateChanged`.
+- Renderer calls `setTrayState()` for `listening`, `speaking`, and `idle` modes. Main preserves `muted` when runtime state updates arrive so tray mute is not accidentally cleared by renderer activity.
+- `test/tray.test.js` verifies menu labels/actions, state icon switching, renderer IPC payloads, and close-to-tray behavior. `test/wave10-integration.test.js` verifies main/preload wiring and packaging config.
+- Final parent gates passed: `npm run check`, `node --test` (329/329), changed JS syntax checks, `git diff --check`, dir build, DMG/ZIP build, mounted DMG layout check, and packaged tray asset check.
 
 ## Errors Encountered
-<!-- Filled if errors occur -->
+- Initial `npm run check` caught Biome import/format issues in `test/tray.test.js`; fixed with Biome on the tray helper/test files. No new LEARNINGS rule needed.
+- Repo-wide gates were temporarily blocked by other Wave 10 slices while workers were still running. Parent integration re-ran `npm run check` and `node --test` successfully.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

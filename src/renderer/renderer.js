@@ -110,6 +110,7 @@ function emitSessionEvent(eventName, payload = {}) {
 
 function emitSessionState(state, payload = {}) {
   emitSessionEvent(SESSION_STATE_EVENTS.stateChanged, { ...payload, state });
+  syncTrayStateForMode(state);
 }
 
 function mountLiveCommandCenter() {
@@ -244,6 +245,36 @@ function setStatus(message) {
 
 function setMode(mode) {
   appShellElement.dataset.mode = mode;
+  syncTrayStateForMode(mode);
+}
+
+function syncTrayStateForMode(mode) {
+  const trayState = trayStateForMode(mode);
+  if (!trayState || typeof window.leena.setTrayState !== "function") {
+    return;
+  }
+  void window.leena.setTrayState(trayState).catch((error) => {
+    void writeRendererDiagnostic("tray.set_state.error", {
+      message: error instanceof Error ? error.message : String(error),
+      state: trayState,
+    });
+  });
+}
+
+function trayStateForMode(mode) {
+  switch (mode) {
+    case "listening":
+      return "listening";
+    case "speaking":
+      return "speaking";
+    case "idle":
+    case "disconnected":
+    case "closed":
+    case "failed":
+      return "idle";
+    default:
+      return null;
+  }
 }
 
 function setMenuOpen(open) {

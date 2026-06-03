@@ -71,7 +71,7 @@ The app shell is the structural skeleton every screen and component mounts into.
 - Reviewer verification required a second focused fix: Electron `panel` mode now uses the app-shell size, and the Integrations grid icon now uses the exact design-system rect values.
 - Reviewer re-review required a third focused fix: `#call-wave` now lives inside visible `#call-stage` so active-call waveform drawing remains visible.
 - `npm start` was smoke-tested for startup only and intentionally terminated after diagnostics showed `session.start` and renderer secret prefetch; no manual visual approval gate applies until Wave 06.
-- Gradients were sourced from `/Users/yasmineseidu/leena/design-system/gradients/` because the clean `origin/main` worktree does not include the untracked `design-system/` directory.
+- Gradients were sourced from the primary checkout's untracked `design-system/gradients/` directory because the clean `origin/main` worktree does not include that reference directory.
 - Independent gates passed: `npm run check`, `node --test` (161 tests, 0 failed/skipped/todo), `node --check` on changed renderer JS/test files, exact icon path scan, `git diff --check`, and Electron startup smoke.
 
 ## Errors Encountered

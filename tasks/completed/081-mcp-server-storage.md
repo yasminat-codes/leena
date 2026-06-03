@@ -2,7 +2,7 @@
 id: "081"
 title: "MCP server configuration storage"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 10000
@@ -12,7 +12,9 @@ context_files:
   - plans/data-model.md
 skills: []
 tags: [phase-5, mcp, storage]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+completed_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -46,6 +48,7 @@ Users need to add, remove, and configure MCP servers persistently. The server st
 ## Outputs
 - `src/mcp/server-store.js` — ServerStore with CRUD operations
 - `mcp_servers` table added to SQLite schema (auto-migrated)
+- `test/mcp-server-store.test.js` — CRUD, validation, update, remove, class wrapper, and auto-connect coverage
 
 ## Interface Contracts
 - **Task 084** depends on all CRUD methods for IPC channel handlers
@@ -53,10 +56,14 @@ Users need to add, remove, and configure MCP servers persistently. The server st
 - Schema shape returned: `{ id, name, transport, url, command, args, enabled, auto_connect, permission_level, created_at }`
 
 ## Handoff Notes
-[Filled after completion]
+- `src/mcp/server-store.js` provides `ServerStore` plus top-level CRUD helpers.
+- HTTP servers require a valid `http(s)` URL; stdio servers require `command`; stdio `args` are stored as JSON text and returned as arrays.
+- Invalid `permission_level` normalizes to fail-closed `confirm`.
+- The store keeps an idempotent local migration and parent integration also added `mcp_servers` to central `database.js` schema.
+- Final parent gates passed: `npm run check`, `node --test` (329/329), focused MCP server-store tests, changed JS syntax checks, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Focused worker gates passed after formatting its owned test. Repo-wide gates were rerun and passed after the remaining Wave 10 slices finished.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

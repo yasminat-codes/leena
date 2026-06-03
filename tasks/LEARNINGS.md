@@ -44,6 +44,7 @@
 - **Decorative geometry still uses named radius tokens.** Even abstract pseudo-elements and background shapes must use `--r-*` tokens for `border-radius`; if a new shape needs a new radius, add a named token instead of a literal runtime value.
 - **Off-white dominance means paper owns the shell.** If the owner says the dominant color should be off-white, teal/dark accents must not own the wallpaper, side rail, topbar, or major orb well. Keep strong teal to selected controls, active states, small marks, and subtle sculptural accents.
 - **Measurement spikes must not invent metrics.** For wake-word, model, audio, latency, or accuracy spikes, block with a usable harness and exact missing assets instead of reporting synthetic FA/FR/latency numbers.
+- **Packaged runtime assets outside `src/` must be explicitly included.** If main-process code loads assets from `build/` or another non-source directory, add that path to electron-builder `build.files` and verify it inside `app.asar` after packaging.
 
 ---
 
@@ -478,3 +479,33 @@
 - **Fix:** Added a realistic SQLite WAL/SHM sidecar migration test with `wal_autocheckpoint=0`, proving an uncheckpointed legacy row survives the cross-root move into `lena.db`; added a focused auth harness test for legacy OpenAI credential migration from the old Electron support root.
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 10 — 033/035 — Packaged tray assets
+- **Symptom:** The tray helper loaded icons from `build/tray`, but the electron-builder `files` allowlist only included `src/**/*`, renderer assets, and `package.json`.
+- **Root cause:** The tray icons lived outside `src/`, so a successful local run could still produce a packaged app with missing tray images.
+- **Fix:** Added `build/tray/**` to `package.json` `build.files`, rebuilt the dir and DMG/ZIP targets, and verified all six tray icon files with `npx asar list dist/mac-arm64/Leena.app/Contents/Resources/app.asar`.
+- **Rule added?:** yes — Packaged runtime assets outside `src/` must be explicitly included.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 10 — 061 — SQLite rowid BigInt in FK test
+- **Symptom:** The full test suite failed with `TypeError: Cannot mix BigInt and other types` in the semantic supersession foreign-key test.
+- **Root cause:** `DatabaseSync#run().lastInsertRowid` can be a BigInt, and the negative FK test added a numeric offset directly.
+- **Fix:** Converted `lastInsertRowid` with `Number(replacement)` before computing the invalid FK id and reran focused memory tests plus full `node --test`.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 10 — reviewer — Learning/WAL tail repair
+- **Symptom:** Reviewer found Wave 10 learnings inside the fix-entry template code fence and the WAL physical tail ending with an older tray checkpoint that implied gates were still blocked.
+- **Root cause:** The Wave 10 summary was inserted into the template block, and a worker checkpoint was appended after terminal post-run entries.
+- **Fix:** Moved Wave 10 fix entries and summary to the physical learning tail and appended a later terminal reviewer-fix WAL checkpoint that supersedes the stale tray checkpoint.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 10 — summary
+- Completed tasks `033`, `035`, `038`, `061`, `081`, and `085`; blocked `093` because `092` still lacks the wake engine/model/threshold/metrics required for an honest coordinator implementation.
+- Electron Builder now creates DMG + ZIP artifacts while preserving `build:mac:dir`; `GATEKEEPER-BYPASS.md` documents unsigned install bypass until Developer ID signing exists.
+- Tray work now has packaged template icons, close-to-tray, tray actions/listeners, state icons, and renderer-driven listening/speaking/idle updates that preserve a muted tray state.
+- Settings work now has a typed SQLite store, defaults, main IPC, preload APIs, `data:changed` settings events, and tests for value types/defaults/deletion/legacy raw rows.
+- Storage work added additive memory tables/indexes, central `mcp_servers` schema, `ServerStore` CRUD, and auto-connect filtering.
+- MCP tools now merge into realtime tool definitions and execute through namespaced routing plus the Wave 09 permission helpers; missing/stale metadata fails closed.
+- Parent verification passed: `npm run check`, `node --test` (329/329), changed JS syntax checks, `git diff --check`, `npm run build:mac:dir`, `npm run build:mac`, mounted DMG layout check, ZIP app check, and packaged tray asset check.

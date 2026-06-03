@@ -2,7 +2,7 @@
 id: "085"
 title: "Wire MCP tools into realtime tool dispatch"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 16000
@@ -13,7 +13,9 @@ context_files:
   - src/realtime/tools/tool-schemas.js
 skills: []
 tags: [phase-5, mcp, tool-dispatch]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+completed_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -47,17 +49,23 @@ This is the integration point — where MCP tools become usable by the AI during
 ## Outputs
 - Updated `src/realtime/tools/index.js` — MCP tool routing added to `executeRealtimeTool`
 - Updated `src/realtime/tools/tool-schemas.js` — merged tool definitions support
-- Updated realtime session handler call site — passes `options.mcp`
+- Updated realtime session handler call site in `src/main.js` — passes `mcpClientManager`, `getMCPServerConfigForPermission`, and merged tool definitions
+- New `test/mcp-tool-execution.test.js`
+- New `test/wave10-integration.test.js`
 
 ## Interface Contracts
 - **Task 087** (test suite) validates end-to-end MCP tool flow
 - **Phase 6 UI** shows MCP tool calls in activity feed (relies on existing activity logging in tool dispatch)
 
 ## Handoff Notes
-[Filled after completion]
+- `getRealtimeToolDefinitions(mcpClientManager)` returns static tools plus connected MCP tools when a manager is provided; no-manager behavior remains synchronous static-only.
+- `executeRealtimeTool()` routes namespaced MCP tools after built-ins, uses `shouldAutoApproveMCPTool()` / `getMCPToolPermissionRequest()`, returns `permission_pending` if no approval callback exists, and wraps MCP failures into safe error results.
+- `src/main.js` now instantiates one `MCPClientManager`, includes merged tools in realtime session creation, and passes MCP options to manual `tools:execute` calls.
+- `getMCPServerConfigForPermission()` enriches stored server config with live `listTools()` metadata when available; missing metadata fails closed.
+- Final parent gates passed: `npm run check`, `node --test` (329/329), focused MCP execution tests, focused MCP suite, changed JS syntax checks, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+- The worker initially formatted `test/mcp-tool-execution.test.js`; no functional blocker remained after parent integration.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

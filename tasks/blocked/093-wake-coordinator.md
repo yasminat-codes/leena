@@ -2,7 +2,7 @@
 id: "093"
 title: "Wake coordinator with debounce and dispatch"
 type: feature
-status: pending
+status: blocked
 priority: high
 complexity: M
 estimated_tokens: 15000
@@ -12,7 +12,9 @@ context_files:
   - src/wake/openwakeword-engine.js
 skills: []
 tags: [phase-6, wake-word, coordinator]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T01:04:37Z"
+blocked_at: "2026-06-03T01:24:00Z"
 created_at: "2026-06-01"
 ---
 
@@ -45,7 +47,7 @@ Raw engine detections are noisy — multiple triggers for a single utterance, tr
 - `test/wake-coordinator.test.js` — debounce timing (mock Date.now), mute guard on/off, session-active guard, cooldown expiry, rate limiting, callback invocation count verification
 
 ## Outputs
-- `src/wake/wake-coordinator.js` — WakeCoordinator class
+- Blocked; no coordinator implementation was written because dependency `092` is terminal-blocked.
 
 ## Interface Contracts
 - **Task 094** (wake IPC) wires `onConfirmedDetection` to IPC dispatch + window surfacing
@@ -53,10 +55,12 @@ Raw engine detections are noisy — multiple triggers for a single utterance, tr
 - Coordinator reads settings keys: `wakeMuted`, `wakeEnabled`, `wakeCooldownMs`
 
 ## Handoff Notes
-[Filled after completion]
+- Task `092` remains blocked: `src/wake/openwakeword-engine.js` is absent, `src/wake/models/hey-lena.onnx` is absent, and `plans/spike-results-wake.md` has no selected threshold, FA/hr, FR%, model size, or latency measurement.
+- Resume only after task `092` has a real engine/model/threshold/metrics or after an explicit Porcupine/hotkey fallback decision.
+- Wake work remains decoupled from the DMG path; Wave 10 non-wake tasks completed normally.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Dependency `092` is blocked by missing wake model/audio corpus/metrics, so implementing a coordinator now would fabricate a working wake stack.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

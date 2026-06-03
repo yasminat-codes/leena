@@ -21,6 +21,9 @@
 
 ## Claim History
 
+- 2026-06-03T21:08:47Z — Opened Wave 17 claims for tasks `120`, `121`, `122`, and `123`: reference brief, UI baseline proof harness/artifacts, Mac access trust contract, Settings IA contract, and owned task files.
+- 2026-06-03T21:27:08Z — Released Wave 17 claims for tasks `120`, `121`, `122`, and `123` after reference brief, UI baseline screenshot harness/artifacts, Mac access trust contract, Settings IA contract, independent artifact/content checks, focused UI harness, `npm run check`, full `node --test` (542/542), WAL parse, privacy scan, and `git diff --check` passed.
+
 - 2026-06-03T10:47:25Z — Released Wave 16 claims for task `046` after MVP DMG/ZIP build, named artifact copies, manifest update, `npm run check`, full `node --test` (529/529), build-smoke focused gates, `git diff --check`, DMG hdiutil verification, read-only mount checks, ZIP extraction checks, active task-count audit, and task-artifact privacy scan.
 - 2026-06-03T10:18:35Z — Released Wave 15 claims for tasks `073` and `111` after parent verification passed identity focused gates, regenerated final DMG/ZIP build, DMG/ZIP structural checks, `npm run check`, full `node --test` (527/527), changed-file syntax check, `git diff --check`, WAL parse, and privacy/count audits.
 - 2026-06-03T09:29:02Z — Released Wave 14 reviewer-fix-5 claims after generation-guarded persona session updates, refreshed realtime tools in active `session.update`, Biome assertion formatting, full `npm test` (525/525), changed-file syntax checks, `git diff --check`, WAL parse, checklist scan, privacy scan, and count audit passed.

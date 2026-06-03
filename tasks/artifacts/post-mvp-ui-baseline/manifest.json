@@ -1,0 +1,61 @@
+{
+  "baseline": "post-mvp-ui-baseline",
+  "commands": {
+    "focused": "node --test test/ui-baseline-smoke.test.js",
+    "full": "node --test",
+    "staticCheck": "npm run check"
+  },
+  "deviceScaleFactor": 1,
+  "fixedNow": "2026-06-03T21:08:47.000Z",
+  "rendererUrl": "/renderer/index.html",
+  "screenshots": [
+    {
+      "colorBuckets": 130,
+      "height": 712,
+      "luminanceRange": 223.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "home.png",
+      "id": "home",
+      "selector": null
+    },
+    {
+      "colorBuckets": 132,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings.png",
+      "id": "settings",
+      "selector": null
+    },
+    {
+      "colorBuckets": 134,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "integrations.png",
+      "id": "integrations",
+      "selector": null
+    },
+    {
+      "colorBuckets": 58,
+      "height": 60,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 480,
+      "capture": "clip",
+      "file": "voice-dock-start.png",
+      "id": "voice-dock-start",
+      "selector": ".command-center-mount"
+    }
+  ],
+  "viewport": {
+    "width": 1060,
+    "height": 712
+  }
+}

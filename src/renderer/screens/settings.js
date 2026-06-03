@@ -503,6 +503,7 @@ export function bindSettingsControls(root, bridge = getLeenaBridge()) {
   });
 
   bindHotkeyControls(root, controller);
+  bindUpdateControls(root, bridge);
   bindProviderModelSelector(root, bridge);
   return root;
 }
@@ -554,6 +555,58 @@ function bindHotkeyControls(root, controller) {
     setNodeValue(input, accelerator);
     applyHotkeyPreview(root, accelerator);
   });
+}
+
+export function bindUpdateControls(root, bridge = getLeenaBridge()) {
+  const statusNode = queryOne(root, "[data-update-status]");
+  const versionNode = queryOne(root, "[data-update-version]");
+  const checkButton = queryOne(root, "[data-update-check]");
+  const downloadButton = queryOne(root, "[data-update-download]");
+  const installButton = queryOne(root, "[data-update-install]");
+
+  if (!statusNode && !versionNode && !checkButton && !downloadButton && !installButton) {
+    return null;
+  }
+
+  const applyStatus = (status) => applyUpdateStatus(root, status);
+  const statusCleanup = subscribeToUpdateStatus(bridge, applyStatus);
+
+  void loadUpdateStatus(bridge)
+    .then(applyStatus)
+    .catch((error) => {
+      applyStatus({ state: "error", message: getErrorMessage(error) });
+    });
+
+  checkButton?.addEventListener?.("click", () => {
+    applyStatus({ state: "checking", message: "Checking GitHub for updates." });
+    void checkForUpdates(bridge)
+      .then(applyStatus)
+      .catch((error) => {
+        applyStatus({ state: "error", message: getErrorMessage(error) });
+      });
+  });
+
+  downloadButton?.addEventListener?.("click", () => {
+    applyStatus({ state: "downloading", message: "Starting update download from GitHub." });
+    void downloadUpdate(bridge)
+      .then(applyStatus)
+      .catch((error) => {
+        applyStatus({ state: "error", message: getErrorMessage(error) });
+      });
+  });
+
+  installButton?.addEventListener?.("click", () => {
+    applyStatus({ state: "installing", message: "Restarting Leena to install the update." });
+    void installUpdate(bridge)
+      .then(applyStatus)
+      .catch((error) => {
+        applyStatus({ state: "error", message: getErrorMessage(error) });
+      });
+  });
+
+  return {
+    dispose: statusCleanup,
+  };
 }
 
 export function bindProviderModelSelector(root, bridge = getLeenaBridge()) {
@@ -1126,6 +1179,23 @@ function renderHotkeySettings() {
   `;
 }
 
+function renderUpdateSettings() {
+  return `
+      <section class="card settings-card" aria-labelledby="settings-updates-title">
+        <div class="settings-card__head">
+          <h2 id="settings-updates-title" class="lx-h2">Updates</h2>
+          <span class="lx-sm text-dim" data-update-version>Version</span>
+        </div>
+        <div class="settings-provider-actions settings-update-actions">
+          <button class="btn btn--ghost" type="button" data-update-check>Check</button>
+          <button class="btn btn--ghost" type="button" data-update-download disabled>Download</button>
+          <button class="btn btn--primary" type="button" data-update-install disabled>Restart</button>
+        </div>
+        <p class="lx-sm settings-status" data-update-status>Updates have not been checked yet.</p>
+      </section>
+  `;
+}
+
 export function renderSettings() {
   return `
     <section class="settings-screen" aria-label="Settings">
@@ -1172,6 +1242,7 @@ export function renderSettings() {
       </section>
 
       ${renderHotkeySettings()}
+      ${renderUpdateSettings()}
 
       <section class="card settings-card" aria-labelledby="settings-providers-title">
         <div class="settings-card__head">
@@ -1530,6 +1601,66 @@ async function writeHotkey(bridge, accelerator) {
   throw new Error("Hotkey controls are unavailable.");
 }
 
+async function loadUpdateStatus(bridge) {
+  if (typeof bridge?.updates?.getStatus === "function") {
+    return normalizeUpdateStatus(await bridge.updates.getStatus());
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeUpdateStatus(await bridge.invoke("update:get-status"));
+  }
+  if (typeof bridge?.getAppVersion === "function") {
+    return normalizeUpdateStatus({
+      message: "Updates are available in packaged builds.",
+      version: await bridge.getAppVersion(),
+    });
+  }
+  return normalizeUpdateStatus({
+    message: "Updates are available in packaged builds.",
+  });
+}
+
+async function checkForUpdates(bridge) {
+  if (typeof bridge?.updates?.check === "function") {
+    return normalizeUpdateStatus(await bridge.updates.check());
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeUpdateStatus(await bridge.invoke("update:check"));
+  }
+  throw new Error("Update controls are unavailable.");
+}
+
+async function downloadUpdate(bridge) {
+  if (typeof bridge?.updates?.download === "function") {
+    return normalizeUpdateStatus(await bridge.updates.download());
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeUpdateStatus(await bridge.invoke("update:download"));
+  }
+  throw new Error("Update download is unavailable.");
+}
+
+async function installUpdate(bridge) {
+  if (typeof bridge?.updates?.install === "function") {
+    return normalizeUpdateStatus(await bridge.updates.install());
+  }
+  if (typeof bridge?.invoke === "function") {
+    return normalizeUpdateStatus(await bridge.invoke("update:install"));
+  }
+  throw new Error("Update install is unavailable.");
+}
+
+function subscribeToUpdateStatus(bridge, callback) {
+  if (typeof bridge?.updates?.onStatus !== "function") {
+    return () => {};
+  }
+
+  const listener = bridge.updates.onStatus((payload) => callback(normalizeUpdateStatus(payload)));
+  if (typeof bridge.updates.offStatus !== "function") {
+    return () => {};
+  }
+  return () => bridge.updates.offStatus(listener);
+}
+
 async function getWakeStatus(bridge) {
   if (typeof bridge?.wake?.getStatus === "function") {
     return bridge.wake.getStatus();
@@ -1624,6 +1755,50 @@ function applyHotkeyPreview(root, accelerator) {
     setNodeText(queryOne(root, "[data-hotkey-status]"), "");
   } catch (error) {
     setNodeText(queryOne(root, "[data-hotkey-status]"), getErrorMessage(error));
+  }
+}
+
+function applyUpdateStatus(root, status) {
+  const normalized = normalizeUpdateStatus(status);
+  setNodeText(queryOne(root, "[data-update-version]"), `Version ${normalized.version}`);
+  setNodeText(queryOne(root, "[data-update-status]"), normalized.message);
+
+  const isBusy = normalized.state === "checking" || normalized.state === "downloading";
+  const canDownload = normalized.state === "available";
+  const canInstall = normalized.state === "downloaded";
+
+  setButtonEnabled(queryOne(root, "[data-update-check]"), !isBusy);
+  setButtonEnabled(queryOne(root, "[data-update-download]"), canDownload);
+  setButtonEnabled(queryOne(root, "[data-update-install]"), canInstall);
+}
+
+function normalizeUpdateStatus(status) {
+  if (typeof status === "string") {
+    return {
+      message: status,
+      state: "idle",
+      version: "unknown",
+    };
+  }
+  const record = isRecord(status) ? status : {};
+  return {
+    message: normalizeString(record.message) || "Updates have not been checked yet.",
+    percent: Number.isFinite(record.percent) ? record.percent : null,
+    state: normalizeString(record.state) || "idle",
+    updateInfo: isRecord(record.updateInfo) ? record.updateInfo : null,
+    version: normalizeString(record.version) || "unknown",
+  };
+}
+
+function setButtonEnabled(button, enabled) {
+  if (!button) {
+    return;
+  }
+  button.disabled = !enabled;
+  if (enabled) {
+    button.removeAttribute?.("disabled");
+  } else {
+    button.setAttribute?.("disabled", "");
   }
 }
 

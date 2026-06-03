@@ -27,8 +27,14 @@ test("Task 046 mac build config keeps the MVP dmg and zip targets shippable", ()
   const macTargets = new Set(packageJson.build?.mac?.target ?? []);
 
   assert.equal(packageJson.scripts["build:mac"], "electron-builder --mac");
+  assert.equal(packageJson.scripts["release:mac"], "electron-builder --mac --publish always");
   assert.equal(macTargets.has("dmg"), true);
   assert.equal(macTargets.has("zip"), true);
+  assert.deepEqual(packageJson.build.publish, {
+    owner: "yasminat-codes",
+    provider: "github",
+    repo: "leena",
+  });
   assert.equal(packageJson.build.mac.hardenedRuntime, true);
   assert.equal(packageJson.build.mac.gatekeeperAssess, false);
   assert.equal(packageJson.build.mac.timestamp, null);

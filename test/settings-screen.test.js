@@ -235,6 +235,11 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /data-hotkey-record/);
   assert.match(html, /data-hotkey-default/);
   assert.match(html, /data-hotkey-save/);
+  assert.match(html, /Updates/);
+  assert.match(html, /data-update-version/);
+  assert.match(html, /data-update-check/);
+  assert.match(html, /data-update-download disabled/);
+  assert.match(html, /data-update-install disabled/);
   assert.match(html, /Providers/);
   assert.match(html, /OpenAI/);
   assert.match(html, /settings-chip--success/);

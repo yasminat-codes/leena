@@ -1,6 +1,6 @@
 {
   "name": "leena",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A fresh Electron desktop app.",
   "main": "src/main.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "test": "npm run check && node --test",
     "build:mac": "electron-builder --mac",
     "build:mac:dir": "electron-builder --mac dir",
-    "open:mac": "npm run build:mac:dir && open dist/mac-arm64/Leena.app"
+    "open:mac": "npm run build:mac:dir && open dist/mac-arm64/Leena.app",
+    "release:mac": "electron-builder --mac --publish always"
   },
   "keywords": [
     "electron"
@@ -52,7 +53,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "yasmineseidu",
+      "owner": "yasminat-codes",
       "repo": "leena"
     }
   },

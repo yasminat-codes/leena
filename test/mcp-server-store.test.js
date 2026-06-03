@@ -102,6 +102,25 @@ test("ServerStore class uses its configured database path", async () => {
   });
 });
 
+test("normalizes Streamable HTTP transport aliases to stored HTTP transport", async () => {
+  await withServerStore((filePath) => {
+    const server = addServer(
+      {
+        name: "Streamable MCP",
+        transport: "streamable-http",
+        url: "https://streamable.example.test/mcp",
+      },
+      filePath,
+    );
+
+    assert.equal(server.transport, "http");
+    assert.deepEqual(getServer(server.id, filePath), {
+      ...server,
+      transport: "http",
+    });
+  });
+});
+
 test("rejects invalid configs with LeenaError", async () => {
   await withServerStore((filePath) => {
     assert.throws(

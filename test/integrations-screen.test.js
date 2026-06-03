@@ -57,7 +57,10 @@ test("renderIntegrationsData maps live MCP statuses to tile classes", () => {
     countMatches(html, /data-integrations-status="disconnected">Disconnected<\/span>/g),
     1,
   );
-  assert.equal(countMatches(html, /data-integrations-transport="http">HTTP<\/span>/g), 1);
+  assert.equal(
+    countMatches(html, /data-integrations-transport="http">Streamable HTTP<\/span>/g),
+    1,
+  );
   assert.equal(countMatches(html, /data-integrations-transport="stdio">STDIO<\/span>/g), 1);
   assert.match(html, />3 tools<\/span>/);
   assert.match(html, />0 tools<\/span>/);

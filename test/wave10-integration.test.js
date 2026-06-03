@@ -64,7 +64,7 @@ test("Wave 10 build config packages tray assets with dmg and zip targets", () =>
   assert.equal(packageJson.build.files.includes("build/tray/**"), true);
   assert.deepEqual(packageJson.build.publish, {
     provider: "github",
-    owner: "yasmineseidu",
+    owner: "yasminat-codes",
     repo: "leena",
   });
 });

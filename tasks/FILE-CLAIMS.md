@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-03T04:36:29Z — Released Wave 12 CodeRabbit advisory bookkeeping claims after recording PR #13 pending advisory status and confirming no repo `codex`/`codex-automation` labels exist.
 - 2026-06-03T04:34:57Z — Released Wave 12 post-wave bookkeeping claims after recording reviewer/advisor gates, wave summary, and learnings; staging reconciliation remains a git-index step only.
 - 2026-06-03T04:24:04Z — Released Wave 12 claims for tasks `040`, `054`, `056`, `063`, `072`, `103`, blocked tasks `095`/`096`, and serialized main/preload integration after full parent gates passed and terminal task moves completed.
 - 2026-06-03T03:11:55Z — Released Wave 11 reviewer-fix-2 claims after wiring first-run onboarding runtime launch, preserving provider API keys when redacted placeholders are saved, updating terminal bookkeeping, and passing focused onboarding/provider gates.

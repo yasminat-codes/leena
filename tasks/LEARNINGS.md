@@ -530,3 +530,4 @@
 - Current MCP Integrations UI must use the live `window.leena.mcp.*` bridge, not stale fixture exports or generic invoke prose; keep old fixture tests aligned with the live contract.
 - Parent verification passed: `npm run check`, `node --test` (438/438), changed JS syntax checks, `git diff --check`, WAL parse, active-claims audit, task counts, task-artifact privacy scan, and primary-checkout contamination check.
 - Reviewer gate cleared with no blockers. The realtime provider/model selector warning is non-blocking for now because runtime selection still uses provider defaults and there is only one OpenAI realtime model.
+- CodeRabbit advisory was requested on PR #13. It posted generated pending/triggered responses with no actionable findings available at merge-decision time; advisory status did not block merge.

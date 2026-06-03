@@ -289,6 +289,7 @@ export function createSettingsScreenController(root, bridge = getLeenaBridge()) 
       if (!normalizedPersonaId) {
         return null;
       }
+      const previousPersona = state.activePersona;
       const switchedPersona =
         (await callRequiredBridge(
           bridge?.identity?.switchPersona,
@@ -315,6 +316,11 @@ export function createSettingsScreenController(root, bridge = getLeenaBridge()) 
       }
       applyIdentityState(root, state.profile, state.activePersona);
       applyPersonaOptions(root, state.personas, normalizedPersonaId);
+      emitPersonaChanged(root, {
+        activePersona: state.activePersona,
+        previousPersona,
+        profile: state.profile,
+      });
       return state.activePersona;
     },
     async setWakeEnabled(enabled) {
@@ -1465,6 +1471,15 @@ function applyPersonaOptions(root, personas, activePersonaId) {
     )
     .join("");
   setNodeValue(select, activePersonaId);
+}
+
+function emitPersonaChanged(root, detail) {
+  if (typeof CustomEvent !== "function") {
+    return;
+  }
+  const eventName = "leena:persona-changed";
+  const target = typeof globalThis.dispatchEvent === "function" ? globalThis : root;
+  target?.dispatchEvent?.(new CustomEvent(eventName, { detail }));
 }
 
 function applyWakeState(root, wakeStatus, wakeAvailable) {

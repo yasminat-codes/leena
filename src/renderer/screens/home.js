@@ -1,5 +1,6 @@
 const RECENT_LIMIT = 5;
 const UP_NEXT_LIMIT = 3;
+const SUGGESTED_LIMIT = 3;
 export const HOME_REFRESH_INTERVAL_MS = 60_000;
 
 const HOME_COPY = Object.freeze({
@@ -50,6 +51,8 @@ export const MOCK_HOME_DATA = Object.freeze({
 });
 
 let activeHomeRefresh = null;
+let homeNudgesExpanded = false;
+let homeRefreshGeneration = 0;
 
 function getDefaultBridge() {
   return typeof window === "undefined" ? null : window.leena;
@@ -260,6 +263,35 @@ function normalizePlannerItem(item, index) {
   };
 }
 
+function normalizeNudgeEntry(item, index) {
+  const title = firstString(item.title, "Suggested nudge");
+  const detail = firstString(item.detail, item.description, "Leena found something timely.");
+  return {
+    datetime: parseTime(item.datetime)?.toISOString() ?? "",
+    detail: clampText(detail, 144),
+    id: firstString(item.id, `nudge-${index + 1}`),
+    meta: clampText(firstString(item.meta, item.type, "Suggested"), 48),
+    source: clampText(firstString(item.source, "leena"), 24),
+    title: clampText(title, 80),
+    type: clampText(firstString(item.type, "suggested"), 32),
+  };
+}
+
+function normalizeNudges(value = {}) {
+  const record = isRecord(value) ? value : {};
+  const source = Array.isArray(value) ? value : (record.nudges ?? record);
+  const visibleLimit = normalizeLimit(record.visibleLimit, SUGGESTED_LIMIT);
+  const nudges = unwrapList(source, ["nudges", "items", "entries"])
+    .map((item, index) => normalizeNudgeEntry(item, index))
+    .filter((item) => item.id && item.title && item.detail);
+  return {
+    enabled: record.enabled === true || Array.isArray(value),
+    hiddenCount: Math.max(0, nudges.length - visibleLimit),
+    nudges,
+    visibleLimit,
+  };
+}
+
 function normalizePreferences(value = {}) {
   const record = isRecord(value) ? value : {};
   return {
@@ -283,6 +315,7 @@ export function normalizeHomeData(data = {}, options = {}) {
   const greetingNow = options.now instanceof Date ? options.now : null;
   const preferences = normalizePreferences(data.preferences);
   const errors = Array.isArray(data.errors) ? data.errors.map(normalizeError).filter(Boolean) : [];
+  const nudges = normalizeNudges(data.nudges);
 
   if (Array.isArray(data.recentActions) || Array.isArray(data.upNext)) {
     return {
@@ -290,6 +323,7 @@ export function normalizeHomeData(data = {}, options = {}) {
       errors,
       greeting: firstString(data.greeting, buildGreeting(preferences.userName, greetingNow)),
       loading: data.loading === true,
+      nudges,
       prompt: firstString(data.prompt, preferences.prompt),
       recentActions: Array.isArray(data.recentActions)
         ? data.recentActions.slice(0, recentLimit)
@@ -305,6 +339,7 @@ export function normalizeHomeData(data = {}, options = {}) {
       errors,
       greeting: buildGreeting(preferences.userName, greetingNow),
       loading: true,
+      nudges: normalizeNudges(),
       prompt: preferences.prompt,
       recentActions: loadingRecentActions.slice(0, recentLimit),
       status: preferences.status,
@@ -333,6 +368,7 @@ export function normalizeHomeData(data = {}, options = {}) {
     errors,
     greeting: buildGreeting(preferences.userName, greetingNow),
     loading: false,
+    nudges,
     prompt: preferences.prompt,
     recentActions: sortNewestFirst([...activity, ...memories])
       .slice(0, recentLimit)
@@ -412,6 +448,13 @@ async function loadHomePreferences(bridge) {
   });
 }
 
+async function loadNudges(bridge) {
+  if (typeof bridge?.nudges?.list === "function") {
+    return callOptional("nudges:list", () => bridge.nudges.list());
+  }
+  return { label: "nudges:none", value: null };
+}
+
 export async function loadHomeData(bridge = getDefaultBridge(), options = {}) {
   const recentLimit = normalizeLimit(options.recentLimit, RECENT_LIMIT);
   const upNextLimit = normalizeLimit(options.upNextLimit, UP_NEXT_LIMIT);
@@ -421,18 +464,20 @@ export async function loadHomeData(bridge = getDefaultBridge(), options = {}) {
     return normalizeHomeData({ activity: [], memory: [], planner: [] }, options);
   }
 
-  const [activity, memory, planner, preferences] = await Promise.all([
+  const [activity, memory, planner, preferences, nudges] = await Promise.all([
     loadRecentActivity(bridge, recentLimit),
     loadMemoryEntries(bridge, recentLimit, memoryQuery),
     loadPlannerItems(bridge, upNextLimit),
     loadHomePreferences(bridge),
+    loadNudges(bridge),
   ]);
 
   return normalizeHomeData(
     {
       activity: activity.value,
-      errors: [activity.error, memory.error, planner.error, preferences.error],
+      errors: [activity.error, memory.error, planner.error, preferences.error, nudges.error],
       memory: memory.value,
+      nudges: nudges.value,
       planner: planner.value,
       preferences: preferences.value,
     },
@@ -508,6 +553,57 @@ function renderUpNextList(data) {
     : renderEmptyUpNext();
 }
 
+function renderNudgeCard(nudge, hidden) {
+  const hiddenAttribute = hidden ? " hidden" : "";
+  const datetime = nudge.datetime
+    ? `<time class="lx-mono text-faint" datetime="${escapeHtml(nudge.datetime)}">${escapeHtml(nudge.meta)}</time>`
+    : `<span class="lx-mono text-faint">${escapeHtml(nudge.meta)}</span>`;
+  return `
+    <article class="row" data-home-nudge-id="${escapeHtml(nudge.id)}" data-home-nudge-type="${escapeHtml(nudge.type)}"${hiddenAttribute}>
+      <span class="home-marker" data-home-icon="${escapeHtml(initials(nudge.source, "SG"))}" aria-hidden="true"></span>
+      <span class="row__txt">
+        <strong class="lx-body screen-text-strong">${escapeHtml(nudge.title)}</strong>
+        <span class="lx-sm text-dim">${escapeHtml(nudge.detail)}</span>
+        ${datetime}
+      </span>
+      <button
+        class="btn btn--ghost"
+        type="button"
+        data-home-dismiss-nudge="${escapeHtml(nudge.id)}"
+        aria-label="Dismiss ${escapeHtml(nudge.title)}"
+      >
+        Dismiss
+      </button>
+    </article>
+  `;
+}
+
+function renderSuggestedSection(data, expanded = homeNudgesExpanded) {
+  const state = data.nudges ?? normalizeNudges();
+  if (!state.enabled || state.nudges.length === 0) {
+    return "";
+  }
+  const visibleLimit = normalizeLimit(state.visibleLimit, SUGGESTED_LIMIT);
+  const visibleCount = expanded ? state.nudges.length : Math.min(visibleLimit, state.nudges.length);
+  const hiddenCount = Math.max(0, state.nudges.length - visibleCount);
+  const toggle =
+    state.nudges.length > visibleLimit
+      ? `<button class="btn btn--ghost" type="button" data-home-nudges-toggle aria-expanded="${String(expanded)}">${expanded ? "Show less" : `See all ${state.nudges.length}`}</button>`
+      : "";
+  return `
+    <section class="home-context home-context--suggested" data-home-suggested-section aria-labelledby="suggested-title">
+      <div class="home-context__header">
+        <h2 id="suggested-title" class="lx-h2">Suggested</h2>
+        <span class="lx-mono text-faint">${escapeHtml(hiddenCount > 0 ? `${hiddenCount} more` : "Now")}</span>
+      </div>
+      <div class="home-list" data-home-nudges-list>
+        ${state.nudges.map((nudge, index) => renderNudgeCard(nudge, index >= visibleCount)).join("")}
+      </div>
+      ${toggle}
+    </section>
+  `;
+}
+
 export function renderHomeData(data = {}) {
   const normalized = normalizeHomeData(data);
   const isLoading = normalized.loading === true;
@@ -541,6 +637,10 @@ export function renderHomeData(data = {}) {
           </div>
         </div>
       </section>
+
+      <div data-home-suggested-slot>
+        ${renderSuggestedSection(normalized)}
+      </div>
 
       <section class="home-context home-context--recent" aria-labelledby="recent-actions-title">
         <div class="home-context__header">
@@ -583,7 +683,7 @@ function updateText(node, value) {
   }
 }
 
-export function updateHomeScreen(root, data = {}) {
+export function updateHomeScreen(root, data = {}, bridge = getDefaultBridge()) {
   const screen = findHomeScreen(root);
   if (!screen) {
     return null;
@@ -592,6 +692,11 @@ export function updateHomeScreen(root, data = {}) {
   updateText(screen.querySelector?.("#home-greeting"), normalized.greeting);
   updateText(screen.querySelector?.("[data-home-status-label]"), normalized.status);
   updateText(screen.querySelector?.(".home-brief .lx-h3"), normalized.prompt);
+
+  const suggestedSlot = screen.querySelector?.("[data-home-suggested-slot]");
+  if (suggestedSlot) {
+    suggestedSlot.innerHTML = renderSuggestedSection(normalized);
+  }
 
   const recentList = screen.querySelector?.("[data-home-recent-list]");
   if (recentList) {
@@ -605,15 +710,48 @@ export function updateHomeScreen(root, data = {}) {
     upNextList.removeAttribute?.("aria-busy");
   }
 
+  bindHomeNudgeActions(screen, root, bridge, normalized);
   return normalized;
+}
+
+function bindHomeNudgeActions(screen, root, bridge, data) {
+  const nudgeBridge = bridge?.nudges;
+  const toggle = screen.querySelector?.("[data-home-nudges-toggle]");
+  toggle?.addEventListener?.("click", () => {
+    homeNudgesExpanded = !homeNudgesExpanded;
+    updateHomeScreen(root, data, bridge);
+  });
+
+  if (typeof nudgeBridge?.dismiss !== "function") {
+    return;
+  }
+  for (const button of screen.querySelectorAll?.("[data-home-dismiss-nudge]") ?? []) {
+    button.addEventListener("click", () => {
+      const id = button.dataset.homeDismissNudge;
+      if (!id) {
+        return;
+      }
+      button.disabled = true;
+      void nudgeBridge
+        .dismiss(id)
+        .then(() => refreshHomeScreen(root, bridge))
+        .catch(() => {
+          button.disabled = false;
+        });
+    });
+  }
 }
 
 export async function refreshHomeScreen(root = getDefaultDocument(), bridge = getDefaultBridge()) {
   if (!root || !findHomeScreen(root)) {
     return null;
   }
+  const generation = ++homeRefreshGeneration;
   const data = await loadHomeData(bridge);
-  return updateHomeScreen(root, data);
+  if (generation !== homeRefreshGeneration || !findHomeScreen(root)) {
+    return null;
+  }
+  return updateHomeScreen(root, data, bridge);
 }
 
 export function startHomeAutoRefresh(
@@ -649,11 +787,20 @@ export function startHomeAutoRefresh(
     });
   };
   const intervalId = setInterval(refresh, intervalMs);
+  const nudgeListener =
+    typeof bridge?.nudges?.onChanged === "function"
+      ? bridge.nudges.onChanged(() => {
+          refresh();
+        })
+      : null;
 
   activeHomeRefresh = {
     dispose() {
       disposed = true;
       clearInterval(intervalId);
+      if (nudgeListener && typeof bridge?.nudges?.offChanged === "function") {
+        bridge.nudges.offChanged(nudgeListener);
+      }
       if (activeHomeRefresh?.screen === screen) {
         activeHomeRefresh = null;
       }

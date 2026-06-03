@@ -333,3 +333,70 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer re-check found no blockers and one warning: the legacy `memory:get-episodes` fallback still returned all conversation rows. Closed it by applying the same capped pagination/search behavior to the fallback path and adding focused IPC coverage.
 - Focused gates passed: changed-file `node --check`, focused Biome, and `node --test test/text-chat.test.js test/provider-openrouter.test.js test/memory-ipc.test.js test/memory-sqlite.test.js test/wave13-integration.test.js` (45/45).
 - Full parent gates passed after reviewer-fix-2 and WAL tail repair: `npm run check`, `node --test` (488/488), active-claims audit, WAL JSON parse, task-count audit, `git diff --check`, and task-artifact privacy scan.
+
+## 2026-06-03 — Wave 14 started
+
+- Cut clean branch/worktree `wave-14` from `origin/main` at `a0662d7` because the primary checkout is dirty/diverged and must remain untouched.
+- Baseline gates before implementation: `node --test` passed 488/488; `npm run check` initially lacked the fresh worktree's local Biome binary, then passed after `npm install`.
+- Ran the required initial `kencode-search` pass before implementation. Curated references identified Vercel AI SDK chat/tool streaming and the MCP TypeScript SDK tool-registration patterns; workers must still follow Leena's local SQLite, provider, preload, renderer, and MCP contracts.
+- Moved tasks `065`, `071`, `107`, `108`, `109`, and `112` to `in-progress` with attempt 1, active claims, and pre-run WAL entries.
+- Shared file ownership is constrained for parallel work: task `108` owns nudge runtime/main/preload/home wiring, task `107` owns Activity conversation history, task `071` owns prompt composition, task `109` owns renderer CSS audit files, task `065` owns memory-focused tests, and task `112` owns final e2e test files.
+
+## 2026-06-03 — Wave 14 summary
+
+- Completed tasks `065`, `071`, `107`, `108`, `109`, and `112`.
+- Added comprehensive memory tests with deterministic mock providers, cross-session recall, consolidation/source-link coverage, and SQLite edge cases.
+- Refactored prompt composition around persona, memory, tools, base instructions, profile context, and runtime context while preserving backward-compatible wrappers and the untrusted recalled-memory boundary.
+- Extended Activity with lazy expandable conversation transcripts, hybrid keyword/semantic rerank search, relevance badges, de-duplication, bounded requests, and local date grouping.
+- Added opt-in in-shell proactive nudges with planner/calendar reminders, stale memory follow-ups, 7-day dismissal persistence, main/preload IPC, and Home Suggested rendering without OS notifications.
+- Completed renderer CSS token cleanup across runtime stylesheets and recorded grep proof in `tasks/artifacts/wave-14-token-cleanup-grep.log`.
+- Added final e2e tests for provider switching, memory recall persistence, MCP HTTP connect/tool merging/disconnect, and settings/protected-secret persistence.
+- Independent verification passed: output existence checks, changed-file `node --check`, `npm run check`, full `node --test` (515/515), `npm test`, WAL JSON parse, and `git diff --check`.
+
+## 2026-06-03 — Wave 14 reviewer-fix-1
+
+- Reviewer gate found blockers in realtime persona wiring, persona switch session-update safety, nudge opt-out staleness, and completed-task checklist hygiene.
+- Fixed realtime session creation so it uses `PersonaEngine.getActive()` for prompt composition and persona voice preference, and passes realtime tool definitions into prompt Tool Context while preserving legacy profile and memory injection.
+- Fixed `buildPersonaSwitchDelta()` so `session.instructions` carries the full realtime instruction contract, not a persona-only fragment; the persona-only section remains available under `sections.persona`.
+- Fixed nudge settings and dismissal refreshes with forced generation invalidation so stale in-flight enabled payloads cannot update or broadcast after opt-out/dismiss.
+- Fixed completed-task acceptance checklists for Wave 14 tasks `065`, `071`, `107`, `108`, `109`, and `112`; checklist audit, privacy scan, and diff check passed.
+- Worker-focused fix gates passed: `npm run check`, focused prompt/nudge tests, Wave 10/Wave 13 integration checks, source diff check, and full `node --test` (517/517). Parent re-run gates passed before re-review, then the parent closed a final realtime Tool Context gap and re-ran gates.
+
+## 2026-06-03 — Wave 14 reviewer-fix-2
+
+- Reviewer re-check found two remaining nudge opt-out blockers: legacy `nudgesEnabled=true` could override the visible Settings toggle `proactiveNudges=false`, and `nudges:list` could return a cached enabled payload while a forced settings/dismiss refresh was in flight.
+- Fixed nudge opt-in precedence so `proactiveNudges` is authoritative when present and `nudgesEnabled` is only a legacy fallback.
+- Fixed `nudges:list` to wait for forced refreshes, and forced refreshes immediately replace the cached payload with a disabled empty payload until the fresh result resolves.
+- Added focused coverage in `test/nudge-engine.test.js` and `test/wave14-integration.test.js`; focused nudge gate passed 8/8. Full parent gates follow before final re-review/advisor.
+
+## 2026-06-03 — Wave 14 reviewer-fix-3
+
+- Reviewer final re-check found persona runtime blockers: Settings persona switches did not update active realtime calls or invalidate prefetched client secrets, and seeded/default persona voice preference could override the user's explicit legacy voice selector.
+- Fixed main-process realtime session config so call secrets and persona session updates share active PersonaEngine state, memory recall, live tool definitions, and resolved voice selection.
+- Added `realtime:create-persona-session-update` through main/preload; renderer sends the returned full `session.update` over an open realtime data channel after Settings/agent profile changes.
+- Added a secret prefetch generation guard so stale in-flight prefetches cannot repopulate the cache after persona/profile invalidation.
+- Added focused coverage in prompt and Wave 12-14 integration tests; focused persona/session gate passed 24/24. Full parent gates follow before final reviewer/advisor.
+
+## 2026-06-03 — Wave 14 reviewer-fix-4
+
+- Independent reviewer re-check found three remaining blockers: identity/profile changes needed a durable main-process invalidation broadcast, renderer-exposed `memory:recall` still accepted unbounded limits, and Home could render stale data from an older overlapping refresh.
+- Fixed identity/profile IPC to broadcast `identity` data changes and wired renderer `onDataChanged` to the existing realtime secret/session refresh helper.
+- Bounded memory recall at both IPC and direct `SQLiteMemoryStore` layers, with focused IPC/store regression coverage.
+- Added a Home refresh generation guard so late older refreshes return `null` and do not overwrite the current Suggested/Home UI state.
+- Focused reviewer-fix gate passed: changed-file `node --check`, scoped Biome, and `node --test test/identity-ipc.test.js test/memory-ipc.test.js test/memory-sqlite.test.js test/home-screen-data.test.js test/wave13-integration.test.js test/wave14-integration.test.js` (41/41). Full parent gates follow before final reviewer/advisor.
+- Full parent gates passed after reviewer-fix-4: `npm test` (524/524), changed-file `node --check`, `git diff --check`, WAL JSON parse, active-claims release, and task-artifact privacy scan pending re-review/advisor.
+
+## 2026-06-03 — Wave 14 reviewer-fix-5
+
+- Final reviewer re-check cleared blockers and raised two P3 warnings: rapid persona/profile changes could race older realtime session-update IPC responses, and active sessions did not refresh tool definitions.
+- Fixed renderer active-session updates with the same invalidation generation used for realtime secret prefetches, so stale session-update responses are dropped before sending on the data channel.
+- Fixed main-process persona session updates to include refreshed realtime tool definitions alongside the full instructions/audio payload.
+- Focused reviewer-warning gate passed: `node --check` on changed files and `node --test test/prompts.test.js test/wave13-integration.test.js test/wave14-integration.test.js` (24/24). Full parent gates follow before advisor.
+- First full gate rerun exposed one Biome formatting issue in the new Wave 14 integration assertion; the assertion was reformatted and the full parent gate then passed.
+- Full parent gates passed after reviewer-fix-5: `npm test` (525/525), changed-file `node --check`, `git diff --check`, WAL JSON parse (`258` entries before the final checkpoint append), completed-checklist scan, task-artifact privacy scan, active-claims audit, and task-count audit (`pending=3`, `in-progress=0`, `completed=63`, `blocked=6`).
+
+## 2026-06-03 — Wave 14 final reviewer/advisor gate
+
+- Reviewer re-check passed with no blockers after reviewer-fix-5. The only carried warning is redundant persona/profile refresh through both the custom renderer event and `data:changed`; it is non-blocking because active session updates and Home refreshes are generation-guarded.
+- Advisor gate cleared. Carried warnings for the next wave: avoid redundant persona refresh churn if it becomes noisy, and keep overview proof counts aligned with the latest full gate.
+- Final parent gates passed against the current worktree: `npm test` (525/525), changed-file `node --check`, `git diff --check`, WAL JSON parse (`260` entries), task-count audit (`pending=3`, `in-progress=0`, `completed=63`, `blocked=6`), active-claims audit (`0`), and changed-task privacy scan.

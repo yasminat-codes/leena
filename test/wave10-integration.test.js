@@ -16,7 +16,8 @@ test("Wave 10 settings, tray, and MCP integrations are wired through main and pr
 
   assert.match(main, /import \{ MCPClientManager \} from "\.\/mcp\/client-manager\.js"/);
   assert.match(main, /const mcpClientManager = new MCPClientManager\(\)/);
-  assert.match(main, /tools: await getRealtimeToolDefinitions\(mcpClientManager\)/);
+  assert.match(main, /const tools = await getRealtimeToolDefinitions\(mcpClientManager\);/);
+  assert.match(main, /tools,/);
   assert.match(
     main,
     /ipcMain\.handle\("tools:get-definitions", \(\) => getRealtimeToolDefinitions\(mcpClientManager\)\)/,

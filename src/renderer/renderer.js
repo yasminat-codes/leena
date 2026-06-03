@@ -71,6 +71,7 @@ let localStream = null;
 // share it instead of minting duplicates.
 let prefetchedSecret = null;
 let secretPrefetchPromise = null;
+let secretPrefetchGeneration = 0;
 // Timestamp of the last background prefetch failure; used to back off automatic
 // re-prime attempts so a failing endpoint isn't hammered by repeated triggers.
 let lastSecretPrefetchFailureAt = 0;
@@ -445,12 +446,8 @@ async function saveAgentProfile() {
   agentStatusElement.textContent = "Saving\u2026";
   try {
     agentProfile = normalizeAgentProfile(await window.leena.setAgentProfile(profile));
-    renderAgentProfile();
     agentStatusElement.textContent = "Saved";
-    // Voice/instructions are baked into the minted secret, so drop the stale
-    // prefetch and prime a fresh one reflecting the updated profile.
-    invalidatePrefetchedSecret();
-    prefetchRealtimeSecret();
+    await handleAgentRuntimeConfigChanged(agentProfile);
   } catch (error) {
     agentStatusElement.textContent = `Save failed: ${error.message}`;
   }
@@ -583,9 +580,13 @@ function prefetchRealtimeSecret() {
     return;
   }
   const startedAt = performance.now();
+  const generation = secretPrefetchGeneration;
   secretPrefetchPromise = window.leena
     .createRealtimeSecret()
     .then((secret) => {
+      if (generation !== secretPrefetchGeneration) {
+        return null;
+      }
       prefetchedSecret = secret;
       lastSecretPrefetchFailureAt = 0;
       void writeRendererDiagnostic("call.secret.prefetched", {
@@ -597,13 +598,17 @@ function prefetchRealtimeSecret() {
     .catch((error) => {
       // A prefetch failure is non-fatal: `consumeRealtimeSecret` falls back to an
       // on-demand fetch, surfacing any real error there.
-      prefetchedSecret = null;
-      lastSecretPrefetchFailureAt = Date.now();
+      if (generation === secretPrefetchGeneration) {
+        prefetchedSecret = null;
+        lastSecretPrefetchFailureAt = Date.now();
+      }
       void writeRendererDiagnostic("call.secret.prefetch_failed", formatRendererError(error));
       return null;
     })
     .finally(() => {
-      secretPrefetchPromise = null;
+      if (generation === secretPrefetchGeneration) {
+        secretPrefetchPromise = null;
+      }
     });
 }
 
@@ -643,10 +648,51 @@ async function consumeRealtimeSecret() {
 // Drop any cached secret when it can no longer be valid (sign-out) or when the
 // agent profile that shaped it changed (voice/instructions are baked in).
 function invalidatePrefetchedSecret() {
+  secretPrefetchGeneration += 1;
   prefetchedSecret = null;
+  secretPrefetchPromise = null;
   // Clear the failure cooldown too, so an explicit invalidation (sign-out,
   // profile change) can re-prime immediately rather than waiting it out.
   lastSecretPrefetchFailureAt = 0;
+}
+
+async function handleAgentRuntimeConfigChanged(profile = null) {
+  if (profile) {
+    agentProfile = normalizeAgentProfile(profile);
+    renderAgentProfile();
+  }
+  invalidatePrefetchedSecret();
+  const generation = secretPrefetchGeneration;
+  prefetchRealtimeSecret();
+  await updateActiveRealtimeSession(generation);
+}
+
+async function updateActiveRealtimeSession(generation = secretPrefetchGeneration) {
+  if (
+    dataChannel?.readyState !== "open" ||
+    typeof window.leena.createPersonaSessionUpdate !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    const update = await window.leena.createPersonaSessionUpdate();
+    if (generation !== secretPrefetchGeneration) {
+      return;
+    }
+    if (update?.session) {
+      sendRealtimeDataChannelEvent({ session: update.session, type: "session.update" });
+    }
+  } catch (error) {
+    await writeRendererDiagnostic("realtime.session_update.failed", formatRendererError(error));
+  }
+}
+
+function handleDataChanged(payload = {}) {
+  if (payload?.category !== "identity" && payload?.type !== "identity") {
+    return;
+  }
+  void handleAgentRuntimeConfigChanged(null);
 }
 
 async function startCall() {
@@ -1234,6 +1280,12 @@ function sendRealtimeDataChannelEvent(event) {
 
 function summarizeRealtimeClientEvent(event) {
   const summary = { type: event?.type };
+  if (event?.session?.instructions) {
+    summary.sessionInstructions = "present";
+  }
+  if (event?.session?.audio?.output?.voice) {
+    summary.sessionVoice = event.session.audio.output.voice;
+  }
   if (event?.item?.type) {
     summary.itemType = event.item.type;
   }
@@ -1584,6 +1636,10 @@ function startAppRuntime() {
   navigator.mediaDevices?.addEventListener?.("devicechange", () => {
     void populateMicDevices();
   });
+  window.addEventListener("leena:persona-changed", (event) => {
+    void handleAgentRuntimeConfigChanged(event.detail?.profile ?? null);
+  });
+  window.leena.onDataChanged?.(handleDataChanged);
   setOrbLevel(0);
 
   panelController.init({ openByDefault: false });

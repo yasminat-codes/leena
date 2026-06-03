@@ -2,7 +2,7 @@
 id: "065"
 title: "Memory comprehensive test suite"
 type: test
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 18000
@@ -13,7 +13,8 @@ context_files:
   - src/memory/memory-middleware.js
 skills: []
 tags: [phase-3, memory, testing]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T08:05:33Z"
 created_at: "2026-06-01"
 ---
 
@@ -35,12 +36,12 @@ Memory is the highest-risk subsystem. Without thorough tests, silent regressions
 
 ## Acceptance Criteria
 
-- [ ] Cross-session integration test passes: fact from session 1 recalled in session 2
-- [ ] Consolidation test passes: episodic → semantic pipeline produces valid facts
-- [ ] Edge cases covered: empty DB, no embeddings, concurrent writes, large content
-- [ ] Mock provider helper is reusable across all memory tests
-- [ ] No real API calls in any test (all providers mocked)
-- [ ] All existing tests still pass (`node --test`)
+- [x] Cross-session integration test passes: fact from session 1 recalled in session 2
+- [x] Consolidation test passes: episodic → semantic pipeline produces valid facts
+- [x] Edge cases covered: empty DB, no embeddings, concurrent writes, large content
+- [x] Mock provider helper is reusable across all memory tests
+- [x] No real API calls in any test (all providers mocked)
+- [x] All existing tests still pass (`node --test`)
 
 ## Tests Required
 
@@ -64,11 +65,16 @@ Memory is the highest-risk subsystem. Without thorough tests, silent regressions
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added `test/helpers/mock-provider.js` with deterministic mock chat and embedding providers.
+- Added cross-session SQLite memory coverage proving `sess-1` espresso memory is recalled after closing and reopening the same DB path.
+- Added consolidation coverage for 15 episodic rows producing recallable semantic facts with `source_episode_ids` linked back to every episode.
+- Expanded SQLite store tests for empty recall, empty embedding provider fallback, concurrent `remember()` writes, and >10KB content round-trip.
+- No production code changes were required; no additional file claims were needed.
+- Verification passed: `node --check` on changed JS, `node --test test/memory-*.test.js`, `npm run check`, and full `node --test`.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- None.
 
 ## Self-Annealing Contract
 

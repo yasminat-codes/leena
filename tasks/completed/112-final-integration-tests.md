@@ -2,7 +2,7 @@
 id: "112"
 title: "End-to-end integration test suite"
 type: test
-status: pending
+status: completed
 priority: critical
 complexity: L
 estimated_tokens: 22000
@@ -14,7 +14,8 @@ context_files:
   - src/mcp/client-manager.js
 skills: []
 tags: [phase-7, testing, integration, e2e]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T08:05:33Z"
 created_at: "2026-06-01"
 ---
 
@@ -33,12 +34,12 @@ Unit tests verify pieces; integration tests verify the product works. These test
 6. Document any flaky tests found during the full run — add retry or fix root cause.
 
 ## Acceptance Criteria
-- [ ] Provider switching test passes — chat routes to correct provider after switch
-- [ ] Memory recall test passes — cross-session recall works
-- [ ] MCP connect test passes — tools appear/disappear on connect/disconnect
-- [ ] Settings persistence test passes — all value types round-trip correctly
-- [ ] Full `npm test` passes with zero failures
-- [ ] No flaky tests remain (or are documented with skip annotation + reason)
+- [x] Provider switching test passes — chat routes to correct provider after switch
+- [x] Memory recall test passes — cross-session recall works
+- [x] MCP connect test passes — tools appear/disappear on connect/disconnect
+- [x] Settings persistence test passes — all value types round-trip correctly
+- [x] Full `npm test` passes with zero failures
+- [x] No flaky tests remain (or are documented with skip annotation + reason)
 
 ## Tests Required
 - `test/e2e-provider-switching.test.js`
@@ -58,10 +59,25 @@ Unit tests verify pieces; integration tests verify the product works. These test
 - This is a terminal task — validates all others
 
 ## Handoff Notes
-[Filled after completion]
+Added all four required e2e test files:
+- `test/e2e-provider-switching.test.js` verifies chat IPC uses the configured default provider after switching from OpenAI to OpenRouter, with fetch mocks asserting the correct chat-completions endpoints.
+- `test/e2e-memory-recall.test.js` verifies SQLite memory recall survives closing and reopening the same temp database with deterministic embedding mocks.
+- `test/e2e-mcp-connect.test.js` starts a local mock HTTP MCP server, persists the server config, connects through `MCPClientManager`, verifies merged namespaced tools, disconnects, and verifies removal.
+- `test/e2e-settings-persistence.test.js` verifies theme, default provider, hotkey, and protected provider secret persistence across database reopen.
+
+Kencode-search queries used before writing code:
+- `node:test createServer await new Promise server.listen` (no results)
+- `import { test } from 'node:test'` (returned examples)
+
+Verification run:
+- `node --check` on all four new e2e JS files: passed.
+- `biome check` on the four new e2e files: passed.
+- Focused `node --test` for the four new e2e files: passed, 4/4.
+- Final combined Wave 14 gates passed after all workers completed: `npm run check`, `node --test` (515/515), `npm test`, changed-file `node --check`, WAL parse, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Initial focused memory test required two recall results; the implementation correctly filters zero-similarity memories, so the assertion was tightened to require the espresso memory as the top result.
+- Concurrent task 071, 107, and 109 edits briefly blocked full `npm run check`/`npm test` while those files were still mid-patch. No task 112 code changes were required; combined Wave 14 gates passed after all workers completed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

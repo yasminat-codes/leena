@@ -4,34 +4,34 @@
   --bg-deep: var(--black); /* Midnight Eclipse — page canvas */
   --bg-elevated: var(--legacy-bg-elevated); /* Starless Night — subtle elevation */
   --bg-overlay: var(--legacy-bg-overlay); /* Deep Ocean — specialized cool surface */
-  --hairline: rgba(229, 229, 229, 0.1);
-  --hairline-strong: rgba(229, 229, 229, 0.2);
-  --raised: rgba(255, 255, 255, 0.04);
-  --raised-hover: rgba(255, 255, 255, 0.07);
-  --surface-translucent: rgba(0, 0, 0, 0.2);
-  --surface-ghost: rgba(212, 212, 212, 0.08);
+  --hairline: color-mix(in srgb, var(--legacy-frost) 10%, var(--transparent));
+  --hairline-strong: color-mix(in srgb, var(--legacy-frost) 20%, var(--transparent));
+  --raised: color-mix(in srgb, var(--white) 4%, var(--transparent));
+  --raised-hover: color-mix(in srgb, var(--white) 7%, var(--transparent));
+  --surface-translucent: color-mix(in srgb, var(--legacy-true-black) 20%, var(--transparent));
+  --surface-ghost: color-mix(in srgb, var(--legacy-ghost-gray) 8%, var(--transparent));
 
   /* Text — Frost / Ghostly Gray ramp */
   --text: var(--white);
-  --text-2: rgba(229, 231, 235, 0.78);
-  --text-3: rgba(229, 231, 235, 0.46);
+  --text-2: color-mix(in srgb, var(--legacy-frost-blue) 78%, var(--transparent));
+  --text-3: color-mix(in srgb, var(--legacy-frost-blue) 46%, var(--transparent));
 
   /* Accent — Superwhisper Electric Blue, with Sky Blue for emphasis */
   --accent: var(--legacy-accent);
   --accent-bright: var(--legacy-accent-bright);
-  --accent-soft: rgba(0, 136, 255, 0.16);
-  --accent-line: rgba(0, 136, 255, 0.4);
+  --accent-soft: color-mix(in srgb, var(--legacy-accent) 16%, var(--transparent));
+  --accent-line: color-mix(in srgb, var(--legacy-accent) 40%, var(--transparent));
 
   /* Semantics — Vivid Green / Sunshine Yellow / Crimson Red */
   --success: var(--legacy-success);
-  --success-soft: rgba(22, 194, 83, 0.16);
-  --success-line: rgba(22, 194, 83, 0.4);
+  --success-soft: color-mix(in srgb, var(--legacy-success) 16%, var(--transparent));
+  --success-line: color-mix(in srgb, var(--legacy-success) 40%, var(--transparent));
   --warn: var(--legacy-warn);
-  --warn-soft: rgba(255, 221, 0, 0.14);
-  --warn-line: rgba(255, 221, 0, 0.4);
+  --warn-soft: color-mix(in srgb, var(--legacy-warn) 14%, var(--transparent));
+  --warn-line: color-mix(in srgb, var(--legacy-warn) 40%, var(--transparent));
   --danger: var(--legacy-danger);
-  --danger-soft: rgba(255, 82, 82, 0.16);
-  --danger-line: rgba(255, 82, 82, 0.4);
+  --danger-soft: color-mix(in srgb, var(--danger) 16%, var(--transparent));
+  --danger-line: color-mix(in srgb, var(--danger) 40%, var(--transparent));
 
   /* Nebula gradient (orb + atmospheric panels) — Dimension Gradient Aura
      combined with Superwhisper Magenta Burst + Deep Ocean. */
@@ -56,23 +56,34 @@
 
   /* Buttons — flat ghost surfaces; no more raised plastic. Existing rules that
      compose --btn-sheen / --btn-raise pick up the new translucent language. */
-  --btn-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-  --btn-sheen-hover: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+  --btn-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--white) 4%, var(--transparent)),
+    color-mix(in srgb, var(--white) 1%, var(--transparent))
+  );
+  --btn-sheen-hover: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--white) 8%, var(--transparent)),
+    color-mix(in srgb, var(--white) 2.5%, var(--transparent))
+  );
   --btn-raise: none;
   --btn-raise-hover: none;
 
   /* Shadows — Dimension's three-layer diffused drop + window frame */
-  --shadow-card: drop-shadow(rgba(255, 255, 255, 0.02) 0 3px 4.5px)
-    drop-shadow(rgba(0, 0, 0, 0.04) 0 10px 8px) drop-shadow(rgba(0, 0, 0, 0.1) 0 4px 3px);
-  --shadow-window: 0 0 0 1px rgba(229, 229, 229, 0.06), 0 30px 80px rgba(0, 0, 0, 0.55);
-  --shadow-icon-hover: rgba(255, 255, 255, 0.2) 0 0 0 2px inset;
+  --shadow-card: drop-shadow(color-mix(in srgb, var(--white) 2%, var(--transparent)) 0 3px 4.5px)
+    drop-shadow(color-mix(in srgb, var(--legacy-true-black) 4%, var(--transparent)) 0 10px 8px)
+    drop-shadow(color-mix(in srgb, var(--legacy-true-black) 10%, var(--transparent)) 0 4px 3px);
+  --shadow-window:
+    0 0 0 1px color-mix(in srgb, var(--legacy-frost) 6%, var(--transparent)),
+    0 30px 80px color-mix(in srgb, var(--legacy-true-black) 55%, var(--transparent));
+  --shadow-icon-hover: color-mix(in srgb, var(--white) 20%, var(--transparent)) 0 0 0 2px inset;
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur: 180ms;
 
   color: var(--text);
-  background: transparent;
+  background: var(--transparent);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
@@ -87,7 +98,7 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: transparent;
+  background: var(--transparent);
 }
 
 button {
@@ -104,7 +115,7 @@ button {
 .permissions-list,
 .agent-form {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  scrollbar-color: color-mix(in srgb, var(--white) 14%, var(--transparent)) var(--transparent);
 }
 
 .panel-body::-webkit-scrollbar,
@@ -116,16 +127,16 @@ button {
 .panel-body::-webkit-scrollbar-thumb,
 .permissions-list::-webkit-scrollbar-thumb,
 .agent-form::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
+  border: 2px solid var(--transparent);
   border-radius: var(--r-pill);
   background-clip: padding-box;
-  background-color: rgba(255, 255, 255, 0.14);
+  background-color: color-mix(in srgb, var(--white) 14%, var(--transparent));
 }
 
 .panel-body::-webkit-scrollbar-thumb:hover,
 .permissions-list::-webkit-scrollbar-thumb:hover,
 .agent-form::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.24);
+  background-color: color-mix(in srgb, var(--white) 24%, var(--transparent));
 }
 
 .panel[hidden],
@@ -146,7 +157,7 @@ button {
   height: 100vh;
   place-items: center;
   padding: 0;
-  background: transparent;
+  background: var(--transparent);
 }
 
 .permissions-panel,
@@ -179,10 +190,22 @@ button {
   border: 1px solid var(--hairline);
   border-radius: var(--r-legacy-window);
   background:
-    radial-gradient(140% 80% at 50% -12%, rgba(107, 98, 242, 0.14), transparent 58%),
-    radial-gradient(120% 70% at 80% 120%, rgba(72, 103, 175, 0.1), transparent 60%),
-    linear-gradient(180deg, rgba(10, 10, 10, 0.92), rgba(3, 7, 25, 0.96));
-  backdrop-filter: blur(20px) saturate(1.15);
+    radial-gradient(
+      140% 80% at 50% -12%,
+      color-mix(in srgb, var(--legacy-nebula-2) 14%, var(--transparent)),
+      var(--transparent) 58%
+    ),
+    radial-gradient(
+      120% 70% at 80% 120%,
+      color-mix(in srgb, var(--legacy-nebula-1) 10%, var(--transparent)),
+      var(--transparent) 60%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--legacy-night) 92%, var(--transparent)),
+      color-mix(in srgb, var(--legacy-bg-elevated) 96%, var(--transparent))
+    );
+  backdrop-filter: blur(var(--blur-panel)) saturate(1.15);
   box-shadow: var(--shadow-window);
   opacity: 0;
   transform: translateY(6px);
@@ -295,7 +318,7 @@ button {
   height: 6px;
   border-radius: var(--r-round);
   background: var(--text-3);
-  box-shadow: 0 0 0 0 transparent;
+  box-shadow: 0 0 0 0 var(--transparent);
   content: "";
 }
 
@@ -307,7 +330,7 @@ button {
 
 .openai-indicator[data-connected="true"]::before {
   background: var(--success);
-  box-shadow: 0 0 8px rgba(22, 194, 83, 0.7);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--legacy-success) 70%, var(--transparent));
 }
 
 /* ---------- Header call control ---------- */
@@ -325,7 +348,7 @@ button {
   border-radius: var(--r-legacy-pill);
   color: var(--black);
   background: var(--white);
-  box-shadow: none;
+  box-shadow: var(--shadow-none);
   cursor: pointer;
   font-family: var(--font-display);
   font-size: 0.78rem;
@@ -340,7 +363,7 @@ button {
 }
 
 .header-call:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--white) 92%, var(--transparent));
   box-shadow: var(--shadow-icon-hover);
 }
 
@@ -360,7 +383,7 @@ button {
 }
 
 .header-call.is-active:hover:not(:disabled) {
-  background: rgba(255, 82, 82, 0.24);
+  background: color-mix(in srgb, var(--danger) 24%, var(--transparent));
   box-shadow: inset 0 0 0 1px var(--danger);
 }
 
@@ -382,11 +405,15 @@ button {
   padding: 6px;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-legacy-md);
-  background: linear-gradient(180deg, rgba(10, 10, 10, 0.96), rgba(3, 7, 25, 0.97));
-  backdrop-filter: blur(20px);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--legacy-night) 96%, var(--transparent)),
+    color-mix(in srgb, var(--legacy-bg-elevated) 97%, var(--transparent))
+  );
+  backdrop-filter: blur(var(--blur-panel));
   box-shadow:
-    0 0 0 1px rgba(229, 229, 229, 0.06),
-    0 24px 56px rgba(0, 0, 0, 0.55);
+    0 0 0 1px color-mix(in srgb, var(--legacy-frost) 6%, var(--transparent)),
+    0 24px 56px color-mix(in srgb, var(--legacy-true-black) 55%, var(--transparent));
   transform-origin: top left;
   animation: menu-in 160ms var(--ease-out);
 }
@@ -405,7 +432,7 @@ button {
   border: 0;
   border-radius: var(--r-legacy-sm);
   color: var(--text);
-  background: transparent;
+  background: var(--transparent);
   cursor: pointer;
   font-size: 0.76rem;
   font-weight: 500;
@@ -417,7 +444,7 @@ button {
 }
 
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--white) 6%, var(--transparent));
   color: var(--text);
 }
 
@@ -435,7 +462,7 @@ button {
   border: 1px solid var(--hairline);
   border-radius: var(--r-legacy-pill);
   background: var(--surface-translucent);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(var(--blur-tab));
 }
 
 .panel-tab {
@@ -444,7 +471,7 @@ button {
   border: 0;
   border-radius: var(--r-legacy-pill);
   color: var(--text-2);
-  background: transparent;
+  background: var(--transparent);
   cursor: pointer;
   font-size: 0.69rem;
   font-weight: 600;
@@ -462,7 +489,7 @@ button {
 .panel-tab.is-active {
   color: var(--black);
   background: var(--text);
-  box-shadow: none;
+  box-shadow: var(--shadow-none);
 }
 
 /* ---------- Body ---------- */
@@ -523,7 +550,7 @@ button {
   gap: 11px;
   margin-bottom: 4px;
   padding: 8px 11px;
-  border: 1px solid transparent;
+  border: 1px solid var(--transparent);
   border-radius: var(--r-legacy-md);
   transition:
     background var(--dur) var(--ease-out),
@@ -534,7 +561,11 @@ button {
   position: absolute;
   inset: 0;
   border-radius: var(--r-legacy-md);
-  background: radial-gradient(220px circle at 50% -40%, rgba(0, 136, 255, 0.12), transparent 70%);
+  background: radial-gradient(
+    220px circle at 50% -40%,
+    color-mix(in srgb, var(--legacy-accent) 12%, var(--transparent)),
+    var(--transparent) 70%
+  );
   opacity: 0;
   transition: opacity var(--dur) var(--ease-out);
   pointer-events: none;
@@ -558,7 +589,7 @@ button {
 .panel-row.is-selected {
   border-color: var(--accent-line);
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px rgba(0, 136, 255, 0.12);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--legacy-accent) 12%, var(--transparent));
 }
 
 .panel-row.is-selected::before {
@@ -637,18 +668,18 @@ button {
 }
 
 .state-dot.state-todo {
-  background: transparent;
+  background: var(--transparent);
 }
 
 .state-dot.state-in_progress {
   border-color: var(--accent);
-  background: conic-gradient(var(--accent) 0 50%, transparent 50% 100%);
+  background: conic-gradient(var(--accent) 0 50%, var(--transparent) 50% 100%);
 }
 
 .state-dot.state-completed {
   border-color: var(--success);
   background: var(--success);
-  box-shadow: 0 0 8px rgba(22, 194, 83, 0.5);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--legacy-success) 50%, var(--transparent));
 }
 
 /* ---------- Pills / badges — Superwhisper Badge spec (true pill) ---------- */
@@ -658,7 +689,7 @@ button {
   z-index: 1;
   flex-shrink: 0;
   padding: 3px 10px;
-  border: 1px solid transparent;
+  border: 1px solid var(--transparent);
   border-radius: var(--r-legacy-pill);
   font-size: 0.55rem;
   font-weight: 700;
@@ -681,7 +712,7 @@ button {
 .priority-low {
   color: var(--text-3);
   border-color: var(--hairline);
-  background: transparent;
+  background: var(--transparent);
 }
 
 .calendar-time {
@@ -776,7 +807,7 @@ button {
   border-color: var(--accent-line);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 16px rgba(0, 136, 255, 0.3);
+    0 0 16px color-mix(in srgb, var(--legacy-accent) 30%, var(--transparent));
 }
 
 .screenshot-caption {
@@ -828,11 +859,19 @@ button {
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-round);
   background:
-    radial-gradient(circle at 38% 32%, rgba(107, 98, 242, 0.45), transparent 60%),
-    radial-gradient(circle at 70% 70%, rgba(184, 85, 231, 0.32), transparent 65%);
+    radial-gradient(
+      circle at 38% 32%,
+      color-mix(in srgb, var(--legacy-nebula-2) 45%, var(--transparent)),
+      var(--transparent) 60%
+    ),
+    radial-gradient(
+      circle at 70% 70%,
+      color-mix(in srgb, var(--legacy-nebula-3) 32%, var(--transparent)),
+      var(--transparent) 65%
+    );
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 0 24px rgba(107, 98, 242, 0.25);
+    inset 0 0 0 1px color-mix(in srgb, var(--white) 4%, var(--transparent)),
+    0 0 24px color-mix(in srgb, var(--legacy-nebula-2) 25%, var(--transparent));
   content: "";
 }
 
@@ -860,7 +899,7 @@ button {
   gap: 10px;
   padding: 10px 14px;
   border-top: 1px solid var(--hairline);
-  background: rgba(0, 0, 0, 0.18);
+  background: color-mix(in srgb, var(--legacy-true-black) 18%, var(--transparent));
 }
 
 .panel-footer-text {
@@ -890,7 +929,11 @@ button {
   justify-content: space-between;
   gap: 10px;
   padding: 22px 16px 16px;
-  background: linear-gradient(180deg, transparent, rgba(3, 7, 25, 0.96) 48%);
+  background: linear-gradient(
+    180deg,
+    var(--transparent),
+    color-mix(in srgb, var(--legacy-bg-elevated) 96%, var(--transparent)) 48%
+  );
   opacity: 0;
   transform: translateY(10px);
   pointer-events: none;
@@ -959,11 +1002,11 @@ button {
   color: var(--black);
   background: var(--white);
   border-radius: var(--r-legacy-pill);
-  box-shadow: none;
+  box-shadow: var(--shadow-none);
 }
 
 .selection-done:hover {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--white) 92%, var(--transparent));
   box-shadow: var(--shadow-icon-hover);
 }
 
@@ -976,7 +1019,7 @@ button {
 }
 
 .selection-delete:hover {
-  background: rgba(255, 82, 82, 0.24);
+  background: color-mix(in srgb, var(--danger) 24%, var(--transparent));
   box-shadow: inset 0 0 0 1px var(--danger);
 }
 
@@ -1002,7 +1045,7 @@ button {
   background-color: var(--raised);
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: var(--legacy-select-chevron-sm);
   background-repeat: no-repeat;
   background-position: right 6px center;
   background-size: 11px;
@@ -1051,10 +1094,22 @@ button {
   overflow: hidden;
   border-radius: var(--r-legacy-window);
   background:
-    radial-gradient(140% 80% at 50% -10%, rgba(107, 98, 242, 0.12), transparent 58%),
-    radial-gradient(120% 70% at 85% 115%, rgba(72, 103, 175, 0.08), transparent 60%),
-    linear-gradient(180deg, rgba(10, 10, 10, 0.96), rgba(3, 7, 25, 0.97));
-  backdrop-filter: blur(20px);
+    radial-gradient(
+      140% 80% at 50% -10%,
+      color-mix(in srgb, var(--legacy-nebula-2) 12%, var(--transparent)),
+      var(--transparent) 58%
+    ),
+    radial-gradient(
+      120% 70% at 85% 115%,
+      color-mix(in srgb, var(--legacy-nebula-1) 8%, var(--transparent)),
+      var(--transparent) 60%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--legacy-night) 96%, var(--transparent)),
+      color-mix(in srgb, var(--legacy-bg-elevated) 97%, var(--transparent))
+    );
+  backdrop-filter: blur(var(--blur-panel));
   animation: body-in 200ms var(--ease-out);
 }
 
@@ -1092,7 +1147,7 @@ button {
   border: 1px solid var(--hairline);
   border-radius: var(--r-legacy-sm);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--white) 6%, var(--transparent));
   font: inherit;
   font-size: 0.8rem;
   resize: none;
@@ -1111,7 +1166,7 @@ button {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 32px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: var(--legacy-select-chevron-md);
   background-repeat: no-repeat;
   background-position: right 11px center;
   background-size: 14px;
@@ -1122,7 +1177,7 @@ button {
 .agent-select:focus {
   outline: none;
   border-color: var(--accent-line);
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--white) 8%, var(--transparent));
 }
 
 .agent-hint {
@@ -1140,7 +1195,7 @@ button {
   border-radius: var(--r-legacy-pill);
   color: var(--black);
   background: var(--white);
-  box-shadow: none;
+  box-shadow: var(--shadow-none);
   cursor: pointer;
   font-size: 0.66rem;
   font-weight: 600;
@@ -1152,7 +1207,7 @@ button {
 }
 
 .agent-save:hover {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--white) 92%, var(--transparent));
   box-shadow: var(--shadow-icon-hover);
 }
 
@@ -1210,7 +1265,7 @@ button {
   padding: 6px 13px 16px;
 }
 
-/* Dimension "Ghost Button" treatment — transparent face + hairline + pill radius.
+/* Dimension "Ghost Button" treatment — var(--transparent) face + hairline + pill radius.
    Shared by all header utility actions and permission item actions. */
 .view-header button:not(.view-back),
 .permission-actions button {
@@ -1302,7 +1357,7 @@ button {
   border: 0;
   border-radius: var(--r-round);
   color: var(--text);
-  background: transparent;
+  background: var(--transparent);
   cursor: pointer;
   transition:
     transform var(--dur) var(--ease-out),
@@ -1330,8 +1385,8 @@ button {
   width: 124px;
   height: 124px;
   border-radius: var(--r-round);
-  background: rgba(0, 0, 0, 0.3);
-  filter: blur(calc(18px + var(--orb-level) * 10px));
+  background: color-mix(in srgb, var(--legacy-true-black) 30%, var(--transparent));
+  filter: blur(var(--blur-orb-shadow));
   transform: translate(-50%, -50%) scale(calc(0.82 + var(--orb-level) * 0.08));
   transform-origin: center;
   transition:
@@ -1374,11 +1429,27 @@ button {
    Gradient Aura blue. Reads as a cosmic nebula contained inside the orb. */
 .orb-aurora {
   background:
-    radial-gradient(circle at 30% 28%, rgba(107, 98, 242, 0.68), transparent 56%),
-    radial-gradient(circle at 72% 68%, rgba(184, 85, 231, 0.55), transparent 54%),
-    radial-gradient(circle at 64% 24%, rgba(96, 165, 250, 0.5), transparent 50%),
-    radial-gradient(circle at 28% 76%, rgba(72, 103, 175, 0.45), transparent 48%);
-  filter: blur(6px) saturate(1.35);
+    radial-gradient(
+      circle at 30% 28%,
+      color-mix(in srgb, var(--legacy-nebula-2) 68%, var(--transparent)),
+      var(--transparent) 56%
+    ),
+    radial-gradient(
+      circle at 72% 68%,
+      color-mix(in srgb, var(--legacy-nebula-3) 55%, var(--transparent)),
+      var(--transparent) 54%
+    ),
+    radial-gradient(
+      circle at 64% 24%,
+      color-mix(in srgb, var(--legacy-accent-bright) 50%, var(--transparent)),
+      var(--transparent) 50%
+    ),
+    radial-gradient(
+      circle at 28% 76%,
+      color-mix(in srgb, var(--legacy-nebula-1) 45%, var(--transparent)),
+      var(--transparent) 48%
+    );
+  filter: blur(var(--blur-orb)) saturate(1.35);
   transform: rotate(calc(var(--orb-level) * -46deg)) scale(calc(1.08 + var(--orb-level) * 0.12));
   opacity: calc(0.72 + var(--orb-level) * 0.28);
   transition:
@@ -1389,8 +1460,16 @@ button {
 /* glossy top highlight for dimensional depth */
 .orb-sheen {
   background:
-    radial-gradient(58% 42% at 50% 14%, rgba(255, 255, 255, 0.5), transparent 70%),
-    radial-gradient(40% 30% at 38% 30%, rgba(255, 255, 255, 0.35), transparent 75%);
+    radial-gradient(
+      58% 42% at 50% 14%,
+      color-mix(in srgb, var(--white) 50%, var(--transparent)),
+      var(--transparent) 70%
+    ),
+    radial-gradient(
+      40% 30% at 38% 30%,
+      color-mix(in srgb, var(--white) 35%, var(--transparent)),
+      var(--transparent) 75%
+    );
   mix-blend-mode: screen;
   opacity: calc(0.5 + var(--orb-level) * 0.22);
   pointer-events: none;
@@ -1398,8 +1477,16 @@ button {
 
 .orb-surface {
   background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.78) 0 4%, transparent 16%),
-    radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.55), transparent 20%),
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--white) 78%, var(--transparent)) 0 4%,
+      var(--transparent) 16%
+    ),
+    radial-gradient(
+      circle at 40% 60%,
+      color-mix(in srgb, var(--white) 55%, var(--transparent)),
+      var(--transparent) 20%
+    ),
     conic-gradient(
       from calc(var(--orb-level) * 70deg),
       var(--nebula-2),
@@ -1418,11 +1505,19 @@ button {
   background:
     radial-gradient(
       circle at 50% 46%,
-      rgba(255, 255, 255, calc(0.62 + var(--orb-level) * 0.24)),
-      transparent calc(9% + var(--orb-level) * 5%)
+      color-mix(in srgb, var(--white) calc(62% + var(--orb-level) * 24%), var(--transparent)),
+      var(--transparent) calc(9% + var(--orb-level) * 5%)
     ),
-    radial-gradient(circle at 46% 54%, rgba(184, 165, 255, 0.82), transparent 30%),
-    radial-gradient(circle at 54% 64%, rgba(0, 0, 0, 0.3), transparent 50%);
+    radial-gradient(
+      circle at 46% 54%,
+      color-mix(in srgb, var(--legacy-orb-core) 82%, var(--transparent)),
+      var(--transparent) 30%
+    ),
+    radial-gradient(
+      circle at 54% 64%,
+      color-mix(in srgb, var(--legacy-true-black) 30%, var(--transparent)),
+      var(--transparent) 50%
+    );
   mix-blend-mode: screen;
   opacity: calc(0.6 + var(--orb-level) * 0.3);
   transform: scale(calc(0.9 + var(--orb-level) * 0.16));
@@ -1435,13 +1530,23 @@ button {
    nebula halo that intensifies with --orb-level. */
 .orb-glow {
   box-shadow:
-    inset 0 -20px 44px rgba(0, 0, 0, 0.45),
-    inset 0 18px 34px rgba(255, 255, 255, 0.16),
-    0 0 calc(26px + var(--orb-level) * 24px) rgba(107, 98, 242, 0.36),
-    0 0 calc(64px + var(--orb-level) * 44px) rgba(184, 85, 231, 0.22);
+    inset 0 -20px 44px color-mix(in srgb, var(--legacy-true-black) 45%, var(--transparent)),
+    inset 0 18px 34px color-mix(in srgb, var(--white) 16%, var(--transparent)),
+    0 0 calc(26px + var(--orb-level) * 24px)
+    color-mix(in srgb, var(--legacy-nebula-2) 36%, var(--transparent)),
+    0 0 calc(64px + var(--orb-level) * 44px)
+    color-mix(in srgb, var(--legacy-nebula-3) 22%, var(--transparent));
   background:
-    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.24), transparent 20%),
-    radial-gradient(circle at 50% 104%, rgba(0, 0, 0, 0.58), transparent 38%);
+    radial-gradient(
+      circle at 50% 8%,
+      color-mix(in srgb, var(--white) 24%, var(--transparent)),
+      var(--transparent) 20%
+    ),
+    radial-gradient(
+      circle at 50% 104%,
+      color-mix(in srgb, var(--legacy-true-black) 58%, var(--transparent)),
+      var(--transparent) 38%
+    );
 }
 
 .app-shell[data-mode="speaking"] .siri-orb {
@@ -1461,7 +1566,7 @@ button {
   width: 100%;
   height: 100%;
   padding: 0 16px;
-  border: 1px solid transparent;
+  border: 1px solid var(--transparent);
   border-radius: var(--r-legacy-window);
   transition:
     border-color 180ms var(--ease-out),
@@ -1476,8 +1581,16 @@ button {
   z-index: 0;
   border-radius: var(--r-legacy-window);
   background:
-    radial-gradient(180px circle at 50% 24%, rgba(107, 98, 242, 0.2), transparent 62%),
-    radial-gradient(160px circle at 78% 62%, rgba(184, 85, 231, 0.14), transparent 64%);
+    radial-gradient(
+      180px circle at 50% 24%,
+      color-mix(in srgb, var(--legacy-nebula-2) 20%, var(--transparent)),
+      var(--transparent) 62%
+    ),
+    radial-gradient(
+      160px circle at 78% 62%,
+      color-mix(in srgb, var(--legacy-nebula-3) 14%, var(--transparent)),
+      var(--transparent) 64%
+    );
   /* Purely decorative: never let the overlay capture clicks. While invisible
      (opacity:0) it would otherwise still intercept pointer events, which ate
      clicks on nested controls like the computer-use End button. */
@@ -1506,11 +1619,11 @@ button {
 
 .app-shell[data-panel="open"]:not([data-call="active"]) .call-stage {
   z-index: 8;
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
+  border-color: var(--transparent);
+  background: var(--transparent);
+  box-shadow: var(--shadow-none);
   pointer-events: none;
-  backdrop-filter: none;
+  backdrop-filter: var(--blur-none);
 }
 
 .app-shell[data-panel="open"]:not([data-call="active"]) .call-stage::before {
@@ -1531,16 +1644,28 @@ button {
   justify-content: center;
   gap: 7px;
   padding: 7px;
-  border-color: transparent;
+  border-color: var(--transparent);
   border-radius: var(--r-legacy-pill);
   background:
-    radial-gradient(120% 200% at 0% 50%, rgba(107, 98, 242, 0.18), transparent 55%),
-    radial-gradient(120% 200% at 100% 50%, rgba(184, 85, 231, 0.12), transparent 55%),
-    linear-gradient(180deg, rgba(10, 10, 10, 0.92), rgba(3, 7, 25, 0.96));
+    radial-gradient(
+      120% 200% at 0% 50%,
+      color-mix(in srgb, var(--legacy-nebula-2) 18%, var(--transparent)),
+      var(--transparent) 55%
+    ),
+    radial-gradient(
+      120% 200% at 100% 50%,
+      color-mix(in srgb, var(--legacy-nebula-3) 12%, var(--transparent)),
+      var(--transparent) 55%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--legacy-night) 92%, var(--transparent)),
+      color-mix(in srgb, var(--legacy-bg-elevated) 96%, var(--transparent))
+    );
   box-shadow:
-    0 0 0 1px rgba(229, 229, 229, 0.08),
-    0 18px 48px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(20px) saturate(1.15);
+    0 0 0 1px color-mix(in srgb, var(--legacy-frost) 8%, var(--transparent)),
+    0 18px 48px color-mix(in srgb, var(--legacy-true-black) 55%, var(--transparent));
+  backdrop-filter: blur(var(--blur-panel)) saturate(1.15);
 }
 
 .app-shell[data-call="active"] .call-stage::before {
@@ -1572,19 +1697,19 @@ button {
   height: 7px;
   border-radius: var(--r-round);
   background: var(--danger);
-  box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.55);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, var(--transparent));
   animation: call-live-pulse 1.6s var(--ease-out) infinite;
 }
 
 @keyframes call-live-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.55);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, var(--transparent));
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(255, 82, 82, 0);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 0%, var(--transparent));
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 0%, var(--transparent));
   }
 }
 
@@ -1650,7 +1775,7 @@ button {
 
 .call-end:hover:not(:disabled),
 .call-end:focus-visible:not(:disabled) {
-  background: rgba(255, 82, 82, 0.28);
+  background: color-mix(in srgb, var(--danger) 28%, var(--transparent));
   box-shadow: inset 0 0 0 1px var(--danger);
 }
 
@@ -1698,7 +1823,7 @@ button {
   height: 12px;
   border: 1.5px solid var(--accent);
   border-radius: var(--r-legacy-xs);
-  box-shadow: 0 0 10px rgba(0, 136, 255, 0.35);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--legacy-accent) 35%, var(--transparent));
 }
 
 .cu-title {
@@ -1763,7 +1888,7 @@ button {
   width: 40%;
   height: 100%;
   border-radius: var(--r-legacy-pill);
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  background: linear-gradient(90deg, var(--transparent), var(--accent), var(--transparent));
   animation: cu-track-slide 1.6s var(--ease-out) infinite;
 }
 
@@ -1801,7 +1926,7 @@ button {
 
 .tool-activity-stop:hover:not(:disabled),
 .tool-activity-stop:focus-visible:not(:disabled) {
-  background: rgba(255, 82, 82, 0.28);
+  background: color-mix(in srgb, var(--danger) 28%, var(--transparent));
   box-shadow: inset 0 0 0 1px var(--danger);
 }
 

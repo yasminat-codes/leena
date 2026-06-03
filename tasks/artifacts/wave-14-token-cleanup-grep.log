@@ -1,0 +1,52 @@
+Wave 14 task 109 CSS token cleanup grep log
+Timestamp: 2026-06-03T08:20:54Z
+
+kencode-search pre-edit queries:
+- border-radius: var(--
+- box-shadow: var(--
+
+Renderer CSS files audited:
+- src/renderer/leena.css
+- src/renderer/styles.css
+- src/renderer/components/command-center.css
+
+Initial findings:
+- src/renderer/styles.css had legacy rgba/color literals in root tokens, panel surfaces, shadows, glows, data-URI select chevrons, and call/orb states.
+- src/renderer/components/command-center.css had one hardcoded rgba shadow, raw blur values, radius fallbacks with literal geometry, and transparent literals.
+- src/renderer/leena.css had a few runtime reset/effect declarations that were not token-backed (`none`, `0`, and workspace shadow colors).
+
+Fix summary:
+- Added centralized legacy/effect tokens in src/renderer/leena.css for transparent, legacy color anchors, select chevrons, shadow resets, and blur sizes.
+- Replaced scattered rgba/url/transparent literals in src/renderer/styles.css with var(...) or color-mix(...) values referencing leena.css tokens.
+- Replaced command-center radius fallbacks, hardcoded shadow color, transparent literals, and raw blur values with token references.
+- Replaced leena.css runtime reset/effect literals with named radius/shadow/blur tokens.
+
+Post-fix scans:
+
+$ rg -n --glob '*.css' --glob '!src/renderer/leena.css' '#[0-9a-fA-F]{3,8}|%23[0-9a-fA-F]{3,8}|rgba?\(' src/renderer
+no matches
+
+$ rg -n --glob '*.css' --glob '!src/renderer/leena.css' --pcre2 '(?<![-\w])(?:white|black|red|green|blue|yellow|purple|orange|pink|gray|grey|transparent)(?![-\w])' src/renderer
+src/renderer/styles.css:854:/* A tiny nebula token — blue glow + Magenta Burst behind a hairline
+src/renderer/styles.css:1428:/* Superwhisper "Nebula Horizon" bloom — blue indigo glow, Magenta Burst,
+src/renderer/styles.css:1429:   Gradient Aura blue. Reads as a cosmic nebula contained inside the orb. */
+src/renderer/styles.css:1529:/* Outer glow uses blue glow + Magenta Burst — the orb floats on a
+Only comment text matched; no runtime named-color values matched.
+
+$ rg -n --pcre2 --glob '*.css' '(border-radius|box-shadow|backdrop-filter|-webkit-backdrop-filter)\s*:\s*(?![^;]*var\(--)[^;]+' src/renderer
+no matches
+
+$ rg -n --pcre2 --glob '*.css' '(filter|-webkit-filter)\s*:\s*[^;]*blur\((?!var\(--)[^)]+\)' src/renderer
+no matches
+
+Validation:
+- npx biome check src/renderer/leena.css src/renderer/styles.css src/renderer/components/command-center.css: pass
+- node --test test/design-system-audit.test.js test/leena-css-tokens.test.js test/font-bundle.test.js: pass, 22/22
+- node --test test/settings-screen.test.js test/shell-navigation.test.js: pass, 9/9
+- node --test test/shell-rendering.test.js: pass, 5/5 including appearance matrix
+- git diff --check: pass
+- node --check on currently changed worktree JS files: pass
+
+Known unrelated blockers:
+- npm run check: fails in task 107-owned src/renderer/components/conversation-card.js and src/renderer/screens/activity.js formatting.
+- node --test: fails one task 107 Activity data assertion in test/activity-screen-data.test.js because memory:semantic-search is called in addition to memory:get-episodes.

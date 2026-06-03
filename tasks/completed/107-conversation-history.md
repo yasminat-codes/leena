@@ -2,7 +2,7 @@
 id: "107"
 title: "Conversation history and search"
 type: feature
-status: pending
+status: completed
 priority: medium
 complexity: M
 estimated_tokens: 16000
@@ -12,7 +12,8 @@ context_files:
   - src/memory/sqlite-memory-store.js
 skills: []
 tags: [phase-7, ui, history, search, memory]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T08:05:33Z"
 created_at: "2026-06-01"
 ---
 
@@ -31,12 +32,12 @@ FTS5 alone misses conceptual matches ("What did I say about coffee?" should find
 6. Add conversation date grouping headers (Today, Yesterday, This Week, Older) above the conversation list.
 
 ## Acceptance Criteria
-- [ ] Conversations expand to show full transcript inline
-- [ ] Transcript loads lazily on expand, not on page load
-- [ ] Search returns both keyword and semantic matches
-- [ ] Results are de-duplicated and re-ranked by combined score
-- [ ] Date grouping headers appear correctly
-- [ ] Search with no results shows appropriate empty state
+- [x] Conversations expand to show full transcript inline
+- [x] Transcript loads lazily on expand, not on page load
+- [x] Search returns both keyword and semantic matches
+- [x] Results are de-duplicated and re-ranked by combined score
+- [x] Date grouping headers appear correctly
+- [x] Search with no results shows appropriate empty state
 
 ## Tests Required
 - `test/conversation-history.test.js` — mock IPC, verify expand/collapse, verify re-rank merge logic, verify date grouping, verify de-duplication
@@ -53,10 +54,14 @@ FTS5 alone misses conceptual matches ("What did I say about coffee?" should find
 - No downstream dependencies
 
 ## Handoff Notes
-[Filled after completion]
+- Added expandable Activity conversation cards in `src/renderer/components/conversation-card.js`; transcript fetch is lazy on expand via the existing memory bridge and cached per card until the list re-renders.
+- Extended `src/renderer/screens/activity.js` with bounded Activity request normalization, hybrid keyword + semantic result merging, entry-id de-duplication, combined scoring (`0.6 * fts + 0.4 * semantic`), relevance badges, and local date grouping headers.
+- Verified the live preload bridge exposes `memory.getEpisodes`, `memory.getConversation`, and `memory.recall`; no shared IPC/preload edits were needed.
+- Added `test/conversation-history.test.js` coverage for lazy expand/collapse, transcript escaping/order, semantic rerank merging, de-duplication, date grouping, relevance badges, and search empty state.
+- Verification passed for changed-file `node --check`, scoped Biome check on owned files, focused Activity/conversation tests, full `node --test`, and final combined Wave 14 gates: `npm run check`, `node --test` (515/515), `npm test`, WAL parse, and `git diff --check`.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Concurrent task 108 edits briefly blocked full `npm run check` while the nudge worker was still formatting owned files. No task 107 code changes were required; combined Wave 14 gates passed after task 108 completed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

@@ -142,11 +142,20 @@
   --indigo: #18037f;
   --white: #ffffff;
   --black: #062423;
+  --transparent: transparent;
   --success: #22a06b;
   --danger: #ff5f57;
   --traffic-close: #ff5f57;
   --traffic-minimize: #febc2e;
   --traffic-zoom: #28c840;
+  --legacy-true-black: #000000;
+  --legacy-night: #0a0a0a;
+  --legacy-frost: #e5e5e5;
+  --legacy-frost-blue: #e5e7eb;
+  --legacy-ghost-gray: #d4d4d4;
+  --legacy-command-shadow: #140450;
+  --legacy-orb-core: #b8a5ff;
+  --legacy-workspace-shadow: #082a27;
   --legacy-bg-elevated: #030719;
   --legacy-bg-overlay: #001b33;
   --legacy-accent: #0088ff;
@@ -177,6 +186,24 @@
   --r-kbd: 6px;
   --r-sm: 14px;
   --r-md: 16px;
+  --r-none: 0;
+
+  /* Effects */
+  --shadow-none: none;
+  --shadow-transparent: 0 0 0 0 var(--transparent);
+  --shadow-workspace-primary-button: 0 14px 28px -20px
+    color-mix(in srgb, var(--legacy-workspace-shadow) 62%, var(--transparent));
+  --blur-none: none;
+  --blur-panel: 20px;
+  --blur-tab: 4px;
+  --blur-orb: 6px;
+  --blur-orb-shadow-base: 18px;
+  --blur-orb-shadow: calc(var(--blur-orb-shadow-base) + var(--orb-level) * 10px);
+  --blur-command: 18px;
+  --blur-command-aurora: 4px;
+  --blur-command-core: 5px;
+  --legacy-select-chevron-sm: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --legacy-select-chevron-md: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -593,8 +620,8 @@
       color-mix(in srgb, var(--side-glass) 44%, transparent)
     ),
     linear-gradient(90deg, transparent, var(--border-2));
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  backdrop-filter: var(--blur-none);
+  -webkit-backdrop-filter: var(--blur-none);
 }
 
 .leena[data-theme="workspace"] .side {
@@ -830,8 +857,8 @@
   position: relative;
   overflow: hidden;
   background: linear-gradient(180deg, var(--glass-sheen), transparent 34%), var(--glass);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  backdrop-filter: var(--blur-none);
+  -webkit-backdrop-filter: var(--blur-none);
   border: 0;
   border-radius: var(--r-panel);
   box-shadow:
@@ -907,7 +934,7 @@
 .leena[data-theme="workspace"] .btn--primary {
   color: #ffffff;
   background: var(--accent);
-  box-shadow: 0 14px 28px -20px rgba(8, 42, 39, 0.62);
+  box-shadow: var(--shadow-workspace-primary-button);
 }
 
 .btn--primary:hover:not(:disabled) {
@@ -1300,7 +1327,7 @@
   padding: 0;
   border-radius: var(--r-panel);
   background: transparent;
-  box-shadow: none;
+  box-shadow: var(--shadow-none);
 }
 
 .home-command__surface {
@@ -1536,7 +1563,7 @@
   padding: 10px 0;
   border: 0;
   border-top: 1px solid var(--border-2);
-  border-radius: 0;
+  border-radius: var(--r-none);
   background: transparent;
 }
 
@@ -1556,7 +1583,7 @@
 
 .leena[data-theme="workspace"] .home-marker {
   background: var(--accent);
-  box-shadow: 0 0 0 4px rgba(7, 91, 85, 0.09);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--grad-hi) 9%, var(--transparent));
 }
 
 .home-list,

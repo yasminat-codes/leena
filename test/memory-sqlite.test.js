@@ -4,8 +4,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { cosineSimilarity, SQLiteMemoryStore } from "../src/memory/sqlite-memory-store.js";
-import { CHAT, EMBEDDINGS } from "../src/providers/types.js";
 import { closeDatabase, getDatabase } from "../src/realtime/tools/database.js";
+import {
+  createMockProviderRegistry,
+  MockChatProvider,
+  MockEmbeddingProvider,
+} from "./helpers/mock-provider.js";
 
 async function withMemoryDb(callback) {
   const directory = await mkdtemp(path.join(tmpdir(), "leena-memory-store-"));
@@ -18,52 +22,6 @@ async function withMemoryDb(callback) {
   }
 }
 
-class MockProviderRegistry {
-  constructor({ embeddings = null, chat = null } = {}) {
-    this.providers = {
-      [EMBEDDINGS]: embeddings,
-      [CHAT]: chat,
-    };
-  }
-
-  getDefault(capability) {
-    return this.providers[capability] ?? null;
-  }
-
-  getForCapability(capability) {
-    const provider = this.providers[capability];
-    return provider ? [provider] : [];
-  }
-}
-
-class MockEmbeddingProvider {
-  constructor(vectors) {
-    this.vectors = new Map(Object.entries(vectors));
-    this.calls = [];
-  }
-
-  async embed(request) {
-    const input = typeof request === "string" ? request : request.input;
-    this.calls.push(input);
-    return {
-      embeddings: [this.vectors.get(input) ?? [0, 0, 1]],
-      model: "mock-embedding",
-    };
-  }
-}
-
-class MockChatProvider {
-  constructor(content) {
-    this.content = content;
-    this.calls = [];
-  }
-
-  async chat(request) {
-    this.calls.push(request);
-    return { content: this.content, model: "mock-chat" };
-  }
-}
-
 test("remember stores episodic entries with embedding BLOBs and ranked recall", async () => {
   await withMemoryDb(async (filePath) => {
     const embeddings = new MockEmbeddingProvider({
@@ -73,7 +31,7 @@ test("remember stores episodic entries with embedding BLOBs and ranked recall", 
     });
     const store = new SQLiteMemoryStore({
       dbPath: filePath,
-      providerRegistry: new MockProviderRegistry({ embeddings }),
+      providerRegistry: createMockProviderRegistry({ embeddingsProvider: embeddings }),
     });
 
     const coffeeId = await store.remember("Coffee is the preferred morning drink.", {
@@ -124,7 +82,7 @@ test("getEpisodic returns one conversation ordered by creation and row id", asyn
     });
     const store = new SQLiteMemoryStore({
       dbPath: filePath,
-      providerRegistry: new MockProviderRegistry({ embeddings }),
+      providerRegistry: createMockProviderRegistry({ embeddingsProvider: embeddings }),
     });
 
     await store.remember("first", { conversationId: "conversation-ordered", role: "user" });
@@ -241,7 +199,10 @@ test("consolidate creates semantic facts with embeddings and source episode link
     );
     const store = new SQLiteMemoryStore({
       dbPath: filePath,
-      providerRegistry: new MockProviderRegistry({ embeddings, chat }),
+      providerRegistry: createMockProviderRegistry({
+        chatProvider: chat,
+        embeddingsProvider: embeddings,
+      }),
     });
 
     const userEpisode = await store.remember("User says they prefer direct answers.", {
@@ -338,6 +299,127 @@ test("missing providers store without embeddings and use keyword recall fallback
 
     const consolidation = await store.consolidate();
     assert.deepEqual(consolidation, { episodic: 1, semantic: 0, ids: [] });
+
+    store.close();
+  });
+});
+
+test("recall clamps direct store limits to a bounded result set", async () => {
+  await withMemoryDb(async (filePath) => {
+    const store = new SQLiteMemoryStore({ dbPath: filePath });
+
+    for (let index = 0; index < 60; index += 1) {
+      await store.remember(`bounded recall fact ${index + 1}`, {
+        conversationId: "bounded-recall",
+        role: "user",
+      });
+    }
+
+    const recalled = await store.recall("bounded recall fact", 500);
+    assert.equal(recalled.length, 50);
+
+    store.close();
+  });
+});
+
+test("recall on an empty database returns no matches", async () => {
+  await withMemoryDb(async (filePath) => {
+    const store = new SQLiteMemoryStore({
+      dbPath: filePath,
+      providerRegistry: createMockProviderRegistry(),
+    });
+
+    assert.deepEqual(await store.recall("coffee preference", 3), []);
+
+    store.close();
+  });
+});
+
+test("empty embedding provider stores content and falls back to keyword recall", async () => {
+  await withMemoryDb(async (filePath) => {
+    const registry = createMockProviderRegistry({ chat: false, embeddingMode: "empty" });
+    const store = new SQLiteMemoryStore({ dbPath: filePath, providerRegistry: registry });
+
+    const id = await store.remember("User likes espresso without embeddings.", {
+      conversationId: "conversation-empty-embedding",
+      role: "user",
+    });
+    const stored = getDatabase(filePath)
+      .prepare("SELECT id, embedding FROM memories_episodic WHERE id = ?")
+      .get(id);
+    assert.equal(Number(stored.id), id);
+    assert.equal(stored.embedding, null);
+
+    const recalled = await store.recall("espresso", 1);
+    assert.equal(recalled.length, 1);
+    assert.equal(recalled[0].entry.id, String(id));
+    assert.equal(recalled[0].entry.content, "User likes espresso without embeddings.");
+    assert.ok(registry.embeddingsProvider.calls.length >= 2);
+
+    store.close();
+  });
+});
+
+test("concurrent remember calls persist distinct episodic rows", async () => {
+  await withMemoryDb(async (filePath) => {
+    const store = new SQLiteMemoryStore({
+      dbPath: filePath,
+      providerRegistry: createMockProviderRegistry(),
+    });
+    const count = 12;
+
+    const ids = await Promise.all(
+      Array.from({ length: count }, (_unused, index) =>
+        store.remember(`Concurrent memory ${index + 1}`, {
+          conversationId: "conversation-concurrent",
+          role: "user",
+          turn: index + 1,
+        }),
+      ),
+    );
+
+    assert.equal(ids.length, count);
+    assert.equal(new Set(ids).size, count);
+    const rows = getDatabase(filePath)
+      .prepare(
+        `
+          SELECT id, content
+          FROM memories_episodic
+          WHERE conversation_id = ?
+          ORDER BY id ASC
+        `,
+      )
+      .all("conversation-concurrent");
+    assert.equal(rows.length, count);
+    assert.deepEqual(
+      rows.map((row) => row.content),
+      Array.from({ length: count }, (_unused, index) => `Concurrent memory ${index + 1}`),
+    );
+
+    store.close();
+  });
+});
+
+test("large content stores and retrieves intact", async () => {
+  await withMemoryDb(async (filePath) => {
+    const store = new SQLiteMemoryStore({
+      dbPath: filePath,
+      providerRegistry: createMockProviderRegistry(),
+    });
+    const largeContent = `User likes espresso. ${"Detailed memory payload. ".repeat(520)}`;
+    assert.ok(Buffer.byteLength(largeContent, "utf8") > 10 * 1024);
+
+    const id = await store.remember(largeContent, {
+      conversationId: "conversation-large-content",
+      role: "user",
+    });
+    const [episode] = store.getEpisodic("conversation-large-content");
+    assert.equal(episode.id, String(id));
+    assert.equal(episode.content, largeContent);
+
+    const recalled = await store.recall("espresso", 1);
+    assert.equal(recalled.length, 1);
+    assert.equal(recalled[0].entry.id, String(id));
 
     store.close();
   });

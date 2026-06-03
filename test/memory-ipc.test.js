@@ -181,13 +181,16 @@ test("recall validates query and limit before delegation", async () => {
   await recall(null, { query: "planner", limit: 2 });
   assert.deepEqual(store.calls.recall.at(-1), { query: "planner", limit: 2 });
 
+  await recall(null, { query: "planner", limit: 500 });
+  assert.deepEqual(store.calls.recall.at(-1), { query: "planner", limit: 50 });
+
   assert.deepEqual(await recall(null, { query: "planner", limit: -1 }), {
     error: "Memory recall limit must be a positive integer.",
   });
   assert.deepEqual(await recall(null, { query: " " }), {
     error: "Memory recall query must be a non-empty string.",
   });
-  assert.equal(store.calls.recall.length, 2);
+  assert.equal(store.calls.recall.length, 3);
 });
 
 test("get-episodes validates pagination and delegates to live memory history", async () => {

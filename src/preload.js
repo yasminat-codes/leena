@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld("leena", {
   logoutOpenAI: () => ipcRenderer.invoke("openai:logout"),
   createRealtimeSession: (options) => ipcRenderer.invoke("realtime:create-session", options),
   createRealtimeSecret: (options) => ipcRenderer.invoke("openai:create-realtime-secret", options),
+  createPersonaSessionUpdate: () => ipcRenderer.invoke("realtime:create-persona-session-update"),
   getAgentProfile: () => ipcRenderer.invoke("agent:get-profile"),
   setAgentProfile: (profile) => ipcRenderer.invoke("agent:set-profile", profile),
   identity: {
@@ -95,6 +96,13 @@ contextBridge.exposeInMainWorld("leena", {
   deletePlannerTasks: (ids) => ipcRenderer.invoke("planner:delete-tasks", ids),
   completePlannerTasks: (ids) => ipcRenderer.invoke("planner:complete-tasks", ids),
   deleteCalendarItems: (ids) => ipcRenderer.invoke("planner:delete-calendar-items", ids),
+  nudges: {
+    list: () => ipcRenderer.invoke("nudges:list"),
+    refresh: () => ipcRenderer.invoke("nudges:refresh"),
+    dismiss: (id) => ipcRenderer.invoke("nudges:dismiss", id),
+    onChanged: (callback) => onIpc("nudges:changed", callback),
+    offChanged: (listener) => offIpc("nudges:changed", listener),
+  },
   listScreenshots: () => ipcRenderer.invoke("screenshots:list"),
   revealScreenshot: (name) => ipcRenderer.invoke("screenshots:reveal", name),
   deleteScreenshots: (names) => ipcRenderer.invoke("screenshots:delete", names),

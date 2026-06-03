@@ -22,7 +22,10 @@ test("Wave 12 memory and identity handlers are registered in main", () => {
   assert.match(mainSource, /registerMemoryHandlers\(\{ ipcMain, store: getMemoryStore\(\) \}\);/);
   assert.match(mainSource, /new SQLiteMemoryStore\(\{\s*providerRegistry: getRegistry\(\),\s*\}\)/);
   assert.match(mainSource, /new PersonaEngine\(\{ settingsStore: settingsStoreBridge \}\)/);
-  assert.match(mainSource, /registerIdentityHandlers\(\{ ipcMain, personaEngine \}\);/);
+  assert.match(
+    mainSource,
+    /registerIdentityHandlers\(\{ ipcMain, onChanged: broadcastIdentityChanged, personaEngine \}\);/,
+  );
 });
 
 test("Wave 12 preload bridge exposes memory and identity APIs", () => {
@@ -39,6 +42,7 @@ test("Wave 12 preload bridge exposes memory and identity APIs", () => {
     "identity:create-persona",
     "identity:update-persona",
     "identity:delete-persona",
+    "realtime:create-persona-session-update",
   ]) {
     assert.ok(preloadSource.includes(`ipcRenderer.invoke("${channel}"`), `missing ${channel}`);
   }

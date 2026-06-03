@@ -14,6 +14,7 @@ export const MEMORY_IPC_CHANNELS = Object.freeze({
 const MAX_EPISODES_LIMIT = 50;
 const MAX_EPISODES_PAGE = 500;
 const MAX_EPISODES_QUERY_LENGTH = 200;
+const MAX_RECALL_LIMIT = 50;
 
 export function registerMemoryHandlers({ ipcMain, ...options } = {}) {
   if (!ipcMain || typeof ipcMain.handle !== "function") {
@@ -204,7 +205,7 @@ function normalizeLimit(limit = 5) {
   if (!Number.isInteger(limit) || limit <= 0) {
     throw new TypeError("Memory recall limit must be a positive integer.");
   }
-  return limit;
+  return Math.min(limit, MAX_RECALL_LIMIT);
 }
 
 function normalizePositiveInteger(value, label) {

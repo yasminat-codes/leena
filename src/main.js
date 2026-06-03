@@ -42,6 +42,12 @@ import { getServer as getStoredMCPServer, ServerStore } from "./mcp/server-store
 import { SQLiteMemoryStore } from "./memory/index.js";
 import { createMemoryMiddleware } from "./memory/memory-middleware.js";
 import {
+  createNudgePayload,
+  dismissNudge,
+  generateNudges,
+  NUDGE_SETTINGS,
+} from "./nudges/nudge-engine.js";
+import {
   computerUseBrowserDocsUrl,
   createOsPermissionSnapshot,
   getMacOsPrivacySettingsUrl,
@@ -51,7 +57,7 @@ import {
 import { getRegistry } from "./providers/index.js";
 import { createOpenAIProvider } from "./providers/openai-provider.js";
 import { REALTIME } from "./providers/types.js";
-import { buildRealtimeInstructions } from "./realtime/prompts.js";
+import { buildRealtimeInstructions, resolveRealtimeVoicePreference } from "./realtime/prompts.js";
 import {
   listActivity,
   migrateLegacyActivityStore,
@@ -112,6 +118,7 @@ const openAIAuthConfig = Object.freeze({
 });
 
 const API_KEY_EXPIRES_AT = Number.MAX_SAFE_INTEGER;
+const NUDGE_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 const windowModes = Object.freeze({
   // `alwaysOnTop` is only set for the transient call overlay so it stays visible
@@ -137,6 +144,10 @@ let suppressMoveSave = false;
 let moveSaveTimer = null;
 // Set while we resize the window ourselves, so the resize guard ignores it.
 let suppressBoundsGuard = false;
+let nudgeRefreshInterval = null;
+let nudgeRefreshPromise = null;
+let nudgeRefreshGeneration = 0;
+let latestNudgePayload = null;
 const mcpClientManager = new MCPClientManager();
 const mcpServerStore = new ServerStore();
 const settingsStoreBridge = {
@@ -148,6 +159,7 @@ const settingsStoreBridge = {
 };
 const personaEngine = new PersonaEngine({ settingsStore: settingsStoreBridge });
 const agentProfileIdentityHandlers = createAgentProfileIdentityAdapters({
+  onChanged: broadcastIdentityChanged,
   personaEngine,
   loadAgentProfile,
   saveAgentProfile,
@@ -462,26 +474,47 @@ ipcMain.handle("openai:create-realtime-secret", async (_event, options = {}) => 
   return createRealtimeProviderSession(options);
 });
 
+ipcMain.handle("realtime:create-persona-session-update", () => createPersonaSessionUpdate());
+
 async function createRealtimeProviderSession(options = {}) {
   const credentials = await getFreshOpenAICredentials();
   if (!credentials) {
     return createNoRealtimeProviderResponse();
   }
 
-  const profile = loadAgentProfile();
-  const memories = await getMemoryMiddleware().onSessionStart(profile);
   const provider = createRealtimeProvider(credentials);
   if (!provider) {
     return createNoRealtimeProviderResponse();
   }
+  const { session, tools } = await createRealtimeSessionConfig();
 
   return provider.createRealtimeSession({
     ...options,
     model: getProviderDefaultModel(provider, REALTIME, options.model),
-    voice: profile.voice,
-    instructions: buildRealtimeInstructions({ profile, memories }),
-    tools: await getRealtimeToolDefinitions(mcpClientManager),
+    voice: session.audio.output.voice,
+    instructions: session.instructions,
+    tools,
   });
+}
+
+async function createPersonaSessionUpdate() {
+  const { activePersona, session, tools } = await createRealtimeSessionConfig();
+  return { activePersona, session: { ...session, tools } };
+}
+
+async function createRealtimeSessionConfig() {
+  const profile = loadAgentProfile();
+  const activePersona = personaEngine.getActive();
+  const memories = await getMemoryMiddleware().onSessionStart(profile);
+  const tools = await getRealtimeToolDefinitions(mcpClientManager);
+  return {
+    activePersona,
+    session: {
+      audio: { output: { voice: resolveRealtimeVoicePreference(profile, activePersona) } },
+      instructions: buildRealtimeInstructions({ profile, memories, persona: activePersona, tools }),
+    },
+    tools,
+  };
 }
 
 ipcMain.handle("agent:get-profile", agentProfileIdentityHandlers.getAgentProfile);
@@ -492,6 +525,9 @@ ipcMain.handle("settings:get", (_event, key, defaultValue) => getSetting(key, de
 ipcMain.handle("settings:set", (_event, key, value) => {
   const saved = setSetting(key, value);
   broadcastDataChanged("settings", { type: "settings", key });
+  if (isNudgeSettingKey(key)) {
+    void refreshNudges("settings", { force: true });
+  }
   return saved;
 });
 ipcMain.handle("settings:get-all", () => getAllSettings());
@@ -502,6 +538,13 @@ ipcMain.handle("planner:delete-tasks", (_event, ids) => deletePlannerTasks(ids))
 ipcMain.handle("planner:complete-tasks", (_event, ids) => completePlannerTasks(ids));
 ipcMain.handle("planner:delete-calendar-items", (_event, ids) => deletePlannerCalendarItems(ids));
 ipcMain.handle("activity:list", (_event, kind) => listActivity(kind));
+ipcMain.handle("nudges:list", () => getLatestNudges());
+ipcMain.handle("nudges:refresh", () => refreshNudges("manual"));
+ipcMain.handle("nudges:dismiss", async (_event, id) => {
+  const dismissed = await dismissNudge(id, { settings: settingsStoreBridge });
+  const payload = await refreshNudges("dismiss", { force: true });
+  return { ...dismissed, payload };
+});
 ipcMain.handle("screenshots:list", () => listScreenshots());
 ipcMain.handle("screenshots:reveal", (_event, name) => revealScreenshot(name));
 ipcMain.handle("screenshots:delete", (_event, names) => deleteScreenshots(names));
@@ -699,6 +742,7 @@ app.whenReady().then(() => {
   initializeTray();
   initializeFeatureHandlers();
   initializeMCPAutoConnect();
+  initializeNudgeScheduler();
 
   if (!isDevelopment) {
     autoUpdater.checkForUpdatesAndNotify();
@@ -724,6 +768,10 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  if (nudgeRefreshInterval !== null) {
+    clearInterval(nudgeRefreshInterval);
+    nudgeRefreshInterval = null;
+  }
   try {
     panelWindowState?.flush();
   } catch (error) {
@@ -769,7 +817,7 @@ function shouldLaunchOnboarding() {
 
 function initializeFeatureHandlers() {
   registerLaunchOnLoginHandlers({ ipcMain, app, settingsStore: settingsStoreBridge });
-  registerIdentityHandlers({ ipcMain, personaEngine });
+  registerIdentityHandlers({ ipcMain, onChanged: broadcastIdentityChanged, personaEngine });
   registerMemoryHandlers({ ipcMain, store: getMemoryStore() });
   registerProviderHandlers(ipcMain, {
     secretCodec: createSafeStorageSecretCodec(safeStorage),
@@ -815,6 +863,83 @@ function getMemoryMiddleware() {
     memoryMiddleware = createMemoryMiddleware(getMemoryStore());
   }
   return memoryMiddleware;
+}
+
+function initializeNudgeScheduler() {
+  if (nudgeRefreshInterval !== null) {
+    clearInterval(nudgeRefreshInterval);
+  }
+  const refresh = () => {
+    void refreshNudges("scheduled");
+  };
+  mainWindow?.webContents.once("did-finish-load", () => {
+    void refreshNudges("launch");
+  });
+  setImmediate(refresh);
+  nudgeRefreshInterval = setInterval(refresh, NUDGE_REFRESH_INTERVAL_MS);
+}
+
+async function getLatestNudges() {
+  if (nudgeRefreshPromise?.force) {
+    return nudgeRefreshPromise.promise;
+  }
+  return latestNudgePayload ?? refreshNudges("initial", { broadcast: false });
+}
+
+async function refreshNudges(reason, { broadcast = true, force = false } = {}) {
+  if (nudgeRefreshPromise && !force) {
+    return nudgeRefreshPromise.promise;
+  }
+
+  if (force) {
+    nudgeRefreshGeneration += 1;
+    latestNudgePayload = createStaleNudgePayload();
+  }
+  const generation = nudgeRefreshGeneration;
+  const promise = generateNudges({
+    memory: {
+      recall: (query, limit) => getMemoryStore().recall(query, limit),
+    },
+    planner: {
+      listCalendarItems,
+      listTasks,
+    },
+    settings: settingsStoreBridge,
+  })
+    .then((payload) => {
+      if (generation !== nudgeRefreshGeneration) {
+        return createStaleNudgePayload();
+      }
+      latestNudgePayload = payload;
+      if (broadcast) {
+        broadcastNudgesChanged(payload, reason);
+      }
+      return payload;
+    })
+    .catch((error) => {
+      safeConsole("warn", "Nudge generation failed", error);
+      const payload = createNudgePayload([], { enabled: false });
+      payload.error = "Nudge generation failed.";
+      if (generation !== nudgeRefreshGeneration) {
+        return createStaleNudgePayload();
+      }
+      latestNudgePayload = payload;
+      if (broadcast) {
+        broadcastNudgesChanged(payload, reason);
+      }
+      return payload;
+    })
+    .finally(() => {
+      if (nudgeRefreshPromise?.generation === generation) {
+        nudgeRefreshPromise = null;
+      }
+    });
+  nudgeRefreshPromise = { force, generation, promise };
+  return promise;
+}
+
+function createStaleNudgePayload() {
+  return createNudgePayload([], { enabled: false });
 }
 
 function initializeMCPAutoConnect() {
@@ -933,6 +1058,21 @@ function broadcastDataChanged(category, details = {}) {
     return;
   }
   mainWindow.webContents.send("data:changed", { category, ...details });
+}
+
+function broadcastIdentityChanged(details = {}) {
+  broadcastDataChanged("identity", { type: "identity", ...details });
+}
+
+function broadcastNudgesChanged(payload, reason) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.webContents.send("nudges:changed", { payload, reason });
+}
+
+function isNudgeSettingKey(key) {
+  return key === NUDGE_SETTINGS.enabled || key === NUDGE_SETTINGS.settingsToggle;
 }
 
 function reportGlobalError(event, error) {

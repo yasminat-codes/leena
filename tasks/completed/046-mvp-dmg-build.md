@@ -2,7 +2,9 @@
 id: "046"
 title: "MVP .dmg build (guaranteed deliverable)"
 type: build
-status: pending
+status: completed
+claim_started: "2026-06-03T10:37:29Z"
+completed_at: "2026-06-03T10:47:25Z"
 priority: critical
 complexity: M
 estimated_tokens: 12000
@@ -13,7 +15,7 @@ context_files:
   - src/main.js
 skills: []
 tags: [distribution, dmg, mvp, deliverable]
-attempts: 0
+attempts: 1
 created_at: "2026-06-01"
 ---
 
@@ -31,10 +33,10 @@ The user's one mandatory deliverable is a `.dmg` they can download and run on ma
 5. Copy the artifact to `dist/Leena-MVP.dmg` and write its path + SHA-256 to `tasks/DELIVERABLE.md`. Append a note: **launch-smoke (`open` the installed app, confirm window) requires the owner's GUI session — flag it in DELIVERABLE.md as an owner manual step, do NOT block the build on it.**
 
 ## Acceptance Criteria
-- [ ] `dist/Leena-MVP.dmg` exists, non-zero, `electron-builder` exit 0, `hdiutil verify` passes
-- [ ] `Leena.app` bundle present + executable inside the mounted dmg (structural check — headless-safe)
-- [ ] `npm run check` and `node --test` pass before the build runs
-- [ ] `tasks/DELIVERABLE.md` records the artifact path + checksum + the owner manual launch-smoke note
+- [x] `dist/Leena-MVP.dmg` exists, non-zero, `electron-builder` exit 0, `hdiutil verify` passes
+- [x] `Leena.app` bundle present + executable inside the mounted dmg (structural check — headless-safe)
+- [x] `npm run check` and `node --test` pass before the build runs
+- [x] `tasks/DELIVERABLE.md` records the artifact path + checksum + the owner manual launch-smoke note
 - [ ] *(owner, GUI session — not an autonomous gate)* app launches after `xattr -cr` without crashing
 
 ## Tests Required
@@ -49,10 +51,30 @@ The user's one mandatory deliverable is a `.dmg` they can download and run on ma
 - `tasks/DELIVERABLE.md` is the manifest the orchestrator reads to confirm the deliverable exists.
 
 ## Handoff Notes
-[Filled after completion]
+- Wave 16 task 046 completed the MVP artifact lane on branch `wave-16`.
+- `kencode-search` was run before code changes against the required concrete anchors: `CSC_IDENTITY_AUTO_DISCOVERY=false`, `hdiutil verify`, and mac `dmg`/`zip` target configuration.
+- MVP gate tasks were confirmed in `tasks/completed/`: 021, 040, 056, 065, 073, 033, 039, 100, 101, and 104.
+- Added `test/build-smoke.test.js` to pin task 046 build-smoke coverage without duplicating the Wave 10 integration test.
+- Pre-build gates passed: `npm run check`; `node --test` with 529 passing tests.
+- Build command passed: `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`.
+- Builder outputs copied after the final build:
+  - `dist/Leena-0.1.0-arm64.dmg` -> `dist/Leena-MVP.dmg`
+  - `dist/Leena-0.1.0-arm64-mac.zip` -> `dist/Leena-MVP.zip`
+- Final artifact hashes:
+  - `dist/Leena-MVP.dmg`: `622285f88cee98384c905c70412c794fe21f6bed03683ad85c72c64ee293be8c`
+  - `dist/Leena-MVP.zip`: `f4897055756ec344ac883d5bc34a3d5a22485267e017c2df5417d16cf46043f6`
+- Headless structural verification passed for the copied MVP DMG and ZIP:
+  - `hdiutil verify dist/Leena-MVP.dmg`
+  - `hdiutil imageinfo dist/Leena-MVP.dmg`
+  - read-only DMG mount with `Leena.app`, `/Applications` symlink, and executable present
+  - 21 packaged font assets in `app.asar`
+  - 4 `@nut-tree-fork` native `.node` addons under `app.asar.unpacked`
+  - ZIP extracted with `ditto`; `Leena.app/Contents/MacOS/Leena` executable present
+- Parent independent verification reran `npm run check`, full `node --test` (529/529), `node --check test/build-smoke.test.js`, focused `node --test test/build-smoke.test.js`, `git diff --check`, `hdiutil verify`, `hdiutil imageinfo`, read-only DMG mount checks, and ZIP extraction checks before moving this task to completed.
+- Owner GUI launch-smoke remains manual only and is intentionally not marked complete.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Initial `node --test` after adding `test/build-smoke.test.js` failed because the new test asserted the exact combined unsigned command string before the task evidence was finalized. The assertion was corrected to check the build command and `CSC_IDENTITY_AUTO_DISCOVERY=false` convention independently. Final pre-build `npm run check` and `node --test` both passed before `electron-builder` ran.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

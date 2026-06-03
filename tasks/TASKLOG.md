@@ -434,3 +434,24 @@ _(wave execution entries appended below as the build runs)_
 - Opened PR #16 (`wave-15` -> `main`) after reviewer and advisor gates cleared; branch head `7770c13`.
 - Requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted generated trigger/review-in-progress comments and a pending advisory status at merge-decision time; no actionable findings were available, so the advisory-only status did not block merge.
 - The repo still lacks `codex` and `codex-automation` labels, so no automation labels were applied.
+
+## 2026-06-03 — Wave 16 started
+
+- Cut clean branch/worktree `wave-16` from `origin/main` at `445f417` after Wave 15 merged; the dirty/diverged primary checkout remains untouched.
+- Baseline gates before implementation passed after `npm install` restored the fresh worktree dependencies: `npm run check` and full `node --test` (527/527).
+- Ran the required initial `kencode-search` pass before code. Electron Builder references confirm `mac.target` can use `dmg` + `zip`; CI examples confirm `CSC_IDENTITY_AUTO_DISCOVERY=false` as the unsigned macOS fallback; hdiutil references confirm `hdiutil verify` as the headless image-integrity check.
+- Moved task `046` to `in-progress` with attempt 1, active claims, and pre-run WAL entry.
+
+## 2026-06-03 — Wave 16 summary
+
+- Completed task `046`: added `test/build-smoke.test.js`, rebuilt unsigned macOS artifacts with `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`, copied the builder outputs to `dist/Leena-MVP.dmg` and `dist/Leena-MVP.zip`, and recorded both standard builder outputs plus MVP named copies in `tasks/DELIVERABLE.md`.
+- Final MVP artifact hashes: DMG `622285f88cee98384c905c70412c794fe21f6bed03683ad85c72c64ee293be8c`; ZIP `f4897055756ec344ac883d5bc34a3d5a22485267e017c2df5417d16cf46043f6`.
+- Parent structural verification passed: `hdiutil verify`, `hdiutil imageinfo`, read-only DMG layout check (`Leena.app` plus Applications symlink), executable check, 21 packaged font assets, four unpacked `@nut-tree-fork` native addon files, and matching ZIP extraction checks.
+- Independent parent gates passed: `npm run check`, full `node --test` (529/529), `node --check test/build-smoke.test.js`, focused `node --test test/build-smoke.test.js`, `git diff --check`, WAL JSON parse, task-count audit, active-claims release, and task-artifact privacy scan.
+- Owner GUI launch-smoke remains a manual checklist in `tasks/DELIVERABLE.md`; no GUI launch result was fabricated.
+
+## 2026-06-03 — Wave 16 reviewer/advisor gate
+
+- Reviewer gate passed with no blockers. Warning only: stage `test/build-smoke.test.js`, task move, and ledger updates before PR creation.
+- Advisor gate passed with no release-readiness blockers. Owner GUI launch-smoke remaining manual is acceptable because task `046` and `tasks/DELIVERABLE.md` explicitly keep it as a non-autonomous checklist item.
+- Carry forward for final handoff: the MVP build is unsigned/ad-hoc and not notarized, `dist/` artifacts are ignored local build outputs, and no GUI launch was performed or claimed.

@@ -116,6 +116,36 @@ test("retries transient connection failures", async () => {
   assert.equal(state.httpTransports.filter((transport) => transport.closed).length, 2);
 });
 
+test("wraps repeated connection timeouts in MCPError after retry exhaustion", async () => {
+  const { manager, state } = createMockManager({
+    connectFailures: [
+      retryableError("first timeout", "ETIMEDOUT"),
+      retryableError("second timeout", "ETIMEDOUT"),
+      retryableError("third timeout", "ETIMEDOUT"),
+    ],
+  });
+
+  await assert.rejects(
+    manager.connect({
+      id: "remote",
+      transport: "http",
+      url: "https://mcp.example.test/mcp",
+    }),
+    (error) => {
+      assert.ok(error instanceof MCPError);
+      assert.equal(error.serverName, "remote");
+      assert.ok(error.cause instanceof RetryExhaustedError);
+      assert.match(error.message, /third timeout/);
+      return true;
+    },
+  );
+  assert.equal(state.connectCalls.length, 3);
+  assert.equal(
+    state.httpTransports.every((transport) => transport.closed),
+    true,
+  );
+});
+
 test("does not retry tool calls by default because MCP tools may have side effects", async () => {
   const { manager, state } = createMockManager({
     callToolFailures: [retryableError("call reset")],
@@ -197,6 +227,43 @@ test("throws MCPError for permanent connection and tool-call failures", async ()
     return true;
   });
   assert.equal(second.state.callToolCalls.length, 1);
+});
+
+test("handles malformed MCP listTools and callTool responses without crashing", async () => {
+  const { manager } = createMockManager({
+    tools: "not an array",
+    callToolResult: { content: { type: "text", text: "not an array" } },
+  });
+
+  await manager.connect({
+    id: "remote",
+    transport: "http",
+    url: "https://mcp.example.test/mcp",
+  });
+
+  assert.deepEqual(await manager.listTools("remote"), []);
+  assert.equal(manager.getStatus().remote.toolCount, 0);
+  assert.deepEqual(await manager.callTool("remote", "search", { query: "mail" }), []);
+});
+
+test("wraps MCP server crashes during tool listing in MCPError", async () => {
+  const crash = new Error("server process crashed");
+  crash.code = "EPIPE";
+  const { manager } = createMockManager({ listToolsFailure: crash });
+
+  await manager.connect({
+    id: "remote",
+    transport: "http",
+    url: "https://mcp.example.test/mcp",
+  });
+
+  await assert.rejects(manager.listTools("remote"), (error) => {
+    assert.ok(error instanceof MCPError);
+    assert.equal(error.serverName, "remote");
+    assert.equal(error.transport, "http");
+    assert.match(error.message, /server process crashed/);
+    return true;
+  });
 });
 
 test("throws MCPError when listing or calling tools on disconnected servers", async () => {
@@ -353,9 +420,9 @@ function createMockManager(overrides = {}) {
   return { manager, state };
 }
 
-function retryableError(message) {
+function retryableError(message, code = "ECONNRESET") {
   const error = new Error(message);
-  error.code = "ECONNRESET";
+  error.code = code;
   return error;
 }
 

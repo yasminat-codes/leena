@@ -2,7 +2,7 @@
 id: "053"
 title: "Provider settings IPC channels"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 14000
@@ -14,7 +14,9 @@ context_files:
   - src/settings-store.js
 skills: []
 tags: [phase-2, providers, ipc, settings]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:17:52Z"
 created_at: "2026-06-01"
 ---
 
@@ -34,15 +36,15 @@ Providers live in the main process (they make HTTP calls, hold API keys). The re
 7. Update `src/preload.js` to expose all channels via `window.leena.providers.*` plus `window.leena.ollama.pullModel(model)` and an `onPullProgress(cb)` subscription (use whatever the current API namespace is if rename hasn't run yet).
 
 ## Acceptance Criteria
-- [ ] `providers:list` returns all registered providers with correct status flags
-- [ ] `providers:get-config` never exposes full API keys across IPC (redacted to last 4 chars)
-- [ ] `providers:set-config` encrypts API keys via safeStorage before storing
-- [ ] `providers:test-connection` returns structured result with latency measurement
-- [ ] `providers:get-models` returns filtered model list for requested capability
-- [ ] `ollama:pull-model` downloads a new model and streams `ollama:pull-progress` events to the renderer; resolves on success
-- [ ] All channels registered in main.js with `ipcMain.handle`
-- [ ] All channels exposed in preload.js via contextBridge
-- [ ] Error responses are serialized `ProviderError` objects (from task 000)
+- [x] `providers:list` returns all registered providers with correct status flags
+- [x] `providers:get-config` never exposes full API keys across IPC (redacted to last 4 chars)
+- [x] `providers:set-config` encrypts API keys via safeStorage before storing
+- [x] `providers:test-connection` returns structured result with latency measurement
+- [x] `providers:get-models` returns filtered model list for requested capability
+- [x] `ollama:pull-model` downloads a new model and streams `ollama:pull-progress` events to the renderer; resolves on success
+- [ ] All channels registered in main.js with `ipcMain.handle` — deferred to shared integration pass
+- [ ] All channels exposed in preload.js via contextBridge — deferred to shared integration pass
+- [x] Error responses are serialized `ProviderError` objects (from task 000)
 
 ## Tests Required
 - `test/provider-settings-ipc.test.js`:
@@ -54,9 +56,9 @@ Providers live in the main process (they make HTTP calls, hold API keys). The re
   - Verify error serialization across IPC boundary
 
 ## Outputs
-- Updated `src/main.js` — 5 new ipcMain.handle registrations
-- Updated `src/preload.js` — 5 new contextBridge channels
-- `test/provider-settings-ipc.test.js` — IPC channel tests
+- New `src/ipc/provider-handlers.js` — task-owned provider IPC registration module with injectable registry, settings store, safeStorage codec, provider reconfiguration, timeout, and progress sender dependencies.
+- New `test/provider-settings-ipc.test.js` — IPC channel tests for registration, API-key redaction/encryption, test-connection latency/timeout, model filtering, serialized errors, and Ollama pull progress.
+- Deferred `src/main.js` / `src/preload.js` wiring to the shared integration pass; this module exports `registerProviderHandlers()`, `createProviderIpcHandlers()`, and `createSafeStorageSecretCodec()` for that handoff.
 
 ## Interface Contracts
 - **Task 054 depends on:** `providers:get-models` returning model lists for the UI dropdown
@@ -66,10 +68,18 @@ Providers live in the main process (they make HTTP calls, hold API keys). The re
 - **Task 054 depends on:** `ollama:pull-model` + `ollama:pull-progress` for the "download new model" affordance with a progress bar
 
 ## Handoff Notes
-_Filled after completion._
+- Implemented provider settings IPC as a task-owned module in `src/ipc/provider-handlers.js`.
+- `registerProviderHandlers(ipcMain, options)` registers `providers:list`, `providers:get-config`, `providers:set-config`, `providers:test-connection`, `providers:get-models`, and `ollama:pull-model`.
+- `createSafeStorageSecretCodec(safeStorage)` adapts Electron `safeStorage.encryptString()` / `decryptString()` to the existing protected provider API-key storage contract. Full API keys do not cross IPC; `get-config` returns only `[REDACTED]` plus the last four characters.
+- `providers:set-config` saves API keys, base URLs, and per-provider default model selections, then calls an injectable reconfiguration hook. The default hook recreates known OpenAI/OpenRouter/Ollama providers in the registry.
+- `providers:test-connection` measures latency and enforces the 10s default timeout. Failures and unsupported operations serialize through `serializeError(..., { redactSecrets: true })`.
+- `providers:get-models` normalizes provider model rows and filters by capability tags.
+- `ollama:pull-model` sends `ollama:pull-progress` through the IPC event sender or an injected progress sender.
+- Main/preload handoff: import `registerProviderHandlers` and `createSafeStorageSecretCodec` in `src/main.js`, call `registerProviderHandlers(ipcMain, { secretCodec: createSafeStorageSecretCodec(safeStorage) })`, then expose renderer bridge methods in `src/preload.js` under `window.leena.providers.*` plus `window.leena.ollama.pullModel()` / pull-progress subscription when those shared files are claim-free.
+- Verification: `npm run check`, `node --test` (354 passing), focused `node --test test/provider-settings-ipc.test.js`, and `node --check src/ipc/provider-handlers.js test/provider-settings-ipc.test.js`.
 
 ## Errors Encountered
-_Filled if errors occur._
+- Focused tests caught the first timeout helper using an unref'd timer, which left the timeout promise pending under `node:test`. Removed the unref so timeout behavior settles deterministically.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

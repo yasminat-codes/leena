@@ -510,3 +510,15 @@
 - MCP tools now merge into realtime tool definitions and execute through namespaced routing plus the Wave 09 permission helpers; missing/stale metadata fails closed.
 - Parent verification passed: `npm run check`, `node --test` (329/329), changed JS syntax checks, `git diff --check`, `npm run build:mac:dir`, `npm run build:mac`, mounted DMG layout check, ZIP app check, and packaged tray asset check.
 - CodeRabbit advisory was requested on PR #11. It posted the generated "Review triggered" response and left the advisory CodeRabbit status pending at merge-decision time, with no actionable findings available; advisory status did not block merge.
+
+## Wave 11 — summary
+- Completed tasks `034`, `036`, `037`, `039`, `053`, `062`, `070`, `084`, `086`, `087`, and `110`; blocked `094` because task `093` has no wake coordinator over a real engine/model/threshold/metrics.
+- Shared `src/main.js` / `src/preload.js` integration now registers launch-on-login, global hotkey, provider settings IPC, MCP server IPC, MCP auto-connect/cleanup, onboarding completion/reset aliases, first-run onboarding launch, and panel bounds get/set APIs.
+- SQLite memory, persona engine, provider IPC, MCP handlers, MCP auto-connect, MCP comprehensive tests, onboarding renderer contract, launch/hotkey helpers, and panel persistence each have focused tests.
+- Wake work remains non-blocking for the deliverable path; task `094` should resume only after real wake coordinator outputs or an explicit fallback decision.
+- Reviewer fix: MCP server removal originally let a stale/disconnected live client block deletion of the saved server row. The handler now uses best-effort disconnect cleanup before deleting storage, with a focused regression proving stale cleanup errors do not prevent removal.
+- Reviewer fix: first-run onboarding was only an integration-ready module, so fresh installs still loaded the main shell. Main now passes `?onboarding=1` when `onboardingCompleted` is false, renderer bootstrap mounts the onboarding flow before app runtime, and focused tests scan the launch path.
+- Reviewer fix: provider settings returned redacted API-key placeholders and then accepted the same placeholder as a fresh secret on general config saves. `providers:set-config` now treats `[REDACTED]...` as display-only and preserves the existing encrypted key while still saving base URL/model changes.
+- Reviewer fix: task-local resize constraints must not override an approved shell contract. Panel mode now preserves the existing 1060px default and allows resizing up to 1280px instead of clamping the desktop shell to 800px.
+- Parent verification passed after reviewer fixes: `npm run check`, `node --test` (400/400), changed JS syntax checks, `git diff --check`, WAL JSON parse, and task-artifact privacy scan.
+- CodeRabbit advisory was requested on PR #12 and was still pending at merge-decision time, with no actionable findings available; advisory status did not block merge.

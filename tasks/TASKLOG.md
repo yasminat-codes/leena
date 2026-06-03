@@ -259,3 +259,23 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate re-check passed with no findings after the bookkeeping fix.
 - Advisor gate cleared with warnings only: DMG/ZIP remain unsigned until Developer ID signing exists; MCP server IPC and auto-connect lifecycle remain scoped to tasks `084` and `086`; wake coordinator follow-ons remain blocked until task `092` has real wake evidence or an approved fallback.
 - Opened PR #11 (`wave-10` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit posted its generated "Review triggered" response and left the advisory status pending, with no actionable findings available at merge-decision time; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.
+
+## 2026-06-03 — Wave 11 started
+
+- Cut clean branch/worktree `wave-11` from `origin/main` at `b5db6ab` because the primary checkout is dirty/diverged and must remain untouched.
+- Moved tasks `034`, `036`, `037`, `039`, `053`, `062`, `070`, `084`, `086`, `087`, `094`, and `110` to `in-progress` with attempt 1 and pre-run WAL entries.
+- Task `094` is expected to block because dependency `093` is already blocked by missing wake engine/model/threshold/metrics.
+- Ran required kencode-search passes before code. The external index did not return exact Electron API snippets for login items/hotkeys/IPC, so agents must rely on the existing local Leena main/preload/settings/MCP patterns and continue with narrower kencode/local context reads before editing.
+- Shared `src/main.js` and `src/preload.js` changes must be serialized through file claims; workers should prefer task-owned helper modules plus focused tests where possible.
+
+## 2026-06-03 — Wave 11 summary
+
+- Completed tasks `034`, `036`, `037`, `039`, `053`, `062`, `070`, `084`, `086`, `087`, and `110`; blocked task `094` because dependency `093` has no wake coordinator implementation and upstream wake assets/metrics remain absent.
+- Parent integration wired shared `src/main.js` and `src/preload.js` for launch-on-login, global hotkey, provider settings IPC, MCP server IPC, MCP auto-connect, onboarding completion/reset aliases, first-run onboarding launch, and resizable panel bounds persistence.
+- Reviewer gate found three blockers: MCP server removal could fail to delete a stored server if live disconnect cleanup errored; onboarding was implemented but unreachable at runtime; provider settings could overwrite a stored secret with its redacted placeholder. Fixed with best-effort MCP disconnect cleanup, first-launch onboarding bootstrap, tokenized onboarding styling, and redacted-sentinel preservation for provider config saves.
+- Reviewer follow-up preserved the approved 1060px app-shell panel default while keeping resize persistence by allowing panel resize up to 1280px instead of clamping the desktop shell narrower.
+- Focused reviewer-fix gates passed: `npm run check`, `node --test test/onboarding-flow.test.js test/provider-settings-ipc.test.js`, changed JS `node --check`, and `git diff --check`.
+- Final parent gates passed after reviewer-fix bookkeeping: `npm run check`, `node --test` (400/400), changed JS `node --check`, `git diff --check`, WAL JSON parse, task-artifact privacy scan, and `npm run build:mac:dir`.
+- Reviewer re-check passed with warnings only: future MCP UI should reconcile `mcp:changed` vs `mcp:status-changed`, pending task `103` still has stale bridge prose, and the 380px panel minimum needs visual smoke when resizable UI becomes user-facing.
+- Advisor gate cleared with warnings only: task `094`/wake chain remains blocked until real wake assets/metrics or an explicit fallback, package build is ad-hoc signed without notarization, and CodeRabbit remains advisory-only.
+- Opened PR #12 (`wave-11` -> `main`) and requested CodeRabbit with `@coderabbitai review`. CodeRabbit status was pending at merge-decision time with no actionable findings available; advisory status did not block the wave. GitHub labels `codex` and `codex-automation` are not present in this repo.

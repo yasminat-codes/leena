@@ -2,7 +2,7 @@
 id: "086"
 title: "Auto-connect MCP servers on app launch"
 type: feature
-status: pending
+status: completed
 priority: medium
 complexity: S
 estimated_tokens: 8000
@@ -11,7 +11,9 @@ context_files:
   - src/main.js
 skills: []
 tags: [phase-5, mcp, lifecycle]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:54:10Z"
 created_at: "2026-06-01"
 ---
 
@@ -49,10 +51,17 @@ Users expect their configured MCP tools to be available as soon as Leena launche
 - Tray from **task 035** may show MCP connection count or indicator
 
 ## Handoff Notes
-[Filled after completion]
+- 2026-06-03T02:25:19Z: Added `src/mcp/auto-connect.js` with `initMCPAutoConnect()`, `registerMCPAutoConnectCleanup()`, `cleanupMCPConnections()`, and `MCP_STATUS_CHANGED_CHANNEL`.
+- `initMCPAutoConnect()` is intentionally non-blocking: it starts a background `completion` promise, loads `serverStore.getAutoConnectServers()`, connects every server through `Promise.allSettled()`, wraps each connect in `withRetry()` with default `{ maxAttempts: 3, baseDelay: 5000, maxDelay: 30000 }`, logs per-server diagnostics, and emits `mcp:status-changed` with `{ connected, failed }`.
+- Failure isolation is covered for individual server failures, exhausted retry failures, logger failures, status emit failures, and `getAutoConnectServers()` store failures; none throw through startup once initialization has begun.
+- `registerMCPAutoConnectCleanup()` wires `app.on("before-quit")` to `mcpClientManager.disconnectAll()`. Stdio process cleanup remains delegated to the task 080 `MCPClientManager.disconnectAll()` / `disconnect()` lifecycle.
+- Added `test/mcp-auto-connect.test.js` covering the required 3-server case, retry attempts, non-blocking startup, status IPC emission, store-failure isolation, and before-quit cleanup/dispose behavior.
+- Integration handoff: once shared `src/main.js` / task 084 IPC claims clear, import `ServerStore` plus the auto-connect helpers, create a `ServerStore`, call `initMCPAutoConnect({ serverStore, mcpClientManager, webContents: mainWindow.webContents, logger: writeDiagnosticLog })` after `createMainWindow()` and after MCP IPC handlers are registered, and call `registerMCPAutoConnectCleanup({ app, mcpClientManager, logger: writeDiagnosticLog })` once during app startup.
+
+- Parent integration 2026-06-03T02:54:10Z: `src/main.js` now registers MCP handlers and starts non-blocking MCP auto-connect after window creation; cleanup is wired on `before-quit`.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Initial `npm run check` attempts were blocked by concurrently claimed formatting/lint issues outside task 086. After those workers resolved their files, final verification passed: `npm run check`, full `node --test` (382/382), focused Biome, changed JS syntax checks, focused auto-connect tests, `git diff --check`, and task-artifact path scan.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

@@ -2,7 +2,7 @@
 id: "034"
 title: "Auto-launch on macOS login"
 type: feature
-status: pending
+status: completed
 priority: medium
 complexity: S
 estimated_tokens: 6000
@@ -12,7 +12,9 @@ context_files:
   - src/preload.js
 skills: []
 tags: [phase-1, launch, macos, settings]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:54:10Z"
 created_at: "2026-06-01"
 ---
 
@@ -41,18 +43,25 @@ A voice assistant is most useful when it's always available. Launch-on-login rem
 - `test/launch-on-login.test.js` — mock Electron app API, verify set/get roundtrip
 
 ## Outputs
-- Modified: `src/main.js`, `src/preload.js`
+- New: `src/ipc/launch-on-login.js`
 - New: `test/launch-on-login.test.js`
+- Handoff: `src/main.js` and `src/preload.js` integration remains for a serialized shared-file pass.
 
 ## Interface Contracts
 - Task 037 (onboarding): presents the toggle, calls `setLaunchOnLogin(true)` if user opts in
 - Task 017 (settings screen mock): the real settings screen will wire to this
 
 ## Handoff Notes
-<!-- Filled after completion -->
+- Added `src/ipc/launch-on-login.js` with `applyLaunchOnLoginAtStartup({ app, settingsStore })`, `registerLaunchOnLoginHandlers({ ipcMain, app, settingsStore })`, direct `getLaunchOnLogin` / `setLaunchOnLogin` helpers, and exported channel constants.
+- Helper behavior defaults `launchOnLogin` to `false`, calls `app.setLoginItemSettings({ openAtLogin, openAsHidden: true })` on startup/set, returns the OS `app.getLoginItemSettings().openAtLogin` value on get, and re-syncs `launchOnLogin` in the settings store when the OS value diverges.
+- Later serialized integration should import the helper into `src/main.js`, pass the task 038 settings-store functions, call `applyLaunchOnLoginAtStartup()` after the data store is initialized, register the handlers, and expose `window.leena.setLaunchOnLogin(enabled)` / `window.leena.getLaunchOnLogin()` in `src/preload.js`.
+- Verification passed before concurrent claimed edits landed: `node --check src/ipc/launch-on-login.js`, `node --check test/launch-on-login.test.js`, `node --test test/launch-on-login.test.js`, `npm run check`, `node --test`, and `git diff --check`.
+- Post-release rerun: `node --test`, changed JS `node --check`, and `git diff --check` still passed. `npm run check` is currently red only on active worker files outside task 034 ownership: `src/memory/sqlite-memory-store.js` (task 062) and `src/renderer/onboarding.js` (task 037).
+
+- Parent integration 2026-06-03T02:54:10Z: `src/main.js` now applies launch-on-login at startup and registers get/set handlers; `src/preload.js` exposes `getLaunchOnLogin()` and `setLaunchOnLogin(enabled)`.
 
 ## Errors Encountered
-<!-- Filled if errors occur -->
+- None.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

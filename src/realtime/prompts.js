@@ -47,6 +47,8 @@ export const REALTIME_VOICES = Object.freeze([
 
 export const DEFAULT_VOICE = "marin";
 
+// Deprecated seed data for PersonaEngine. Keep exported until task 071 moves
+// prompt composition off direct AGENT_PERSONAS lookups.
 export const AGENT_PERSONAS = Object.freeze({
   default: {
     label: "Default",

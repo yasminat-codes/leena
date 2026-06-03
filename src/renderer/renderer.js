@@ -6,6 +6,7 @@ import {
 } from "../realtime/prompts.js";
 import { initClickSound } from "./click-sound.js";
 import { createCommandCenter, demoAllStates } from "./components/command-center.js";
+import { mountOnboarding, shouldShowOnboarding } from "./onboarding.js";
 import { createPanelController } from "./panel.js";
 import { createRealtimePlaybackTracker, isBenignCancelError } from "./realtime-playback.js";
 import {
@@ -18,6 +19,7 @@ import { initShell } from "./shell.js";
 import { createWaitingSound } from "./waiting-sound.js";
 
 const appShellElement = document.querySelector("#app-shell");
+const leenaShellElement = document.querySelector("#leena-shell");
 const statusElement = document.querySelector("#status");
 const connectOpenAIButton = document.querySelector("#connect-openai");
 const menuToggleButton = document.querySelector("#menu-toggle");
@@ -103,6 +105,8 @@ const realtimeToolHandler = createRealtimeToolHandler({
 let commandCenterDemo = null;
 let liveCommandCenter = null;
 let liveCommandCenterMount = null;
+let appRuntimeStarted = false;
+let onboardingMount = null;
 
 function emitSessionEvent(eventName, payload = {}) {
   window.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
@@ -1413,42 +1417,95 @@ const panelController = createPanelController({
     appShellElement.dataset.panel = mode === "panel" ? "open" : "closed";
   },
 });
-panelController.init({ openByDefault: false });
-initShell();
-mountLiveCommandCenter();
 
-initClickSound();
+function shouldForceOnboarding() {
+  return new URLSearchParams(window.location.search).get("onboarding") === "1";
+}
 
-callToggleButton.addEventListener("click", toggleCall);
-headerCallButton.addEventListener("click", toggleCall);
-callEndButton.addEventListener("click", () => {
-  // Same button, context-aware: during computer use it stops the task and keeps
-  // the call going; otherwise it ends the call.
-  if (appShellElement.dataset.toolActivity === "active") {
-    void stopComputerUse();
-  } else {
-    void stopCall();
+async function shouldStartOnboarding() {
+  return shouldForceOnboarding() || (await shouldShowOnboarding(window.leena));
+}
+
+function showAppShell() {
+  onboardingMount?.remove();
+  onboardingMount = null;
+  leenaShellElement.hidden = false;
+  appShellElement.dataset.onboarding = "complete";
+}
+
+function showOnboardingShell() {
+  leenaShellElement.hidden = true;
+  appShellElement.dataset.onboarding = "active";
+  onboardingMount = document.createElement("div");
+  onboardingMount.id = "onboarding-root";
+  onboardingMount.className = "onboarding-root";
+  appShellElement.append(onboardingMount);
+  return onboardingMount;
+}
+
+function startAppRuntime() {
+  if (appRuntimeStarted) {
+    return;
   }
-});
-micSelectElement.addEventListener("change", () => {
-  void handleMicSelection();
-});
-navigator.mediaDevices?.addEventListener?.("devicechange", () => {
-  void populateMicDevices();
-});
-setOrbLevel(0);
+  appRuntimeStarted = true;
+  callToggleButton.addEventListener("click", toggleCall);
+  headerCallButton.addEventListener("click", toggleCall);
+  callEndButton.addEventListener("click", () => {
+    // Same button, context-aware: during computer use it stops the task and keeps
+    // the call going; otherwise it ends the call.
+    if (appShellElement.dataset.toolActivity === "active") {
+      void stopComputerUse();
+    } else {
+      void stopCall();
+    }
+  });
+  micSelectElement.addEventListener("change", () => {
+    void handleMicSelection();
+  });
+  navigator.mediaDevices?.addEventListener?.("devicechange", () => {
+    void populateMicDevices();
+  });
+  setOrbLevel(0);
 
-refreshOpenAIStatus().catch((error) => {
-  setOpenAIConnected(false);
-  setStatus(`Status failed: ${error.message}`);
+  panelController.init({ openByDefault: false });
+  initShell();
+  mountLiveCommandCenter();
+  initClickSound();
+
+  refreshOpenAIStatus().catch((error) => {
+    setOpenAIConnected(false);
+    setStatus(`Status failed: ${error.message}`);
+  });
+  refreshOsPermissions().catch((error) => {
+    setStatus(`Permissions failed: ${error.message}`);
+  });
+  populateAgentOptions();
+  loadAgentProfile().catch((error) => {
+    setStatus(`Agent profile failed: ${error.message}`);
+  });
+  loadMicPreference()
+    .then(() => populateMicDevices())
+    .catch(() => {});
+}
+
+async function startRenderer() {
+  if (await shouldStartOnboarding()) {
+    await mountOnboarding(showOnboardingShell(), {
+      bridge: window.leena,
+      onComplete: () => {
+        showAppShell();
+        startAppRuntime();
+      },
+    });
+    return;
+  }
+
+  showAppShell();
+  startAppRuntime();
+}
+
+startRenderer().catch((error) => {
+  showAppShell();
+  startAppRuntime();
+  setStatus(`Onboarding failed: ${error.message}`);
 });
-refreshOsPermissions().catch((error) => {
-  setStatus(`Permissions failed: ${error.message}`);
-});
-populateAgentOptions();
-loadAgentProfile().catch((error) => {
-  setStatus(`Agent profile failed: ${error.message}`);
-});
-loadMicPreference()
-  .then(() => populateMicDevices())
-  .catch(() => {});

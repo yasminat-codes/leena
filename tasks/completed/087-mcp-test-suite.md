@@ -2,7 +2,7 @@
 id: "087"
 title: "MCP comprehensive test suite"
 type: test
-status: pending
+status: completed
 priority: high
 complexity: M
 estimated_tokens: 18000
@@ -12,7 +12,9 @@ context_files:
   - test/web-tools.test.js
 skills: []
 tags: [phase-5, mcp, testing]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:27:20Z"
 created_at: "2026-06-01"
 ---
 
@@ -30,13 +32,13 @@ MCP is a security-critical external integration. Untested schema conversion sile
 5. Verify all tests pass with `node --test test/mcp-*.test.js`. Fix any failures. Ensure existing test suite (`npm test`) still passes with no regressions.
 
 ## Acceptance Criteria
-- [ ] `test/mcp-client.test.js` covers connect, listTools, callTool, disconnect, retry, error for both transports
-- [ ] `test/mcp-schema-converter.test.js` covers all schema variations and edge cases
-- [ ] `test/mcp-permission-gate.test.js` covers all 9 permission × risk combos + defaults
-- [ ] `test/mcp-integration.test.js` covers end-to-end tool dispatch through MCP
-- [ ] All MCP tests pass: `node --test test/mcp-*.test.js` exits 0
-- [ ] Existing tests unaffected: `npm test` exits 0 (no regressions)
-- [ ] Error paths tested: MCP server crash, malformed response, timeout — none crash the test runner
+- [x] `test/mcp-client.test.js` covers connect, listTools, callTool, disconnect, retry, error for both transports
+- [x] `test/mcp-schema-converter.test.js` covers all schema variations and edge cases
+- [x] `test/mcp-permission-gate.test.js` covers all 9 permission × risk combos + defaults
+- [x] `test/mcp-integration.test.js` covers end-to-end tool dispatch through MCP
+- [x] All MCP tests pass: `node --test test/mcp-*.test.js` exits 0
+- [x] Existing tests unaffected: `npm test` exits 0 (no regressions)
+- [x] Error paths tested: MCP server crash, malformed response, timeout — none crash the test runner
 
 ## Tests Required
 - This task IS the test suite, comprising these 4 files (full specs in Steps 1-4):
@@ -57,10 +59,15 @@ MCP is a security-critical external integration. Untested schema conversion sile
 - Future MCP changes must keep these tests passing or update them deliberately
 
 ## Handoff Notes
-[Filled after completion]
+- 2026-06-03T02:27:20Z: Added MCP resilience coverage in `test/mcp-client.test.js` for repeated connection timeout retry exhaustion, malformed `listTools` / `callTool` responses, and server-crash tool-list wrapping.
+- Added schema-converter coverage for empty object schemas after root `$schema` / `$id` / `$comment` stripping.
+- Added permission-gate coverage proving omitted server `permission_level` defaults to confirm-all even for low-risk tools.
+- Added `test/mcp-integration.test.js` covering ServerStore add, MCPClientManager connect, merged tool definitions, permission callback execution, un-namespaced `callTool` routing, text-content formatting, disconnect dropping MCP tools, built-in `end_call` routing, and malformed MCP content handling.
+- Verification passed: pre-change focused MCP suite `node --test test/mcp-*.test.js` 42/42, post-change focused MCP suite 60/60, `npm run check`, full `node --test` 382/382, and exact `npm test`.
+- No production code changed and no production bug was found; this task only expanded coverage.
 
 ## Errors Encountered
-[Filled if errors occur]
+None.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

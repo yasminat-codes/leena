@@ -2,7 +2,7 @@
 id: "070"
 title: "Persona engine core"
 type: feature
-status: pending
+status: completed
 priority: medium
 complexity: M
 estimated_tokens: 14000
@@ -12,7 +12,9 @@ context_files:
   - src/realtime/tools/database.js
 skills: []
 tags: [phase-4, identity, persona]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:27:57Z"
 created_at: "2026-06-01"
 ---
 
@@ -36,12 +38,12 @@ The current persona system is a frozen object with 5 hardcoded entries (default,
 
 ## Acceptance Criteria
 
-- [ ] PersonaEngine class with full CRUD (getAll, getActive, setActive, create, update, delete)
-- [ ] Default "Leena" persona always exists and cannot be deleted
-- [ ] Existing 5 personas migrated as seed data on first run
-- [ ] Personas persisted via settings store (survives restart)
-- [ ] `AGENT_PERSONAS` in prompts.js marked deprecated
-- [ ] Tests pass for all CRUD operations and edge cases
+- [x] PersonaEngine class with full CRUD (getAll, getActive, setActive, create, update, delete)
+- [x] Default "Leena" persona always exists and cannot be deleted
+- [x] Existing 5 personas migrated as seed data on first run
+- [x] Personas persisted via settings store (survives restart)
+- [x] `AGENT_PERSONAS` in prompts.js marked deprecated
+- [x] Tests pass for all CRUD operations and edge cases
 
 ## Tests Required
 
@@ -62,11 +64,16 @@ The current persona system is a frozen object with 5 hardcoded entries (default,
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added `src/identity/persona-engine.js` with `PersonaEngine`, `DEFAULT_LEENA_PERSONA`, `PERSONAS_SETTING_KEY`, `ACTIVE_PERSONA_ID_SETTING_KEY`, and first-run seed migration from legacy `AGENT_PERSONAS`.
+- Persistence uses task 038 settings-store semantics: `personas` is a JSON array and `active_persona_id` is a string setting. The engine defaults to `src/settings-store.js`, while tests inject a temp-DB-bound store wrapper.
+- Task 071 should compose the active persona from `engine.getActive()`. Use `persona.systemPrompt` for legacy migrated personas, falling back to `persona.instructions`/`tone` for custom personas.
+- Task 072 can expose `getAll`, `getActive`, `setActive`, `create`, `update`, and `delete` through IPC. Default Leena update/delete both throw; custom delete resets active persona to default if needed.
+- `AGENT_PERSONAS` remains exported only as deprecated seed/legacy prompt data until task 071 removes direct prompt composition usage.
+- Verification passed: `npm run check`, `node --test` (382/382), `node --check src/identity/persona-engine.js`, `node --check test/persona-engine.test.js`, `node --check src/realtime/prompts.js`, `node --test test/persona-engine.test.js`, and `git diff --check`.
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Caught an `apply_patch` checkout-path mistake before implementation edits and removed only the accidental primary-checkout task-070 claim rows. Final implementation changes are in the requested wave worktree.
 
 ## Self-Annealing Contract
 

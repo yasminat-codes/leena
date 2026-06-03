@@ -2,7 +2,7 @@
 id: "094"
 title: "Wake word IPC channels"
 type: feature
-status: pending
+status: blocked
 priority: high
 complexity: M
 estimated_tokens: 15000
@@ -13,7 +13,9 @@ context_files:
   - src/wake/wake-coordinator.js
 skills: []
 tags: [phase-6, wake-word, ipc]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+blocked_at: "2026-06-03T02:54:10Z"
 created_at: "2026-06-01"
 ---
 
@@ -46,9 +48,7 @@ The wake engine runs in the renderer (WASM + WebAudio), but session start, windo
 - `test/wake-ipc.test.js` — mock Electron IPC: set-enabled round-trip, mute round-trip, detected → window show mock, status shape validation, push event delivery
 
 ## Outputs
-- Modified `src/main.js` — wake IPC handlers
-- Modified `src/preload.js` — wake API on window.leena
-- `test/wake-ipc.test.js`
+- Blocked; no wake IPC implementation was written because dependency task `093` is blocked.
 
 ## Interface Contracts
 - **Task 095** (consent/tray) reads wake status via these IPC channels
@@ -56,10 +56,11 @@ The wake engine runs in the renderer (WASM + WebAudio), but session start, windo
 - Renderer code (Phase 7 UI wiring) uses `window.leena.wake.*` to drive wake UI
 
 ## Handoff Notes
-[Filled after completion]
+- Blocked by task `093`, which is blocked by task `092` and task `091`: no `src/wake/wake-coordinator.js`, no `src/wake/openwakeword-engine.js`, no `src/wake/models/hey-lena.onnx`, no selected threshold, and no measured FA/hr, FR%, model size, or latency.
+- Resume only after real wake coordinator outputs backed by engine/model/threshold/metrics exist, or after an explicit Porcupine/hotkey-only fallback decision.
 
 ## Errors Encountered
-[Filled if errors occur]
+- Dependency `093` is terminal-blocked; implementing IPC now would fabricate a working wake stack over absent coordinator/model/metrics.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

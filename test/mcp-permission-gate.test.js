@@ -112,6 +112,25 @@ test("MCP permission request includes server name, sanitized tool description, a
   assert.ok(!request.summary.includes("ignored"));
 });
 
+test("MCP tools require confirmation by default when server policy is omitted", () => {
+  const serverConfig = {
+    serverId: "calendar",
+    name: "Calendar",
+    tools: [
+      {
+        name: TOOL_NAME,
+        description: "Create calendar event",
+        inputSchema: schemaWithProperties({ title: { type: "string" } }),
+      },
+    ],
+  };
+
+  const request = getMCPToolPermissionRequest(NAMESPACED_TOOL_NAME, {}, serverConfig);
+
+  assert.equal(request.level, "low");
+  assert.equal(shouldAutoApproveMCPTool(NAMESPACED_TOOL_NAME, {}, serverConfig), false);
+});
+
 test("MCP auto approval fails closed for missing config, malformed names, ownership mismatch, and bad policy", () => {
   assert.equal(shouldAutoApproveMCPTool(NAMESPACED_TOOL_NAME, {}, null), false);
   assert.deepEqual(getMCPToolPermissionRequest(NAMESPACED_TOOL_NAME, {}, null), {

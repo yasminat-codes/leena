@@ -2,7 +2,7 @@
 id: "062"
 title: "SQLiteMemoryStore implementation"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: L
 estimated_tokens: 25000
@@ -14,7 +14,9 @@ context_files:
   - src/providers/index.js
 skills: []
 tags: [phase-3, memory, sqlite, embeddings]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:15:07Z"
 created_at: "2026-06-01"
 ---
 
@@ -38,14 +40,14 @@ This is the core memory engine — the subsystem that makes Leena remember acros
 
 ## Acceptance Criteria
 
-- [ ] `remember()` stores episodic entry with embedding BLOB
-- [ ] `recall()` returns relevant results ranked by cosine similarity
-- [ ] `getEpisodic()` returns ordered conversation entries
-- [ ] `consolidate()` creates semantic entries from episodic clusters
-- [ ] `stats()` returns accurate counts
-- [ ] `close()` is safe to call multiple times
-- [ ] All tests pass with mock provider (no real API calls in tests)
-- [ ] Cosine similarity implementation is correct (verified with known vectors in tests)
+- [x] `remember()` stores episodic entry with embedding BLOB
+- [x] `recall()` returns relevant results ranked by cosine similarity
+- [x] `getEpisodic()` returns ordered conversation entries
+- [x] `consolidate()` creates semantic entries from episodic clusters
+- [x] `stats()` returns accurate counts
+- [x] `close()` is safe to call multiple times
+- [x] All tests pass with mock provider (no real API calls in tests)
+- [x] Cosine similarity implementation is correct (verified with known vectors in tests)
 
 ## Tests Required
 
@@ -66,11 +68,23 @@ This is the core memory engine — the subsystem that makes Leena remember acros
 
 ## Handoff Notes
 
-_Filled after completion._
+- Added `SQLiteMemoryStore` backed by `memories_episodic` and `memories_semantic` using `getDatabase(dbPath)` / `closeDatabase(dbPath)`.
+- `remember()` normalizes conversation metadata, stores embeddings as `Float32Array` BLOBs when an embedding provider is available, and stores rows with `NULL` embeddings when providers fail or are missing.
+- `recall()` ranks embedded semantic rows first, then episodic rows, using cosine similarity; if embeddings are unavailable or no vector match scores above zero, it falls back to keyword scoring instead of throwing.
+- `consolidate()` batches up to 20 unlinked episodic rows, calls a chat provider with a discrete-facts prompt, parses newline/JSON-array facts, embeds facts when possible, and stores semantic rows with source episode links.
+- Exported `SQLiteMemoryStore` from `src/memory/index.js`; tests import mock providers only and make no real API calls.
+- Verification passed:
+  - `node --test test/memory-sqlite.test.js test/memory-store.test.js test/memory-tables.test.js`
+  - `npx biome check src/memory/sqlite-memory-store.js src/memory/index.js test/memory-sqlite.test.js`
+  - `node --check src/memory/sqlite-memory-store.js`
+  - `node --check test/memory-sqlite.test.js`
+  - `npm run check`
+  - `node --test` (347/347)
+  - `git diff --check`
 
 ## Errors Encountered
 
-_Filled if errors occur._
+- Initial focused memory test expected a zero-similarity unrelated row to be returned. The implementation correctly filters non-relevant zero-score results, so the test was tightened to assert only the relevant match.
 
 ## Self-Annealing Contract
 

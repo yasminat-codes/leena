@@ -2,7 +2,7 @@
 id: "036"
 title: "Global hotkey to summon Leena"
 type: feature
-status: pending
+status: completed
 priority: high
 complexity: S
 estimated_tokens: 8000
@@ -12,7 +12,9 @@ context_files:
   - src/preload.js
 skills: []
 tags: [phase-1, hotkey, shortcut, macos]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-03T02:05:04Z"
+completed_at: "2026-06-03T02:54:10Z"
 created_at: "2026-06-01"
 ---
 
@@ -52,7 +54,14 @@ A voice assistant must be instantly summable from any context. The global hotkey
 - Task 038 (settings store): persists hotkey accelerator string
 
 ## Handoff Notes
-<!-- Filled after completion -->
+- 2026-06-03T02:46:23Z helper slice complete: added `src/ipc/hotkey.js` with injectable `createHotkeyController()` and `registerHotkeyHandlers()` exports.
+- Helper defaults to `CommandOrControl+Shift+L`, reads/writes the existing `hotkey` settings key, registers `settings:get-hotkey` / `settings:set-hotkey`, emits `hotkey:activated`, and wires `app.on("will-quit")` cleanup through `globalShortcut.unregisterAll()`.
+- Reconfiguration unregisters the old accelerator, attempts the new registration, returns `{ success: false, error: "Hotkey is already in use." }` on conflict without throwing, and restores the prior shortcut without persisting the failed value.
+- Activation behavior is covered with mocks: hidden/minimized windows restore/show/focus, visible focused windows hide, and visible unfocused windows focus.
+- Serialized integration handoff: import `globalShortcut` plus `createHotkeyController` / `registerHotkeyHandlers` in `src/main.js`, create the controller after `createMainWindow()`, call `registerConfiguredHotkey()`, register the IPC handlers, and send the helper's `hotkey:activated` event through the main window. In `src/preload.js`, expose `getHotkey()`, `setHotkey(accelerator)`, and `onHotkeyActivated(callback)` on `window.leena`.
+- Verification for this helper slice: `node --test test/hotkey.test.js`, `node --check src/ipc/hotkey.js && node --check test/hotkey.test.js`, `npm run check`, `node --test` (398 tests), and `git diff --check` all passed.
+
+- Parent integration 2026-06-03T02:54:10Z: `src/main.js` now registers the configured global hotkey with Electron `globalShortcut`; `src/preload.js` exposes hotkey get/set and activation listeners.
 
 ## Errors Encountered
 <!-- Filled if errors occur -->

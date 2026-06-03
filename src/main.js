@@ -11,6 +11,7 @@ import {
   app,
   BrowserWindow,
   desktopCapturer,
+  globalShortcut,
   ipcMain,
   Menu,
   nativeImage,
@@ -21,8 +22,16 @@ import {
   Tray,
 } from "electron";
 import electronUpdater from "electron-updater";
+import { registerHotkeyHandlers } from "./ipc/hotkey.js";
+import {
+  applyLaunchOnLoginAtStartup,
+  registerLaunchOnLoginHandlers,
+} from "./ipc/launch-on-login.js";
+import { registerMCPHandlers } from "./ipc/mcp-handlers.js";
+import { createSafeStorageSecretCodec, registerProviderHandlers } from "./ipc/provider-handlers.js";
+import { initMCPAutoConnect, registerMCPAutoConnectCleanup } from "./mcp/auto-connect.js";
 import { MCPClientManager } from "./mcp/client-manager.js";
-import { getServer as getStoredMCPServer } from "./mcp/server-store.js";
+import { getServer as getStoredMCPServer, ServerStore } from "./mcp/server-store.js";
 import {
   computerUseBrowserDocsUrl,
   createOsPermissionSnapshot,
@@ -54,10 +63,14 @@ import {
   migrateLegacyPlannerStore,
   updateTaskStatus,
 } from "./realtime/tools/planner-store.js";
-import { loadWindowPosition, saveWindowPosition } from "./realtime/tools/window-state-store.js";
-import { getAllSettings, getSetting, setSetting } from "./settings-store.js";
+import { getAllSettings, getBool, getSetting, getString, setSetting } from "./settings-store.js";
 import { createTrayController } from "./tray.js";
 import { redactSensitiveText, serializeError } from "./utils/errors.js";
+import {
+  createPanelWindowStatePersistence,
+  getWindowModeOptions,
+  resolvePanelWindowBounds,
+} from "./window-state.js";
 
 const { autoUpdater } = electronUpdater;
 const execFileAsync = promisify(execFile);
@@ -99,6 +112,7 @@ const windowModes = Object.freeze({
   call: { width: 226, height: 52, placement: "bottom-center", alwaysOnTop: true },
   panel: { width: 1060, height: 712, placement: "bottom-right", alwaysOnTop: false },
 });
+const onboardingCompletedSettingKey = "onboardingCompleted";
 
 let mainWindow;
 let windowMode = "panel";
@@ -106,15 +120,23 @@ let trayController = null;
 let windowFadeTimer = null;
 let windowFadeResolve = null;
 let activeComputerUseController = null;
-// User-chosen window position (set by dragging the panel), persisted across
-// launches. Only the draggable main panel honors it; transient call/orb modes
-// keep their anchored placement.
-let userWindowPosition = null;
+// User-chosen panel bounds (set by dragging/resizing the panel), persisted
+// across launches. Transient call/orb modes keep their anchored placement.
+let panelWindowState = null;
+let userPanelBounds = null;
 let suppressMoveSave = false;
 let moveSaveTimer = null;
 // Set while we resize the window ourselves, so the resize guard ignores it.
 let suppressBoundsGuard = false;
 const mcpClientManager = new MCPClientManager();
+const mcpServerStore = new ServerStore();
+const settingsStoreBridge = {
+  getAllSettings,
+  getBool,
+  getSetting,
+  getString,
+  setSetting,
+};
 
 process.on("uncaughtException", (error) => {
   reportGlobalError("process.uncaughtException", error);
@@ -125,16 +147,17 @@ process.on("unhandledRejection", (reason) => {
 });
 
 function createMainWindow() {
+  const panelOptions = getWindowModeOptions("panel", windowModes.panel);
   mainWindow = new BrowserWindow({
-    width: windowModes.panel.width,
-    height: windowModes.panel.height,
-    minWidth: windowModes.panel.width,
-    minHeight: windowModes.panel.height,
-    maxWidth: windowModes.panel.width,
-    maxHeight: windowModes.panel.height,
+    width: panelOptions.width,
+    height: panelOptions.height,
+    minWidth: panelOptions.minWidth,
+    minHeight: panelOptions.minHeight,
+    maxWidth: panelOptions.maxWidth,
+    maxHeight: panelOptions.maxHeight,
     frame: false,
     transparent: true,
-    resizable: false,
+    resizable: panelOptions.resizable,
     alwaysOnTop: windowModes.panel.alwaysOnTop,
     skipTaskbar: true,
     backgroundColor: "#00000000",
@@ -147,11 +170,14 @@ function createMainWindow() {
   });
 
   applyWindowBounds(getWindowBoundsForMode(windowModes.panel, "panel"));
-  mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+  mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"), {
+    query: shouldLaunchOnboarding() ? { onboarding: "1" } : {},
+  });
 
   // Persist the position whenever the user drags the panel so it is restored on
   // the next launch. Programmatic moves (mode switches) are suppressed.
   mainWindow.on("move", handleWindowMove);
+  mainWindow.on("resize", handleWindowResize);
   // macOS auto-resizes this frameless, transparent window during screen capture
   // (desktopCapturer.getSources), ignoring even maxSize — it stretched the
   // computer-use pill to ~84px. Snap any unexpected resize back to the mode size.
@@ -190,14 +216,25 @@ function handleWindowMove() {
     if (!mainWindow || mainWindow.isDestroyed()) {
       return;
     }
-    const [x, y] = mainWindow.getPosition();
-    userWindowPosition = { x, y };
+    userPanelBounds = mainWindow.getBounds();
     try {
-      saveWindowPosition(userWindowPosition);
+      panelWindowState?.scheduleSave(userPanelBounds);
     } catch (error) {
-      safeConsole("warn", "Failed to persist window position", error);
+      safeConsole("warn", "Failed to persist window bounds", error);
     }
   }, 400);
+}
+
+function handleWindowResize() {
+  if (windowMode !== "panel" || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  userPanelBounds = mainWindow.getBounds();
+  try {
+    panelWindowState?.scheduleSave(userPanelBounds);
+  } catch (error) {
+    safeConsole("warn", "Failed to persist window bounds", error);
+  }
 }
 
 // Applies bounds without recording them as a user-initiated move or tripping the
@@ -221,6 +258,9 @@ function enforceModeBounds() {
   if (suppressBoundsGuard || !mainWindow || mainWindow.isDestroyed()) {
     return;
   }
+  if (windowMode === "panel") {
+    return;
+  }
   const expected = windowModes[windowMode];
   if (!expected) {
     return;
@@ -239,20 +279,13 @@ function enforceModeBounds() {
   });
 }
 
-function clampToVisibleArea(x, y, width, height) {
-  const display = screen.getDisplayMatching({ x, y, width, height }) ?? screen.getPrimaryDisplay();
-  const area = display.workArea;
-  const clampedX = Math.min(Math.max(x, area.x), area.x + area.width - width);
-  const clampedY = Math.min(Math.max(y, area.y), area.y + area.height - height);
-  return { x: Math.round(clampedX), y: Math.round(clampedY) };
-}
-
 async function setMainWindowMode(mode) {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return windowMode;
   }
   const target = windowModes[mode] ?? windowModes.orb;
   windowMode = windowModes[mode] ? mode : "orb";
+  const modeOptions = getWindowModeOptions(windowMode, target);
   const targetBounds = getWindowBoundsForMode(target, windowMode);
   const currentBounds = mainWindow.getBounds();
   const sizeChanged =
@@ -263,8 +296,9 @@ async function setMainWindowMode(mode) {
   // Pin BOTH min and max to the mode size. This frameless, transparent window
   // is otherwise auto-grown by macOS during screen capture (it stretched the
   // computer-use pill to ~84px tall); locking max prevents any such resize.
-  mainWindow.setMinimumSize(targetBounds.width, targetBounds.height);
-  mainWindow.setMaximumSize(targetBounds.width, targetBounds.height);
+  mainWindow.setResizable(Boolean(modeOptions.resizable));
+  mainWindow.setMinimumSize(modeOptions.minWidth, modeOptions.minHeight);
+  mainWindow.setMaximumSize(modeOptions.maxWidth, modeOptions.maxHeight);
   // Only the transient call overlay floats above other apps; the main UI is a
   // normal window so it can be sent behind other windows.
   mainWindow.setAlwaysOnTop(Boolean(target.alwaysOnTop));
@@ -276,29 +310,28 @@ async function setMainWindowMode(mode) {
 }
 
 function getWindowBoundsForMode(target, mode) {
-  // The main panel is the only draggable surface, so it restores the user's
-  // saved position; call/orb keep their anchored placement.
-  if (mode === "panel" && userWindowPosition) {
-    const { x, y } = clampToVisibleArea(
-      userWindowPosition.x,
-      userWindowPosition.y,
-      target.width,
-      target.height,
-    );
-    return { x, y, width: target.width, height: target.height };
-  }
   const display = screen.getPrimaryDisplay();
   const margin = target.placement === "bottom-center" ? 14 : 24;
   const x =
     target.placement === "bottom-center"
       ? Math.round(display.workArea.x + (display.workArea.width - target.width) / 2)
       : Math.round(display.workArea.x + display.workArea.width - target.width - margin);
-  return {
+  const defaultBounds = {
     x,
     y: Math.round(display.workArea.y + display.workArea.height - target.height - margin),
     width: target.width,
     height: target.height,
   };
+  // The main panel is the only draggable/resizable surface, so it restores the
+  // user's saved bounds; call/orb keep their anchored placement.
+  if (mode === "panel") {
+    return resolvePanelWindowBounds({
+      savedBounds: userPanelBounds,
+      defaultBounds,
+      displays: screen.getAllDisplays(),
+    });
+  }
+  return defaultBounds;
 }
 
 function endActiveFade() {
@@ -469,11 +502,41 @@ ipcMain.handle("window:minimize", () => {
   mainWindow.minimize();
   return true;
 });
+ipcMain.handle("window:get-state", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return null;
+  }
+  return mainWindow.getBounds();
+});
+ipcMain.handle("window:set-state", (_event, bounds) => {
+  if (!mainWindow || mainWindow.isDestroyed() || windowMode !== "panel") {
+    return null;
+  }
+  const nextBounds = resolvePanelWindowBounds({
+    savedBounds: bounds,
+    defaultBounds: getWindowBoundsForMode(windowModes.panel, "panel"),
+    displays: screen.getAllDisplays(),
+  });
+  userPanelBounds = nextBounds;
+  panelWindowState?.saveNow(nextBounds);
+  applyWindowBounds(nextBounds);
+  return nextBounds;
+});
 ipcMain.handle("tray:set-state", (_event, state) => setRuntimeTrayState(state));
 ipcMain.handle("tray:get-state", () => trayController?.getCurrentState() ?? "idle");
 ipcMain.handle("app:quit", () => {
   app.quit();
   return true;
+});
+ipcMain.handle("onboarding:complete", () => {
+  const saved = setSetting(onboardingCompletedSettingKey, true);
+  broadcastDataChanged("settings", { type: "settings", key: onboardingCompletedSettingKey });
+  return saved;
+});
+ipcMain.handle("settings:reset-onboarding", () => {
+  const saved = setSetting(onboardingCompletedSettingKey, false);
+  broadcastDataChanged("settings", { type: "settings", key: onboardingCompletedSettingKey });
+  return saved;
 });
 ipcMain.handle("permissions:get-status", async () => getOsPermissionStatus());
 ipcMain.handle("permissions:request", async (_event, id) => requestOsPermission(id));
@@ -586,10 +649,13 @@ function cancelComputerUse() {
 
 app.whenReady().then(() => {
   initializeDataStore();
+  applyConfiguredLaunchOnLogin();
   void startDiagnosticSession();
   wireUpdateEvents();
   createMainWindow();
   initializeTray();
+  initializeFeatureHandlers();
+  initializeMCPAutoConnect();
 
   if (!isDevelopment) {
     autoUpdater.checkForUpdatesAndNotify();
@@ -614,6 +680,14 @@ app.on("window-all-closed", () => {
   }
 });
 
+app.on("before-quit", () => {
+  try {
+    panelWindowState?.flush();
+  } catch (error) {
+    safeConsole("warn", "Failed to flush window bounds", error);
+  }
+});
+
 function initializeDataStore() {
   const currentUserDataPath = app.getPath("userData");
   const legacyUserDataPaths = getLegacyUserDataPaths(currentUserDataPath);
@@ -626,10 +700,71 @@ function initializeDataStore() {
     safeConsole("warn", "Legacy store migration failed", error);
   }
   try {
-    userWindowPosition = loadWindowPosition();
+    panelWindowState = createPanelWindowStatePersistence({ settingsStore: settingsStoreBridge });
+    userPanelBounds = panelWindowState.load();
   } catch (error) {
-    safeConsole("warn", "Failed to load window position", error);
+    safeConsole("warn", "Failed to load window bounds", error);
   }
+}
+
+function applyConfiguredLaunchOnLogin() {
+  try {
+    applyLaunchOnLoginAtStartup({ app, settingsStore: settingsStoreBridge });
+  } catch (error) {
+    safeConsole("warn", "Failed to apply launch-on-login setting", error);
+  }
+}
+
+function shouldLaunchOnboarding() {
+  try {
+    return !getBool(onboardingCompletedSettingKey, false);
+  } catch (error) {
+    safeConsole("warn", "Failed to read onboarding completion setting", error);
+    return true;
+  }
+}
+
+function initializeFeatureHandlers() {
+  registerLaunchOnLoginHandlers({ ipcMain, app, settingsStore: settingsStoreBridge });
+  registerProviderHandlers(ipcMain, {
+    secretCodec: createSafeStorageSecretCodec(safeStorage),
+  });
+  registerMCPHandlers({
+    ipcMain,
+    serverStore: mcpServerStore,
+    mcpClientManager,
+    webContents: mainWindow?.webContents,
+  });
+  const hotkeyRegistration = registerHotkeyHandlers({
+    ipcMain,
+    app,
+    globalShortcut,
+    getMainWindow: () => mainWindow,
+    settingsStore: settingsStoreBridge,
+    logger: console,
+  });
+  const hotkeyController = hotkeyRegistration.controller;
+  const result = hotkeyController.registerConfiguredHotkey();
+  if (!result.success) {
+    safeConsole("warn", "Failed to register configured hotkey", result.error);
+  }
+}
+
+function initializeMCPAutoConnect() {
+  registerMCPAutoConnectCleanup({
+    app,
+    mcpClientManager,
+    logger: writeDiagnosticLog,
+  });
+  const mcpAutoConnectController = initMCPAutoConnect({
+    serverStore: mcpServerStore,
+    mcpClientManager,
+    webContents: mainWindow?.webContents,
+    logger: writeDiagnosticLog,
+  });
+  mcpAutoConnectController.completion.catch((error) => {
+    safeConsole("warn", "MCP auto-connect failed", error);
+  });
 }
 
 function initializeTray() {

@@ -183,6 +183,28 @@ test("sanitizeSchema defaults root object parameters and truncates deep schemas 
   });
 });
 
+test("mcpToolToOpenAI defaults empty object schemas after stripping root metadata", () => {
+  const converted = mcpToolToOpenAI({
+    name: "empty",
+    description: "Empty schema",
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "empty-tool",
+      $comment: "not accepted by OpenAI",
+    },
+  });
+
+  assert.deepEqual(converted, {
+    type: "function",
+    name: "empty",
+    description: "Empty schema",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  });
+});
+
 test("tool names namespace and parse round-trip", () => {
   const namespaced = namespaceMCPTool("calendar", "create_event");
 

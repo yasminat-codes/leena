@@ -1065,5 +1065,6 @@
 - Terminal verified gates after reviewer fix: `npm run check`, full `node --test` (623/623), `node --test test/ui-baseline-smoke.test.js`, changed-file `node --check`, `git diff --check`, output existence checks, active-claim release, WAL parse, and privacy scan.
 - Reviewer re-check passed with no blockers. Non-blocking risk: the new narrow Chat coverage uses one representative narrow viewport rather than every exact breakpoint/minimum-width edge.
 - Advisor gate passed with no merge blockers. Non-blocking risk repeated: narrow Chat coverage uses one representative viewport, which is acceptable for this wave but should be expanded in the upcoming screenshot regression task.
+- PR #24 opened and CodeRabbit review requested/acknowledged as advisory-only. No actionable findings were available before merge decision.
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl

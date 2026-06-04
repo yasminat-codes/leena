@@ -686,4 +686,6 @@ _(wave execution entries appended below as the build runs)_
 - Terminal gates passed after reviewer fix: `npm run check`, full `node --test` (623/623), `node --test test/ui-baseline-smoke.test.js`, changed-file syntax checks, and `git diff --check`.
 - Reviewer re-check passed with no blockers after independently verifying the narrow Chat fix. Non-blocking risk recorded: coverage exercises one narrow viewport, not every boundary/minimum width.
 - Advisor gate passed with no merge blockers after reviewing Settings detail preservation, file policy and Full Disk Access runtime handoff, Chat history/detail/narrow layout coverage, task counts, empty active claims, WAL, and privacy hygiene.
-- Next gates pending: CodeRabbit advisory PR request and merge to `main`.
+- Opened PR #24 from `wave-20` to `main`, requested CodeRabbit review, and received CodeRabbit acknowledgement/processing status. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/in-progress and non-blocking.
+- Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.
+- Next gate pending: merge to `main`.

@@ -6,6 +6,7 @@ import {
 } from "../realtime/prompts.js";
 import { initClickSound } from "./click-sound.js";
 import { createCommandCenter, demoAllStates } from "./components/command-center.js";
+import { normalizeOrbState } from "./components/orb.js";
 import { mountOnboarding, shouldShowOnboarding } from "./onboarding.js";
 import { createPanelController } from "./panel.js";
 import { createRealtimePlaybackTracker, isBenignCancelError } from "./realtime-playback.js";
@@ -55,6 +56,7 @@ const callToggleButton = document.querySelector("#call-toggle");
 const headerCallButton = document.querySelector("#header-call");
 const headerCallLabelElement = document.querySelector("#header-call-label");
 const callLabelElement = document.querySelector("#call-label");
+const callStageOrbButton = document.querySelector("#call-stage-toggle");
 const callEndButton = document.querySelector("#call-end");
 const callEndLabelElement = callEndButton.querySelector("span:not(.call-end-glyph)");
 const callTimerElement = document.querySelector("#call-timer");
@@ -122,6 +124,55 @@ let shellController = null;
 let voiceStartupFailure = null;
 let voiceStartupGeneration = 0;
 let voiceStartupStage = VOICE_STARTUP_STAGES.starting;
+const voiceDockOrbTokenBindings = Object.freeze([
+  Object.freeze(["--legacy-nebula-1", "var(--orb-a)"]),
+  Object.freeze(["--legacy-nebula-2", "var(--orb-b)"]),
+  Object.freeze(["--legacy-nebula-3", "var(--orb-c)"]),
+  Object.freeze(["--nebula-1", "var(--orb-a)"]),
+  Object.freeze(["--nebula-2", "var(--orb-b)"]),
+  Object.freeze(["--nebula-3", "var(--orb-c)"]),
+  Object.freeze(["--legacy-accent-bright", "var(--accent)"]),
+  Object.freeze(["--accent-bright", "var(--accent)"]),
+  Object.freeze(["--legacy-orb-core", "var(--orb-signal)"]),
+]);
+const voiceDockOrbStateTokens = Object.freeze({
+  idle: Object.freeze({
+    scale: "0.88",
+    levelScale: "0.16",
+    brightness: "0.98",
+    saturation: "1.35",
+  }),
+  starting: Object.freeze({
+    scale: "0.91",
+    levelScale: "0.16",
+    brightness: "1.02",
+    saturation: "1.42",
+  }),
+  listening: Object.freeze({
+    scale: "0.94",
+    levelScale: "0.18",
+    brightness: "1.05",
+    saturation: "1.52",
+  }),
+  speaking: Object.freeze({
+    scale: "0.98",
+    levelScale: "0.2",
+    brightness: "1.1",
+    saturation: "1.7",
+  }),
+  tool: Object.freeze({
+    scale: "0.92",
+    levelScale: "0.14",
+    brightness: "1",
+    saturation: "1.45",
+  }),
+  error: Object.freeze({
+    scale: "0.9",
+    levelScale: "0.08",
+    brightness: "0.96",
+    saturation: "1.18",
+  }),
+});
 
 function emitSessionEvent(eventName, payload = {}) {
   window.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
@@ -190,6 +241,7 @@ void window.leena.isDevelopment().then((isDevelopment) => {
 // silence with the looping waiting ambience (fading in/out via waiting-sound).
 function handleToolStart(name, args = {}) {
   emitSessionEvent(SESSION_STATE_EVENTS.toolExecuting, { name, args });
+  setVoiceOrbState("tool");
   showToolActivity(name);
   // Computer use has its own on-screen indicator (and can run for a long time),
   // so only fill silence with the waiting ambience for normal quick tool calls.
@@ -203,12 +255,14 @@ function handleToolEnd(name, result = null) {
     tool: { name, result },
   });
   hideToolActivity(name);
+  syncVoiceOrbStateForMode(appShellElement.dataset.mode);
   if (!stoppableTools.has(name)) {
     waitingSound.stop();
   }
 }
 
 function showToolActivity(name) {
+  setVoiceOrbState("tool");
   if (!stoppableTools.has(name)) {
     return;
   }
@@ -231,6 +285,7 @@ function hideToolActivity(name) {
   }
   toolActivityElement.hidden = true;
   appShellElement.dataset.toolActivity = "idle";
+  syncVoiceOrbStateForMode(appShellElement.dataset.mode);
   if (!isCallActive && !panelController.isOpen()) {
     appShellElement.dataset.panel = "open";
     void setWindowMode("panel");
@@ -387,7 +442,52 @@ async function openProviderSettings() {
 
 function setMode(mode) {
   appShellElement.dataset.mode = mode;
+  syncVoiceOrbStateForMode(mode);
   syncTrayStateForMode(mode);
+}
+
+function setVoiceOrbState(state) {
+  const normalized = normalizeOrbState(state);
+  const tokens = voiceDockOrbStateTokens[normalized];
+  appShellElement.dataset.orbState = normalized;
+
+  for (const element of [callToggleButton, callStageOrbButton, headerCallButton]) {
+    if (element) {
+      element.dataset.state = normalized;
+    }
+  }
+
+  for (const surface of getVoiceDockOrbSurfaces()) {
+    surface.style.setProperty(
+      "--orb-scale",
+      `calc(${tokens.scale} + var(--orb-level) * ${tokens.levelScale})`,
+    );
+    surface.style.setProperty("--orb-brightness", tokens.brightness);
+    surface.style.setProperty("--orb-saturation", tokens.saturation);
+  }
+}
+
+function syncVoiceOrbStateForMode(mode) {
+  if (appShellElement.dataset.toolActivity === "active") {
+    setVoiceOrbState("tool");
+    return;
+  }
+
+  setVoiceOrbState(mode);
+}
+
+function getVoiceDockOrbSurfaces() {
+  return [callToggleButton, callStageOrbButton]
+    .map((element) => element?.querySelector?.(".siri-orb") ?? null)
+    .filter(Boolean);
+}
+
+function bindVoiceDockOrbTokens() {
+  for (const surface of getVoiceDockOrbSurfaces()) {
+    for (const [property, value] of voiceDockOrbTokenBindings) {
+      surface.style.setProperty(property, value);
+    }
+  }
 }
 
 function syncTrayStateForMode(mode) {
@@ -1838,6 +1938,8 @@ function startAppRuntime() {
   });
   window.leena.onDataChanged?.(handleDataChanged);
   setOrbLevel(0);
+  bindVoiceDockOrbTokens();
+  syncVoiceOrbStateForMode(appShellElement.dataset.mode);
 
   panelController.init({ openByDefault: false });
   shellController = initShell();

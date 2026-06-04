@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createOrb } from "../src/renderer/components/orb.js";
+import { createOrb, normalizeOrbState, ORB_STATES } from "../src/renderer/components/orb.js";
 import { createWaveform } from "../src/renderer/components/waveform.js";
 
 const defaultWaveHeights = [8, 16, 24, 12, 20, 9, 18, 26, 14, 10, 22, 16];
@@ -114,7 +114,7 @@ test("createOrb returns an orb element with the expected methods", () => {
   assert.equal(orb.style.height, "40px");
   assert.equal(orb.getAttribute("aria-hidden"), "true");
 
-  for (const method of ["pulse", "breathe", "shake", "stop"]) {
+  for (const method of ["setState", "pulse", "breathe", "shake", "stop"]) {
     assert.equal(typeof orb[method], "function", `${method} should be exposed`);
   }
 });
@@ -142,6 +142,10 @@ test("createOrb leaves orb material, color, and glow to CSS tokens", () => {
   assert.equal("background" in ring.style, false);
   assert.equal("boxShadow" in ring.style, false);
 
+  for (const state of ORB_STATES) {
+    orb.setState(state);
+    assert.equal(orb.dataset.state, state);
+  }
   orb.breathe(true);
   orb.pulse();
   orb.shake();
@@ -149,6 +153,7 @@ test("createOrb leaves orb material, color, and glow to CSS tokens", () => {
   assert.equal("background" in orb.style, false);
   assert.equal("boxShadow" in orb.style, false);
   assert.equal("border" in orb.style, false);
+  assert.doesNotMatch(orb.style["--orb-state-filter"], /#[0-9a-f]|rgba?\(|hsla?\(/i);
 });
 
 test("createOrb accepts named sizes and falls back to the bar size for unknown values", () => {
@@ -162,21 +167,34 @@ test("createOrb accepts named sizes and falls back to the bar size for unknown v
 test("orb state methods update visual state and return the element", () => {
   const orb = createOrb();
 
+  assert.equal(orb.setState("starting"), orb);
+  assert.equal(orb.dataset.state, "starting");
+  assert.equal(orb.style["--orb-state-intensity"], "0.28");
+  assert.equal(orb.style.transform, "scale(var(--orb-state-scale))");
+  assert.equal(orb.style.filter, "var(--orb-state-filter)");
+
   assert.equal(orb.breathe(true), orb);
   assert.equal(orb.dataset.state, "listening");
-  assert.equal(orb.style.transform, "scale(1.03)");
+  assert.equal(orb.style["--orb-state-intensity"], "0.44");
 
   assert.equal(orb.breathe(false), orb);
   assert.equal(orb.dataset.state, "idle");
-  assert.equal(orb.style.transform, "scale(1)");
+  assert.equal(orb.style.transform, "");
 
   assert.equal(orb.pulse(), orb);
-  assert.equal(orb.dataset.state, "success");
-  assert.equal(orb.style.filter, "brightness(1.12) saturate(1.12)");
+  assert.equal(orb.dataset.state, "speaking");
+  assert.equal(orb.style["--orb-state-intensity"], "0.72");
   assert.equal(orb.animations.length, 1);
+
+  assert.equal(orb.setState("tool_executing"), orb);
+  assert.equal(orb.dataset.state, "tool");
+  assert.equal(orb.style["--orb-state-intensity"], "0.56");
+  assert.equal(orb.animations.length, 1);
+  assert.equal(orb.animations[0].cancelled, true);
 
   assert.equal(orb.shake(), orb);
   assert.equal(orb.dataset.state, "error");
+  assert.equal(orb.style["--orb-state-intensity"], "0.36");
   assert.equal(orb.animations.length, 2);
 
   const animations = [...orb.animations];
@@ -195,6 +213,9 @@ test("orb does not force animations when disabled or reduced motion is requested
   disabledOrb.pulse();
   disabledOrb.shake();
   assert.equal(disabledOrb.animations.length, 0);
+  assert.equal(disabledOrb.dataset.motion, "reduced");
+  assert.equal(disabledOrb.dataset.state, "error");
+  assert.equal(disabledOrb.style.transform, "scale(var(--orb-state-scale))");
 
   globalThis.matchMedia = () => ({ matches: true });
   const reducedOrb = createOrb();
@@ -202,6 +223,20 @@ test("orb does not force animations when disabled or reduced motion is requested
   reducedOrb.shake();
   assert.equal(reducedOrb.animations.length, 0);
   assert.equal(reducedOrb.style.transition, "none");
+  assert.equal(reducedOrb.dataset.motion, "reduced");
+  assert.equal(reducedOrb.dataset.state, "error");
+  assert.equal(reducedOrb.style.filter, "var(--orb-state-filter)");
+});
+
+test("normalizeOrbState maps realtime and renderer modes to orb state tokens", () => {
+  assert.deepEqual(ORB_STATES, ["idle", "starting", "listening", "speaking", "tool", "error"]);
+  assert.equal(normalizeOrbState("connecting"), "starting");
+  assert.equal(normalizeOrbState("response.created"), "starting");
+  assert.equal(normalizeOrbState("input_audio_buffer.speech_started"), "listening");
+  assert.equal(normalizeOrbState("response.output_audio.delta"), "speaking");
+  assert.equal(normalizeOrbState("tool_executing"), "tool");
+  assert.equal(normalizeOrbState("failed"), "error");
+  assert.equal(normalizeOrbState("unknown"), "idle");
 });
 
 test("createWaveform renders default bars with currentColor and configured heights", () => {

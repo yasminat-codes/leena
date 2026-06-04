@@ -3,8 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  getMCPSetupFieldVisibility,
   renderIntegrations,
   renderIntegrationsData,
+  testMCPServerConnection,
+  validateMCPServerDraft,
 } from "../src/renderer/screens/integrations.js";
 
 const leenaCss = readFileSync(new URL("../src/renderer/leena.css", import.meta.url), "utf8");
@@ -95,10 +98,103 @@ test("renderIntegrationsData keeps Custom MCP setup inside the detail shell", ()
   assert.match(html, /data-integrations-add-form/);
   assert.match(html, /class="settings-input" name="name"/);
   assert.match(html, /class="settings-select" name="transport"/);
+  assert.match(html, /data-integrations-field="url"/);
+  assert.match(html, /data-integrations-field="headers"/);
   assert.match(html, /data-integrations-field="command" hidden/);
+  assert.match(html, /data-integrations-field="args" hidden/);
+  assert.match(html, /data-integrations-error-for="name" role="alert" hidden/);
+  assert.match(html, /data-integrations-error-for="url" role="alert" hidden/);
+  assert.match(html, /data-integrations-action="test-connection">Test connection/);
   assert.match(html, /Add MCP Server/);
+  assert.match(html, /data-integrations-action="cancel-add">Cancel/);
   assert.match(html, /No MCP servers/);
+  assert.ok(
+    html.indexOf('data-integrations-action="test-connection"') <
+      html.indexOf('type="submit">Add MCP Server'),
+  );
   assert.equal(countMatches(html, /class="card integrations-card"/g), 9);
+});
+
+test("Custom MCP field visibility keeps HTTP and stdio inputs mutually focused", () => {
+  assert.deepEqual(getMCPSetupFieldVisibility("http"), {
+    args: false,
+    command: false,
+    headers: true,
+    name: true,
+    transport: true,
+    url: true,
+  });
+  assert.deepEqual(getMCPSetupFieldVisibility("streamable-http"), {
+    args: false,
+    command: false,
+    headers: true,
+    name: true,
+    transport: true,
+    url: true,
+  });
+  assert.deepEqual(getMCPSetupFieldVisibility("stdio"), {
+    args: true,
+    command: true,
+    headers: false,
+    name: true,
+    transport: true,
+    url: false,
+  });
+});
+
+test("Custom MCP validation parses optional HTTP headers before test connection", async () => {
+  assert.deepEqual(
+    validateMCPServerDraft({
+      headers: "Authorization: Bearer token; X-Team: ops",
+      name: "Remote",
+      transport: "http",
+      url: "https://mcp.example.com/mcp",
+    }),
+    {
+      config: {
+        headers: {
+          Authorization: "Bearer token",
+          "X-Team": "ops",
+        },
+        name: "Remote",
+        transport: "http",
+        url: "https://mcp.example.com/mcp",
+      },
+    },
+  );
+  assert.deepEqual(
+    validateMCPServerDraft({
+      headers: "Authorization",
+      name: "Remote",
+      transport: "http",
+      url: "https://mcp.example.com/mcp",
+    }),
+    { error: "HTTP headers must use Name: value pairs with non-empty values." },
+  );
+
+  const calls = [];
+  const result = await testMCPServerConnection(
+    {
+      name: "Remote",
+      transport: "http",
+      url: "https://mcp.example.com/mcp",
+    },
+    {
+      async testConnection(config) {
+        calls.push(config);
+        return { latencyMs: 12, reachable: true, toolCount: 2 };
+      },
+    },
+  );
+
+  assert.deepEqual(calls, [
+    {
+      name: "Remote",
+      transport: "http",
+      url: "https://mcp.example.com/mcp",
+    },
+  ]);
+  assert.deepEqual(result, { latencyMs: 12, reachable: true, toolCount: 2 });
 });
 
 test("renderIntegrationsData shows Mac Access card states and scoped actions", () => {

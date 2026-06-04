@@ -38,7 +38,11 @@ import { registerMemoryHandlers } from "./ipc/memory-handlers.js";
 import { createSafeStorageSecretCodec, registerProviderHandlers } from "./ipc/provider-handlers.js";
 import { initMCPAutoConnect, registerMCPAutoConnectCleanup } from "./mcp/auto-connect.js";
 import { MCPClientManager } from "./mcp/client-manager.js";
-import { getServer as getStoredMCPServer, ServerStore } from "./mcp/server-store.js";
+import {
+  createComposioIntegrationService,
+  registerComposioIntegrationHandlers,
+} from "./mcp/composio-integration.js";
+import { ServerStore } from "./mcp/server-store.js";
 import { SQLiteMemoryStore } from "./memory/index.js";
 import { createMemoryMiddleware } from "./memory/memory-middleware.js";
 import {
@@ -50,10 +54,14 @@ import {
 import {
   computerUseBrowserDocsUrl,
   createOsPermissionSnapshot,
-  getMacOsPrivacySettingsUrl,
   getWindowsPrivacySettingsUrl,
   isKnownOsPermissionId,
 } from "./os-permissions.js";
+import {
+  detectAppleCalendarAccessStatus,
+  detectFullDiskAccessStatus,
+  openMacOsPrivacySettings,
+} from "./os-permissions-main.js";
 import { getRegistry } from "./providers/index.js";
 import { createOpenAIProvider } from "./providers/openai-provider.js";
 import { REALTIME } from "./providers/types.js";
@@ -149,7 +157,14 @@ let nudgeRefreshPromise = null;
 let nudgeRefreshGeneration = 0;
 let latestNudgePayload = null;
 const mcpClientManager = new MCPClientManager();
-const mcpServerStore = new ServerStore();
+const secretCodec = createSafeStorageSecretCodec(safeStorage);
+const mcpServerStore = new ServerStore({ secretCodec });
+const composioIntegrationService = createComposioIntegrationService({
+  secretCodec,
+  serverStore: mcpServerStore,
+  mcpClientManager,
+  openExternal: (url) => shell.openExternal(url),
+});
 const settingsStoreBridge = {
   getAllSettings,
   getBool,
@@ -790,6 +805,11 @@ async function executeRealtimeToolWithRuntimeOptions(name, args = {}, { abortCon
       fileSystem: {
         rootPath: app.getPath("home"),
       },
+      planner: {
+        appleCalendar: {
+          permissionStatus: await getAppleCalendarAccessStatus(),
+        },
+      },
       mcp: {
         clientManager: mcpClientManager,
         getServerConfig: getMCPServerConfigForPermission,
@@ -891,7 +911,12 @@ function initializeFeatureHandlers() {
   registerIdentityHandlers({ ipcMain, onChanged: broadcastIdentityChanged, personaEngine });
   registerMemoryHandlers({ ipcMain, store: getMemoryStore() });
   registerProviderHandlers(ipcMain, {
-    secretCodec: createSafeStorageSecretCodec(safeStorage),
+    registerComposioTestConnection: false,
+    secretCodec,
+  });
+  registerComposioIntegrationHandlers({
+    ipcMain,
+    service: composioIntegrationService,
   });
   registerChatHandlers({
     ipcMain,
@@ -1063,15 +1088,21 @@ function setRuntimeTrayState(state) {
 }
 
 async function getMCPServerConfigForPermission(serverId) {
-  const storedServer = getStoredMCPServer(serverId);
+  const composioConfig = composioIntegrationService.getPermissionServerConfig(serverId);
+  if (composioConfig) {
+    return composioConfig;
+  }
+
+  const storedServer = mcpServerStore.getServer(serverId);
   let tools = [];
   try {
     tools = await mcpClientManager.listTools(serverId);
   } catch {
     tools = [];
   }
+  const { headers: _headers, ...serverMetadata } = storedServer ?? {};
   return {
-    ...(storedServer ?? {}),
+    ...serverMetadata,
     serverId: storedServer?.id ?? serverId,
     name: storedServer?.name ?? serverId,
     permission_level: storedServer?.permission_level ?? "confirm",
@@ -1487,12 +1518,18 @@ async function readMacOsTccRows() {
   }
 }
 
+async function getAppleCalendarAccessStatus() {
+  return detectAppleCalendarAccessStatus();
+}
+
 async function getOsPermissionStatus() {
   return createOsPermissionSnapshot({
     microphone: getMediaAccessStatus("microphone"),
     screen: getMediaAccessStatus("screen"),
     accessibility: getAccessibilityStatus(),
+    "apple-calendar": await getAppleCalendarAccessStatus(),
     computer: await getComputerUseBrowserStatus(),
+    "full-disk-access": await detectFullDiskAccessStatus(),
   });
 }
 
@@ -1533,8 +1570,7 @@ async function openOsPermissionSettings(id) {
     return { opened: true };
   }
   if (process.platform === "darwin") {
-    await shell.openExternal(getMacOsPrivacySettingsUrl(id));
-    return { opened: true };
+    return openMacOsPrivacySettings(id, (url) => shell.openExternal(url));
   }
   if (process.platform === "win32") {
     await shell.openExternal(getWindowsPrivacySettingsUrl(id));

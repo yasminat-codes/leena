@@ -585,3 +585,85 @@ _(wave execution entries appended below as the build runs)_
 - Requested CodeRabbit review with `@coderabbitai review`; CodeRabbit acknowledged the command and started processing run `43490940-5a8e-4cff-a84e-8c784b4f7fd4`.
 - No actionable CodeRabbit findings were available at merge-decision time. Per wave protocol, CodeRabbit is advisory-only and does not block merge.
 - The repo does not have `codex` or `codex-automation` labels, so no automation labels were applied.
+
+## 2026-06-04 — Wave 19 started
+
+- Created a clean Wave 19 worktree from `origin/main` commit `6947d44e7f2fdddcbd30dee34e981f25e3b772ef` because the primary checkout is dirty and behind remote truth.
+- Baseline gates passed before task work: `npm run check` and full `node --test` (565/565).
+- Required pre-code kencode-search was attempted through the MCP-backed curated reference map for Wave 19 UI, MCP/Composio, macOS permission, Apple Calendar, chat, and orb slices; no exact reusable curated references matched, so local Wave 17/18 contracts and source remain authoritative.
+- Moved tasks `127`, `132`, `134`, `136`, `137`, `140`, and `143` to `in-progress` with `attempts=1`, updated overview counts to `pending=9`, `in-progress=7`, `completed=77`, `blocked=6`, and wrote WAL `pre_run` entries.
+- Opened active file claims for all seven task slices. Shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` are reserved for serialized parent integration after workers finish.
+
+
+## 2026-06-04 — Wave 19 tasks completed
+
+- Completed tasks `127`, `132`, `134`, `136`, `137`, `140`, and `143`; moved task files to `tasks/completed/` and released active claims.
+- Parent integration completed shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` wiring for Settings viewport proof, Composio live MCP refresh, and Full Disk Access status.
+- Independent gates passed before terminal bookkeeping: `npm run check`, focused task gates, UI baseline harness, output existence checks, and full `node --test` (596/596).
+- Next gates pending: reviewer agent, advisor gate, CodeRabbit advisory PR request, and merge to `main`.
+
+## 2026-06-04 — Wave 19 advisor schema fix
+
+- Local advisor review found the Apple Calendar create tool schema still required local planner `description`, `date`, and `time` even though the Apple adapter path uses `startDate` and `endDate`.
+- Fixed `add_calendar_item` schema to require only shared `title`, kept local planner field requirements in runtime validation, and added Apple create/schema regression coverage.
+- Focused gate passed: `node --test test/apple-calendar-adapter.test.js test/tool-schemas.test.js test/all-tools-functional.test.js` (17/17).
+
+## 2026-06-04 — Wave 19 reviewer blockers fixed
+
+- Reviewer blocker 1: Apple Calendar was schema-visible but had no live main-process permission runtime. Fixed by adding Calendar-specific TCC status detection, adding Apple Calendar to permission snapshots, and passing `appleCalendar.permissionStatus` into realtime tool execution.
+- Reviewer blocker 2: Custom MCP HTTP headers were parsed by the UI but dropped by IPC/store normalization. Fixed by preserving validated headers through MCP IPC, persisted server storage, temporary test connections, and the HTTP client transport; stdio transport changes clear headers.
+- Focused reviewer-fix gate passed: `node --test test/mcp-server-store.test.js test/mcp-ipc-handlers.test.js test/e2e-mcp-connect.test.js test/integrations-screen.test.js test/wave19-integration.test.js` (33/33).
+- Static check passed after the fixes: `npm run check`.
+
+## 2026-06-04 — Wave 19 reviewer re-check blocker fixed
+
+- Reviewer re-check found the Apple Calendar runtime status was still passed as a top-level `appleCalendar` option, while `executeRealtimeTool` forwards only `options.planner` to planner tools.
+- Fixed the runtime handoff by nesting the live Calendar permission under `planner.appleCalendar` in `src/main.js` and tightened the Wave 19 integration test to assert that exact dispatcher path.
+- Focused Apple Calendar gate passed: `node --test test/wave19-integration.test.js test/apple-calendar-adapter.test.js` (13/13).
+- Full gates passed after the re-check fix: `npm run check` and `node --test` (600/600).
+
+## 2026-06-04 — Wave 19 final reviewer blockers fixed
+
+- Final reviewer found two remaining blockers before PR: stale git index/untracked files and a too-narrow Calendar status probe that checked only the system TCC database.
+- Fixed Calendar status by moving the runtime detection into `src/os-permissions-main.js`, checking both user and system TCC databases, and keeping unreadable/write-only states fail-closed.
+- Fixed the non-blocking MCP header parity warning by applying the same HTTP token-name validation in direct MCP IPC and server-store persistence paths.
+- Gates passed after the final fixes: focused reviewer-fix tests (39/39), `npm run check`, full `node --test` (605/605), WAL parse, count audit, privacy scan, and `git diff --check`.
+
+## 2026-06-04 — Wave 19 advisor security blocker fixed
+
+- Advisor gate blocked merge because Custom MCP HTTP headers can contain bearer tokens but were stored as ordinary JSON server config and returned to renderer state.
+- Fixed the storage boundary by requiring protected storage for persisted non-empty MCP HTTP headers, storing encrypted header payloads with only header names visible, redacting headers in MCP IPC list/add/update responses, and keeping decrypted values only on main-process connect/auto-connect paths.
+- Also aligned MCP change broadcasts with the existing preload subscription channel `mcp:status-changed` so post-add/update/remove/connection refreshes are not stale.
+- Focused security gate passed: `node --test test/mcp-server-store.test.js test/mcp-ipc-handlers.test.js test/e2e-mcp-connect.test.js test/composio-integration.test.js test/mcp-integration.test.js` (31/31).
+- Static check passed after the fix: `npm run check`.
+
+## 2026-06-04 — Wave 19 reviewer IPC redaction gaps fixed
+
+- Final reviewer re-pass found two remaining IPC leak paths: `mcp:update-server` with an empty update returned an already-decrypted existing server, and `mcp:test-connection`/connect failures could echo bearer material in renderer-visible error messages.
+- Fixed the handler boundary so empty updates return `redactServerForRenderer(existing)` and MCP handler errors pass through `redactSensitiveText` before reaching renderer-visible return values or thrown errors.
+- Added regressions for both reproduced leaks in `test/mcp-ipc-handlers.test.js`.
+- Final local gates passed after the fix: `npm run check`, `node --test` (606/606), `git diff --check`, and task-artifact privacy scan.
+
+## 2026-06-04 — Wave 19 direct list-tools redaction fixed
+
+- Reviewer re-pass found one direct IPC leak path still open: `mcp:list-tools` called the MCP client manager directly, so a client error containing `Authorization: Bearer ...` could be thrown to the renderer without sanitizer coverage.
+- Fixed `listTools` to sanitize thrown errors with the same renderer boundary helper used by connect/test paths and added a direct list-tools regression in `test/mcp-ipc-handlers.test.js`.
+- Final local gates passed after the fix: focused MCP handler test (12/12), `npm run check`, `node --test` (606/606), `git diff --check`, WAL parse, count audit, and task-artifact privacy scan.
+
+## 2026-06-04 — Wave 19 terminal reviewer edges fixed
+
+- Final reviewer/advisor edge checks found stale terminal evidence plus three direct-boundary issues: conflicting Apple Calendar TCC rows could grant after denial, blank Custom MCP header values could pass direct IPC/store validation, and MCP execution error text needed the same secret-header redaction coverage as IPC errors.
+- Fixed Calendar denial precedence, rejected blank MCP header values after trimming, extended `redactSensitiveText` to cover secret `Header: value` diagnostics, and added focused regressions across Calendar, MCP IPC/store, MCP execution, Composio permission metadata, and generic error redaction.
+- Terminal local gates passed after the fix: focused Calendar/MCP gate (38/38), `npm run check`, full `node --test` (607/607), and the final bookkeeping/audit pass is recorded in WAL.
+
+## 2026-06-04 — Wave 19 reviewer and advisor gates passed
+
+- Independent reviewer gate passed with no blockers after checking the Wave 19 diff, MCP redaction/protected-storage paths, task counts, active claims, WAL JSON, and privacy scans.
+- Advisor gate passed with no merge blockers after verifying MCP tool execution redaction, credential-header redaction, Composio permission metadata stripping, Apple Calendar runtime nesting, Settings router, Full Disk Access, Chat shell, and orb theming.
+- Final pre-PR gates passed: `npm run check`, focused MCP/redaction suite (49/49), full `node --test` (607/607), `git diff --check`, WAL parse, count audit, active-claim audit, and task-artifact privacy scan.
+
+## 2026-06-04 — Wave 19 PR and CodeRabbit advisory recorded
+
+- Opened PR #23 from `wave-19` to `main` after reviewer and advisor gates passed.
+- Requested CodeRabbit review on PR #23; CodeRabbit acknowledged the request and began processing. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/in-progress and non-blocking.
+- Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.

@@ -81,7 +81,12 @@ contextBridge.exposeInMainWorld("leena", {
     getCredentialStatus: () => ipcRenderer.invoke("composio:get-credential-status"),
     saveCredential: (apiKey) => ipcRenderer.invoke("composio:save-credential", { apiKey }),
     clearCredential: () => ipcRenderer.invoke("composio:clear-credential"),
+    getIntegrationStatus: () => ipcRenderer.invoke("composio:get-integration-status"),
     testConnection: () => ipcRenderer.invoke("composio:test-connection"),
+    refreshTools: (payload) => ipcRenderer.invoke("composio:refresh-tools", payload),
+    listToolkits: (payload) => ipcRenderer.invoke("composio:list-toolkits", payload),
+    listConnectedApps: (payload) => ipcRenderer.invoke("composio:list-connected-apps", payload),
+    openAppAuth: (payload) => ipcRenderer.invoke("composio:open-app-auth", payload),
   },
   mcp: {
     listServers: () => ipcRenderer.invoke("mcp:list-servers"),

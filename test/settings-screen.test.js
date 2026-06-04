@@ -4,9 +4,11 @@ import test from "node:test";
 import {
   applyAppearancePreference,
   bindSettingsControls,
+  bindSettingsDetailRouter,
   loadAppearancePreferences,
   renderSettings,
   SETTINGS_MOCK_DATA,
+  showSettingsDetail,
 } from "../src/renderer/screens/settings.js";
 
 class TestElement {
@@ -16,6 +18,8 @@ class TestElement {
     this.attributes = new Map();
     this.listeners = new Map();
     this.children = [];
+    this.hidden = false;
+    this.focusCount = 0;
     this.classList = {
       contains: (className) => classes.includes(className),
     };
@@ -26,7 +30,15 @@ class TestElement {
       return this.id === "app-shell" && this.classList.contains("leena");
     }
 
-    return false;
+    if (selector === ".leena") {
+      return this.classList.contains("leena");
+    }
+
+    if (selector.startsWith("#")) {
+      return this.id === selector.slice(1);
+    }
+
+    return matchesDatasetSelector(this, selector);
   }
 
   addEventListener(type, listener) {
@@ -34,7 +46,11 @@ class TestElement {
   }
 
   click() {
-    this.listeners.get("click")?.();
+    this.listeners.get("click")?.({ preventDefault() {} });
+  }
+
+  keydown(key) {
+    this.listeners.get("keydown")?.({ key, preventDefault() {} });
   }
 
   setAttribute(name, value) {
@@ -45,38 +61,49 @@ class TestElement {
     return this.attributes.get(name) ?? null;
   }
 
+  removeAttribute(name) {
+    this.attributes.delete(name);
+  }
+
+  focus() {
+    this.focusCount += 1;
+  }
+
   querySelector(selector) {
     return this.querySelectorAll(selector)[0] ?? null;
   }
 
   querySelectorAll(selector) {
-    if (selector === "#app-shell.leena") {
-      return this.children.filter(
-        (child) => child.id === "app-shell" && child.classList.contains("leena"),
-      );
-    }
-
-    if (selector === ".leena") {
-      return this.children.filter((child) => child.classList.contains("leena"));
-    }
-
-    if (selector === "#app-shell") {
-      return this.children.filter((child) => child.id === "app-shell");
-    }
-
-    if (selector === "[data-appearance-key][data-appearance-value]") {
-      return this.children.filter(
-        (child) => child.dataset.appearanceKey && child.dataset.appearanceValue,
-      );
-    }
-
-    const appearanceKey = selector.match(/^\[data-appearance-key="([^"]+)"\]$/)?.[1];
-    if (appearanceKey) {
-      return this.children.filter((child) => child.dataset.appearanceKey === appearanceKey);
-    }
-
-    return [];
+    const matches = [];
+    const visit = (node) => {
+      if (node.matches(selector)) {
+        matches.push(node);
+      }
+      for (const child of node.children) {
+        visit(child);
+      }
+    };
+    visit(this);
+    return matches;
   }
+}
+
+function matchesDatasetSelector(element, selector) {
+  if (selector === "[data-appearance-key][data-appearance-value]") {
+    return Boolean(element.dataset.appearanceKey && element.dataset.appearanceValue);
+  }
+
+  const dataMatch = selector.match(/^\[data-([a-z-]+)(?:="([^"]+)")?\]$/);
+  if (!dataMatch) {
+    return false;
+  }
+
+  const key = dataMatch[1].replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+  const expectedValue = dataMatch[2];
+  if (!(key in element.dataset)) {
+    return false;
+  }
+  return typeof expectedValue === "undefined" || element.dataset[key] === expectedValue;
 }
 
 function installLocalStorage(initialValues = {}) {
@@ -122,8 +149,37 @@ function createSettingsRoot() {
   return { densityCompact, root, themeDark, themeLight, treatmentCoral, wrapper };
 }
 
+function createSettingsRouterRoot() {
+  const root = new TestElement({
+    dataset: { settingsActiveDetail: "overview", settingsDetailRouter: "" },
+  });
+  const overview = new TestElement({ dataset: { settingsDetail: "overview" } });
+  const general = new TestElement({ dataset: { settingsDetail: "general" } });
+  const theme = new TestElement({ dataset: { settingsDetail: "theme" } });
+  const providers = new TestElement({ dataset: { settingsDetail: "providers" } });
+  const generalCard = new TestElement({ dataset: { settingsDetailTarget: "general" } });
+  const themeCard = new TestElement({ dataset: { settingsDetailTarget: "theme" } });
+  const back = new TestElement({ dataset: { settingsDetailBack: "general" } });
+  const close = new TestElement({ dataset: { settingsDetailClose: "theme" } });
+
+  root.children.push(overview, general, theme, providers, generalCard, themeCard, back, close);
+  return { back, close, general, generalCard, overview, providers, root, theme, themeCard };
+}
+
 function getHtmlTags(html, tagName) {
   return html.match(new RegExp(`<${tagName}\\b[^>]*>`, "g")) ?? [];
+}
+
+function getDetailSectionTags(html) {
+  return getHtmlTags(html, "section").filter((tag) => tag.includes("data-settings-detail="));
+}
+
+function getDetailSectionTag(html, detailId) {
+  const tag = getDetailSectionTags(html).find((sectionTag) =>
+    sectionTag.includes(`data-settings-detail="${detailId}"`),
+  );
+  assert.ok(tag, `expected ${detailId} detail section`);
+  return tag;
 }
 
 test.afterEach(() => {
@@ -217,27 +273,38 @@ test("bindSettingsControls loads preferences and wires segmented clicks", () => 
 test("renderSettings returns settings sections, providers, toggles, and no inline hex colors", () => {
   const html = renderSettings();
 
-  assert.match(html, /^\s*<section class="settings-screen" aria-label="Settings">/);
-  assert.match(html, /class="panel-glass settings-identity[^"]*settings-detail-section/);
+  assert.match(
+    html,
+    /^\s*<section\s+class="settings-screen"\s+aria-label="Settings"\s+data-settings-detail-router/s,
+  );
+  assert.match(html, /data-settings-active-detail="overview"/);
+  assert.match(html, /class="panel-glass settings-identity"/);
   assert.match(html, /class="settings-identity__fields"/);
   assert.match(html, /data-settings-primitive="detail-section"/);
   assert.match(html, /data-settings-detail="general"/);
   assert.match(html, /data-settings-detail="overview"/);
+  assert.match(html, /data-settings-detail="theme"/);
+  assert.match(html, /data-settings-detail="mac-access"/);
+  assert.match(html, /data-settings-detail="integrations-health"/);
   assert.match(html, /data-settings-primitive="overview-card"/);
   assert.match(html, /data-settings-detail-target="general"/);
   assert.match(html, /data-settings-detail-target="theme"/);
   assert.match(html, /data-settings-detail-target="providers"/);
   assert.match(html, /data-settings-detail-target="updates"/);
   assert.match(html, /data-settings-detail-target="mac-access"/);
+  assert.match(html, /data-settings-detail-target="integrations-health"/);
+  assert.match(html, /aria-label="Open General settings detail"/);
+  assert.match(html, /aria-label="Open Integrations Health settings detail"/);
+  assert.match(html, /data-settings-detail-back="general"/);
+  assert.match(html, /data-settings-detail-close="general"/);
   assert.match(html, /class="orb settings-avatar"/);
-  assert.match(html, /class="lx-h2">Yasmine<\/h1>/);
+  assert.match(html, /class="lx-h2">Yasmine<\/h3>/);
   assert.match(html, /class="lx-sm text-dim">yasmine@leena\.local<\/span>/);
   assert.match(html, /data-settings-action="edit-identity"/);
   assert.match(html, /data-agent-name/);
   assert.match(html, /data-persona-select/);
   assert.match(html, /data-persona-tone/);
-  assert.match(html, /Appearance/);
-  assert.match(html, /data-settings-detail="appearance"/);
+  assert.match(html, /Theme/);
   assert.match(html, /data-settings-primitive="detail-row"/);
   assert.match(html, /data-settings-primitive="segmented-option"/);
   assert.match(html, /data-appearance-key="theme"/);
@@ -267,7 +334,8 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /Ollama/);
   assert.match(html, /Choose a hosted model/);
   assert.match(html, /Choose a local model/);
-  assert.match(html, /Features/);
+  assert.match(html, /Mac Access/);
+  assert.match(html, /Integrations Health/);
   assert.match(html, /Wake Word/);
   assert.match(html, /Always Listening/);
   assert.match(html, /Launch on Login/);
@@ -276,6 +344,23 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /data-settings-primitive="toggle"/);
   assert.match(html, /data-settings-primitive="status-callout"/);
   assert.doesNotMatch(html, /#[0-9a-fA-F]{3,8}\b/);
+
+  const overviewTag = getDetailSectionTag(html, "overview");
+  assert.doesNotMatch(overviewTag, /\shidden(?:\s|>)/);
+  assert.match(overviewTag, /aria-hidden="false"/);
+
+  for (const detail of [
+    "general",
+    "theme",
+    "updates",
+    "providers",
+    "mac-access",
+    "integrations-health",
+  ]) {
+    const detailTag = getDetailSectionTag(html, detail);
+    assert.match(detailTag, /\shidden(?:\s|>)/);
+    assert.match(detailTag, /aria-hidden="true"/);
+  }
 
   for (const group of Object.values(SETTINGS_MOCK_DATA.appearance)) {
     for (const option of group) {
@@ -304,6 +389,63 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   for (const tag of buttonTags) {
     assert.match(tag, /data-settings-primitive="(?:action-button|segmented-option|toggle)"/);
   }
+});
+
+test("settings detail router opens cards and returns to overview", () => {
+  const { back, general, generalCard, overview, providers, root, theme, themeCard } =
+    createSettingsRouterRoot();
+
+  assert.equal(bindSettingsDetailRouter(root), root);
+
+  assert.equal(root.dataset.settingsActiveDetail, "overview");
+  assert.equal(overview.hidden, false);
+  assert.equal(general.hidden, true);
+  assert.equal(theme.hidden, true);
+  assert.equal(providers.hidden, true);
+
+  generalCard.click();
+
+  assert.equal(root.dataset.settingsActiveDetail, "general");
+  assert.equal(overview.hidden, true);
+  assert.equal(general.hidden, false);
+  assert.equal(theme.hidden, true);
+  assert.equal(general.getAttribute("aria-hidden"), "false");
+  assert.equal(generalCard.getAttribute("aria-pressed"), "true");
+  assert.equal(general.focusCount, 1);
+
+  back.click();
+
+  assert.equal(root.dataset.settingsActiveDetail, "overview");
+  assert.equal(overview.hidden, false);
+  assert.equal(general.hidden, true);
+
+  themeCard.keydown("Enter");
+
+  assert.equal(root.dataset.settingsActiveDetail, "theme");
+  assert.equal(overview.hidden, true);
+  assert.equal(theme.hidden, false);
+  assert.equal(themeCard.getAttribute("aria-pressed"), "true");
+});
+
+test("settings detail close and invalid routes fall back to overview", () => {
+  const { close, general, overview, root, theme } = createSettingsRouterRoot();
+
+  assert.equal(showSettingsDetail(root, "appearance"), "theme");
+  assert.equal(root.dataset.settingsActiveDetail, "theme");
+  assert.equal(theme.hidden, false);
+  assert.equal(overview.hidden, true);
+
+  assert.equal(bindSettingsDetailRouter(root), root);
+  close.click();
+
+  assert.equal(root.dataset.settingsActiveDetail, "overview");
+  assert.equal(overview.hidden, false);
+  assert.equal(theme.hidden, true);
+
+  assert.equal(showSettingsDetail(root, "unknown-detail"), "overview");
+  assert.equal(root.dataset.settingsActiveDetail, "overview");
+  assert.equal(overview.hidden, false);
+  assert.equal(general.hidden, true);
 });
 
 test("invalid preferences are rejected before storage or dataset changes", () => {

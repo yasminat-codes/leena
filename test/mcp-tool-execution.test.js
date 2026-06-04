@@ -164,6 +164,26 @@ test("MCP execution wraps MCP call errors without crashing realtime dispatch", a
     status: "error",
     message: "MCP tool failed: calendar server failed",
   });
+
+  const secretManager = createMockMCPManager({
+    callError: new MCPError("upstream failed Authorization: Bearer topsecret-token", {
+      serverName: SERVER_ID,
+    }),
+  });
+
+  assert.deepEqual(
+    await executeRealtimeTool(
+      NAMESPACED_TOOL_NAME,
+      { title: "Planning" },
+      {
+        mcp: createMCPOptions(secretManager),
+      },
+    ),
+    {
+      status: "error",
+      message: "MCP tool failed: upstream failed Authorization: [redacted]",
+    },
+  );
 });
 
 test("built-in dispatch remains unchanged before MCP fallback", async () => {

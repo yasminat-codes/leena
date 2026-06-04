@@ -64,6 +64,30 @@ const knownPermissionIds = new Set(osPermissionDefinitions.map((permission) => p
 
 export const computerUseBrowserDocsUrl = "https://playwright.dev/docs/browsers#install-browsers";
 
+const macOsPrivacySettingsUrls = Object.freeze({
+  microphone: Object.freeze([
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
+  ]),
+  screen: Object.freeze([
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+  ]),
+  accessibility: Object.freeze([
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+  ]),
+  "full-disk-access": Object.freeze([
+    "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AllFiles",
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles",
+    "x-apple.systempreferences:com.apple.preference.security?Privacy",
+  ]),
+  "apple-calendar": Object.freeze([
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars",
+  ]),
+  files: Object.freeze([
+    "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders",
+  ]),
+  default: Object.freeze(["x-apple.systempreferences:com.apple.preference.security?Privacy"]),
+});
+
 export function normalizeOsPermissionStatus(status) {
   return [
     "not-determined",
@@ -98,22 +122,11 @@ export function isOsPermissionActionable(status) {
 }
 
 export function getMacOsPrivacySettingsUrl(id) {
-  switch (id) {
-    case "microphone":
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";
-    case "screen":
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
-    case "accessibility":
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
-    case "full-disk-access":
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles";
-    case "apple-calendar":
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars";
-    case "files":
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders";
-    default:
-      return "x-apple.systempreferences:com.apple.preference.security?Privacy";
-  }
+  return getMacOsPrivacySettingsUrls(id)[0];
+}
+
+export function getMacOsPrivacySettingsUrls(id) {
+  return macOsPrivacySettingsUrls[id] ?? macOsPrivacySettingsUrls.default;
 }
 
 export function getWindowsPrivacySettingsUrl(id) {

@@ -926,3 +926,115 @@
 - CodeRabbit acknowledged the request and began processing run `43490940-5a8e-4cff-a84e-8c784b4f7fd4`; no actionable findings were available at merge-decision time.
 - The repo still has no `codex` or `codex-automation` labels available, so the wave could not apply automation labels.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — 137 — Apple Calendar adapter gate boundary
+- **Symptom:** Apple Calendar was only a guided Integration card while planner calendar tools stayed local-only.
+- **Root cause:** Leena had no native EventKit helper or signed Calendar entitlement path, so direct Calendar reads/writes needed an optional adapter boundary that could fail closed without touching a real owner calendar in tests.
+- **Fix:** Added an optional `osascript`/JXA Apple Calendar adapter with declared full-access tradeoffs, host-supplied grant checks for read/search, host-supplied confirmation/trusted-write gates for create/delete, and mocked adapter/planner/permission coverage. Local planner calendar behavior remains the default when `source` is omitted.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl.
+
+
+### Fix — Wave 19 — parent — Renderer-safe Full Disk Access split
+- **Symptom:** The UI baseline harness timed out after Integrations imported `src/os-permissions.js`, because that shared renderer path pulled Node built-ins into browser-loaded modules.
+- **Root cause:** Full Disk Access probe/settings helpers were added to a module consumed by both main and renderer code.
+- **Fix:** Moved Node-only helpers into `src/os-permissions-main.js`, kept `src/os-permissions.js` renderer-safe, and wired main permission status/settings fallback through the main-only module.
+- **Rule added?:** yes — keep Node built-ins out of renderer-imported shared permission modules.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — parent — Settings hidden detail sections
+- **Symptom:** The UI baseline harness failed because the Settings Theme detail title and density controls were below the 1060x712 viewport.
+- **Root cause:** Author-level card display rules overrode the HTML `hidden` attribute, so inactive settings sections still consumed grid rows.
+- **Fix:** Added an explicit `.settings-detail-section[hidden] { display: none; }` rule, made detail mode a single full-width grid track, refreshed Settings baseline artifacts, and reran the UI baseline harness plus full suite.
+- **Rule added?:** yes — hidden routed sections need an explicit display-none rule when reusable card classes set display.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — 134 — Composio live MCP refresh boundary
+- **Symptom:** Composio only had secure credential storage and a credential-present test stub from Wave 18.
+- **Root cause:** The live Actions Hub session, MCP server refresh, preload APIs, and MCP permission metadata routing were not wired yet.
+- **Fix:** Added the Composio integration service, wired live status/test/refresh/toolkit/app/auth channels through main/preload, kept credential save/status/clear on provider settings, and routed Composio MCP permissions through refreshed non-secret metadata before generic MCP fallback.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 19 — final implementation gate notes
+- Wave 19 tasks `127`, `132`, `134`, `136`, `137`, `140`, and `143` reached completed state after independent output checks.
+- Final implementation gates passed: `npm run check`, focused Settings/Integrations/MCP/Composio/Full Disk Access/Apple Calendar/Chat/Orb tests, UI baseline harness, and full `node --test` (596/596).
+- Refreshed post-MVP UI baseline artifacts now include Settings overview, General detail, Theme detail, Integrations, Home, and voice dock captures.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — advisor — Apple Calendar create schema
+- **Symptom:** The Apple Calendar adapter accepted `startDate`/`endDate`, but the shared `add_calendar_item` tool schema still required local planner `description`, `date`, and `time` fields.
+- **Root cause:** The additive Apple Calendar schema fields were added without loosening the local-only required field list.
+- **Fix:** Made `title` the only schema-level required field, documented that local `description`/`date`/`time` are local-calendar requirements enforced by runtime validation, and added regression coverage for Apple create with ISO window fields and no local date labels.
+- **Rule added?:** yes — when one tool supports multiple backends, keep schema-level required fields to the shared minimum and enforce backend-specific requirements at runtime.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — reviewer — Apple Calendar live permission runtime
+- **Symptom:** The Apple Calendar adapter and schema were present, but the main-process realtime tool executor did not pass Apple Calendar permission state into `executeRealtimeTool`, so live `source: "apple"` calls would always fail with permission-required even after an owner granted Calendar access.
+- **Root cause:** Task 137 added the adapter boundary and mocked runtime options, but serialized main-process integration did not supply `appleCalendar.permissionStatus`.
+- **Fix:** Added a conservative Calendar-specific macOS TCC status helper, included Apple Calendar status in OS permission snapshots, and passed that status into realtime tool runtime options; create/delete still require explicit host confirmation or trusted write mode.
+- **Rule added?:** yes — every schema-exposed backend must have live main-process runtime context, not only mocked adapter tests.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — reviewer — Custom MCP HTTP headers persistence
+- **Symptom:** The Custom MCP UI parsed optional HTTP headers, but MCP IPC/store normalization dropped them before test/add/connect, so authenticated HTTP MCP servers could not use the field reliably.
+- **Root cause:** The lower MCP client already supported `requestInit.headers`, but `headers` was missing from the IPC update allowlist, store update allowlist, persisted table shape, row mapping, and temporary connection config.
+- **Fix:** Added validated string header support through MCP IPC, persisted storage with an idempotent `headers` column migration, temporary test connections, and E2E HTTP transport coverage; switching a server to stdio clears headers.
+- **Rule added?:** yes — UI fields that affect connectivity must be preserved through renderer validation, IPC normalization, persistence, and client transport tests.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — reviewer re-check — Apple Calendar planner option nesting
+- **Symptom:** The main process computed Apple Calendar permission state, but live `source: "apple"` planner calls still received an unknown permission state.
+- **Root cause:** `executeRealtimeTool` passes only `options.planner` into planner tools, while main supplied `appleCalendar` as a sibling option.
+- **Fix:** Nested the live Calendar runtime under `planner.appleCalendar` in `src/main.js` and tightened Wave 19 integration coverage to assert the dispatcher-visible shape.
+- **Rule added?:** yes — runtime options must be tested at the exact nesting level consumed by the dispatcher, not just by checking that a property name appears somewhere in main.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — final reviewer — Apple Calendar user TCC detection
+- **Symptom:** Reviewer found Calendar status detection checked only the system TCC database, so a valid user-level Calendar grant could still leave live Apple Calendar tools blocked as `unknown`.
+- **Root cause:** The first main-process Calendar status helper reused the privacy-diagnostics system DB query instead of the user-first permission path needed for runtime access checks.
+- **Fix:** Moved Calendar status detection into the main-only permission helper, checked both user and system TCC databases with mocked tests, kept unreadable databases fail-closed, and treated Calendar write-only grants as `restricted` rather than read-capable.
+- **Rule added?:** yes — runtime TCC permission checks must cover the user-level TCC database before falling back to the system database.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — final reviewer — MCP header validation parity
+- **Symptom:** Reviewer found Custom MCP header names were validated strictly in the renderer but more loosely in IPC/store paths.
+- **Root cause:** The UI used the HTTP token grammar, while direct IPC/store normalization only rejected whitespace and colons.
+- **Fix:** Mirrored the HTTP token rule in MCP IPC and server-store normalization and added direct caller regression coverage.
+- **Rule added?:** yes — UI validation for connectivity-affecting fields must be mirrored at direct IPC and persistence boundaries.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — advisor — Custom MCP header secret storage
+- **Symptom:** Custom MCP headers supported authenticated HTTP servers, but `Authorization`-style values were persisted as ordinary JSON in `mcp_servers.headers` and returned to renderer state.
+- **Root cause:** The Wave 19 header plumbing followed normal server-config persistence instead of the protected provider credential pattern.
+- **Fix:** Required a protected secret codec for persisted non-empty MCP HTTP headers, stored encrypted header payloads with only names visible, redacted MCP IPC list/add/update responses, kept decrypted values only for main-process connect paths, and added storage/IPC/E2E/Composio regressions proving bearer values do not round-trip as plaintext.
+- **Rule added?:** yes — any user-entered MCP field that can carry credentials must use protected storage and renderer redaction before it can persist beyond a temporary test connection.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — reviewer re-check — MCP IPC redaction escapes
+- **Symptom:** Even after protected MCP header storage, an empty `mcp:update-server` response and MCP connection/test error messages could expose bearer header values to renderer-visible IPC results.
+- **Root cause:** The empty-update path returned the decrypted existing server directly, and error results reused raw `error.message` strings.
+- **Fix:** Redacted empty-update returns through the same renderer serializer, sanitized MCP handler/test-connection error messages with `redactSensitiveText`, and added regressions for both leak paths.
+- **Rule added?:** yes — protected storage is not sufficient; every IPC early return and error return path must use the same redaction policy as the success response.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — reviewer re-check — Direct MCP list-tools error redaction
+- **Symptom:** Direct `mcp:list-tools` calls still leaked bearer text if the MCP client manager threw an error containing an authorization header.
+- **Root cause:** The direct list-tools handler bypassed the sanitizer added to connect/test paths.
+- **Fix:** Wrapped `deps.mcpClientManager.listTools(serverId)` in a try/catch that throws `sanitizeErrorForRenderer(error)` and added a regression for direct list failure redaction.
+- **Rule added?:** yes — any MCP IPC method that delegates to a client/transport boundary must sanitize thrown errors before returning to renderer IPC.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 19 — terminal reviewer — fail-closed Calendar and MCP secret edges
+- **Symptom:** Reviewer/advisor re-checks found three final edge cases: conflicting Apple Calendar TCC rows could grant after an earlier read-capable denial, blank Custom MCP header values could pass direct IPC/store validation, and MCP tool execution errors could echo secret header values.
+- **Root cause:** Calendar status detection checked grant rows before denial rows, header normalization trimmed values without rechecking emptiness, and the generic secret redactor covered bearer tokens but not all `Header: value` diagnostic text.
+- **Fix:** Made read-capable Calendar denial win over grants, rejected blank header values at MCP IPC/store boundaries, redacted secret header diagnostic pairs in `redactSensitiveText`, and added regressions across Calendar, MCP IPC/store, MCP execution, and Composio permission metadata.
+- **Rule added?:** yes — fail-closed permission checks and redaction rules must be validated at the same direct boundaries reviewers can exercise, not only through the UI path.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 19 — reviewer/advisor terminal gate
+- Independent reviewer and advisor gates both passed after the terminal MCP redaction, protected-header storage, Composio permission metadata, and Apple Calendar runtime fixes.
+- Final verified gates before PR: `npm run check`, focused MCP/redaction suite (49/49), full `node --test` (607/607), `git diff --check`, WAL JSON parse, count audit, active-claim audit, and task-artifact privacy scan.
+- PR #23 was opened and CodeRabbit review was requested/acknowledged as advisory-only; no actionable findings were available before merge decision.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl

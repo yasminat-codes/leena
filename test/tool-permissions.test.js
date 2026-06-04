@@ -40,6 +40,32 @@ test("getToolPermissionRequest classifies every active tool with a summary", () 
     description: "Send a search query to DuckDuckGo.",
     summary: "query: weather",
   });
+  assert.deepEqual(
+    getToolPermissionRequest("add_calendar_item", {
+      source: "apple",
+      title: "Planning Review",
+      startDate: "2026-06-05T14:00:00.000Z",
+      endDate: "2026-06-05T14:30:00.000Z",
+    }),
+    {
+      toolName: "add_calendar_item",
+      label: "Add calendar item",
+      level: "write",
+      description: "Add an item to your local Calendar list.",
+      summary:
+        "source: apple, title: Planning Review, startDate: 2026-06-05T14:00:00.000Z, endDate: 2026-06-05T14:30:00.000Z",
+    },
+  );
+  assert.deepEqual(
+    getToolPermissionRequest("delete_calendar_item", { source: "apple", query: "Planning" }),
+    {
+      toolName: "delete_calendar_item",
+      label: "Delete calendar item",
+      level: "destructive",
+      description: "Delete an item from your local Calendar list.",
+      summary: "source: apple, query: Planning",
+    },
+  );
 });
 
 test("formatPermissionPrompt includes label, description, details, and risk", () => {

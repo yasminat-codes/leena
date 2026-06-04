@@ -10,15 +10,25 @@ import { ServerStore } from "../src/mcp/server-store.js";
 import { closeDatabase } from "../src/realtime/tools/database.js";
 import { getRealtimeToolDefinitions } from "../src/realtime/tools/index.js";
 
+const TEST_SECRET_CODEC = Object.freeze({
+  protect(value) {
+    return Buffer.from(String(value), "utf8").toString("base64");
+  },
+  reveal(value) {
+    return Buffer.from(String(value), "base64").toString("utf8");
+  },
+});
+
 test("MCP HTTP server tools appear in merged definitions and disappear after disconnect", async () => {
   const mockServer = await startMockMcpServer();
   try {
     await withMcpDb(async (storePath) => {
-      const store = new ServerStore({ storePath });
+      const store = new ServerStore({ storePath, secretCodec: TEST_SECRET_CODEC });
       const storedServer = store.addServer({
         name: "Local E2E MCP",
         transport: "http",
         url: mockServer.url,
+        headers: { Authorization: "Bearer e2e-token" },
         permission_level: "trust",
       });
       const manager = createHttpBackedManager();
@@ -48,6 +58,10 @@ test("MCP HTTP server tools appear in merged definitions and disappear after dis
       assert.deepEqual(
         mockServer.requests.map((request) => request.method),
         ["initialize", "tools/list", "tools/list"],
+      );
+      assert.deepEqual(
+        mockServer.requests.map((request) => request.authorization),
+        ["Bearer e2e-token", "Bearer e2e-token", "Bearer e2e-token"],
       );
     });
   } finally {
@@ -81,11 +95,11 @@ function createHttpBackedManager() {
 class LocalHttpMcpClient {
   async connect(transport) {
     this.transport = transport;
-    await postJson(transport.url, { method: "initialize" });
+    await postJson(transport.url, { method: "initialize" }, transport.options);
   }
 
   async listTools() {
-    return postJson(this.transport.url, { method: "tools/list" });
+    return postJson(this.transport.url, { method: "tools/list" }, this.transport.options);
   }
 
   async close() {
@@ -109,10 +123,13 @@ class LocalStdioTransport {
   async close() {}
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, transportOptions = {}) {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(transportOptions?.requestInit?.headers ?? {}),
+    },
     body: JSON.stringify(payload),
   });
   assert.equal(response.ok, true);
@@ -144,7 +161,11 @@ async function startMockMcpServer() {
   ];
   const server = createServer(async (request, response) => {
     const body = await readJsonBody(request);
-    requests.push({ path: request.url, method: body.method });
+    requests.push({
+      authorization: request.headers.authorization ?? null,
+      path: request.url,
+      method: body.method,
+    });
 
     if (request.url !== "/mcp") {
       sendJson(response, 404, { error: "not found" });

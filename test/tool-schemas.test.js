@@ -47,6 +47,17 @@ test("computer_use_task target enum offers browser and computer modes", () => {
   assert.deepEqual(tool.parameters.properties.target.enum, ["browser", "computer"]);
 });
 
+test("add_calendar_item schema supports local labels and Apple Calendar ISO windows", () => {
+  const tool = getRealtimeToolDefinitions().find((item) => item.name === "add_calendar_item");
+
+  assert.deepEqual(tool.parameters.required, ["title"]);
+  assert.deepEqual(tool.parameters.properties.source.enum, ["local", "apple"]);
+  assert.equal(tool.parameters.properties.date.type, "string");
+  assert.equal(tool.parameters.properties.time.type, "string");
+  assert.equal(tool.parameters.properties.startDate.type, "string");
+  assert.equal(tool.parameters.properties.endDate.type, "string");
+});
+
 test("returned tool definitions are cloned to prevent caller mutation", () => {
   const first = getRealtimeToolDefinitions();
   first[0].name = "mutated";

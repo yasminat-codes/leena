@@ -174,6 +174,16 @@ const SETTINGS_OVERVIEW_CARDS = Object.freeze([
     title: "Mac Access",
     description: "Trusted Mac permissions.",
   }),
+  Object.freeze({
+    id: "integrations-health",
+    meta: "Health",
+    title: "Integrations Health",
+    description: "Connections and setup status.",
+  }),
+]);
+const SETTINGS_DETAIL_IDS = Object.freeze([
+  "overview",
+  ...SETTINGS_OVERVIEW_CARDS.map((card) => card.id),
 ]);
 
 function escapeHtml(value) {
@@ -487,6 +497,7 @@ export function bindSettingsControls(root, bridge = getLeenaBridge()) {
   }
 
   const controller = createSettingsScreenController(root, bridge);
+  bindSettingsDetailRouter(root);
 
   if (hasSettingsBridge(bridge)) {
     void controller.load().catch((error) => {
@@ -539,6 +550,75 @@ export function bindSettingsControls(root, bridge = getLeenaBridge()) {
   bindUpdateControls(root, bridge);
   bindProviderModelSelector(root, bridge);
   return root;
+}
+
+export function bindSettingsDetailRouter(root) {
+  const routerRoot = resolveSettingsRouterRoot(root);
+  if (!routerRoot?.querySelectorAll) {
+    return null;
+  }
+
+  showSettingsDetail(routerRoot, routerRoot.dataset?.settingsActiveDetail ?? "overview", {
+    focus: false,
+  });
+
+  for (const card of queryAll(routerRoot, "[data-settings-detail-target]")) {
+    const openTarget = () => {
+      showSettingsDetail(routerRoot, card.dataset.settingsDetailTarget);
+    };
+    card.addEventListener?.("click", openTarget);
+    card.addEventListener?.("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault?.();
+      openTarget();
+    });
+  }
+
+  for (const control of queryAll(routerRoot, "[data-settings-detail-back]")) {
+    control.addEventListener?.("click", () => {
+      showSettingsDetail(routerRoot, "overview");
+    });
+  }
+
+  for (const control of queryAll(routerRoot, "[data-settings-detail-close]")) {
+    control.addEventListener?.("click", () => {
+      showSettingsDetail(routerRoot, "overview");
+    });
+  }
+
+  return routerRoot;
+}
+
+export function showSettingsDetail(root, detailId, options = {}) {
+  const routerRoot = resolveSettingsRouterRoot(root);
+  const activeDetail = normalizeSettingsDetailId(detailId);
+  if (!routerRoot?.querySelectorAll) {
+    return activeDetail;
+  }
+
+  if (routerRoot.dataset) {
+    routerRoot.dataset.settingsActiveDetail = activeDetail;
+  }
+
+  for (const section of queryAll(routerRoot, "[data-settings-detail]")) {
+    const isActive = section.dataset.settingsDetail === activeDetail;
+    setNodeHidden(section, !isActive);
+    section.setAttribute?.("aria-hidden", String(!isActive));
+  }
+
+  for (const card of queryAll(routerRoot, "[data-settings-detail-target]")) {
+    card.setAttribute?.("aria-pressed", String(card.dataset.settingsDetailTarget === activeDetail));
+  }
+
+  if (options.focus !== false && activeDetail !== "overview") {
+    queryOne(routerRoot, `[data-settings-detail="${activeDetail}"]`)?.focus?.({
+      preventScroll: true,
+    });
+  }
+
+  return activeDetail;
 }
 
 function bindHotkeyControls(root, controller) {
@@ -1092,6 +1172,11 @@ function renderSettingsOverviewCard(card) {
       class="settings-provider-cardlet settings-overview-card"
       data-settings-primitive="overview-card"
       data-settings-detail-target="${escapeHtml(card.id)}"
+      role="button"
+      tabindex="0"
+      aria-label="${escapeHtml(`Open ${card.title} settings detail`)}"
+      aria-controls="settings-detail-${escapeHtml(card.id)}"
+      aria-pressed="false"
     >
       <div class="settings-provider-cardlet__head">
         <span class="tooldot" aria-hidden="true">${escapeHtml(card.title.at(0))}</span>
@@ -1105,19 +1190,41 @@ function renderSettingsOverviewCard(card) {
 }
 
 function renderSettingsSection({ caption = "", children, id, title }) {
+  const active = id === "overview";
   return `
     <section
+      id="settings-detail-${escapeHtml(id)}"
       class="card settings-card settings-detail-section"
       data-settings-primitive="detail-section"
       data-settings-detail="${escapeHtml(id)}"
       aria-labelledby="settings-${escapeHtml(id)}-title"
+      aria-hidden="${String(!active)}"
+      ${active ? "" : "hidden"}
+      tabindex="-1"
     >
       <div class="settings-card__head">
         <h2 id="settings-${escapeHtml(id)}-title" class="lx-h2">${escapeHtml(title)}</h2>
         ${caption ? `<span class="lx-sm text-dim">${escapeHtml(caption)}</span>` : ""}
+        ${id === "overview" ? "" : renderSettingsDetailActions(id, title)}
       </div>
       ${children}
     </section>
+  `;
+}
+
+function renderSettingsDetailActions(id, title) {
+  const escapedId = escapeHtml(id);
+  return `
+    <div class="settings-provider-actions settings-detail-actions">
+      ${renderActionButton({
+        attributes: `data-settings-detail-back="${escapedId}" aria-label="Back to Settings overview"`,
+        label: "Back",
+      })}
+      ${renderActionButton({
+        attributes: `data-settings-detail-close="${escapedId}" aria-label="Close ${escapeHtml(title)} settings"`,
+        label: "Close",
+      })}
+    </div>
   `;
 }
 
@@ -1250,10 +1357,13 @@ function renderStatusCallout({
   `;
 }
 
-function renderSegmentedControl(key, label, options) {
+function renderCompactSegmentedControl(key, label, options) {
   return `
-    ${renderDetailRow({
-      children: `
+    <article class="settings-appearance-row" data-settings-primitive="appearance-row" data-settings-row="${escapeHtml(key)}">
+      <span class="row__txt">
+        <strong class="lx-body">${escapeHtml(label)}</strong>
+        <span class="lx-sm">Saved across Leena windows</span>
+      </span>
       <div class="settings-segmented" role="group" aria-label="${escapeHtml(label)}">
         ${options
           .map(
@@ -1273,11 +1383,7 @@ function renderSegmentedControl(key, label, options) {
           )
           .join("")}
       </div>
-      `,
-      description: "Saved across Leena windows",
-      id: key,
-      title: label,
-    })}
+    </article>
   `;
 }
 
@@ -1366,34 +1472,29 @@ function renderSwitchControl({
   `;
 }
 
-function renderHotkeySettings() {
-  return renderSettingsSection({
-    caption: formatHotkeyAccelerator(DEFAULT_HOTKEY_ACCELERATOR),
-    children: `
-        <div class="settings-hotkey-row">
-          ${renderSettingsInputField({
-            ariaLabel: "Keyboard shortcut",
-            autocomplete: "off",
-            dataAttribute: "data-hotkey-input",
-            label: "Shortcut",
-            spellcheck: "false",
-            value: DEFAULT_HOTKEY_ACCELERATOR,
-          })}
-          <div class="settings-provider-actions settings-hotkey-actions">
-            ${renderActionButton({ attributes: "data-hotkey-record", label: "Record" })}
-            ${renderActionButton({ attributes: "data-hotkey-default", label: "Default" })}
-            ${renderActionButton({
-              attributes: "data-hotkey-save",
-              label: "Save",
-              variant: "primary",
-            })}
-          </div>
-        </div>
-        ${renderStatusCallout({ attributes: "data-hotkey-status" })}
-    `,
-    id: "hotkey",
-    title: "Keyboard Shortcut",
-  });
+function renderHotkeySettingsContent() {
+  return `
+    <div class="settings-hotkey-row">
+      ${renderSettingsInputField({
+        ariaLabel: "Keyboard shortcut",
+        autocomplete: "off",
+        dataAttribute: "data-hotkey-input",
+        label: "Shortcut",
+        spellcheck: "false",
+        value: DEFAULT_HOTKEY_ACCELERATOR,
+      })}
+      <div class="settings-provider-actions settings-hotkey-actions">
+        ${renderActionButton({ attributes: "data-hotkey-record", label: "Record" })}
+        ${renderActionButton({ attributes: "data-hotkey-default", label: "Default" })}
+        ${renderActionButton({
+          attributes: "data-hotkey-save",
+          label: "Save",
+          variant: "primary",
+        })}
+      </div>
+    </div>
+    ${renderStatusCallout({ attributes: "data-hotkey-status" })}
+  `;
 }
 
 function renderUpdateSettings() {
@@ -1425,18 +1526,18 @@ function renderUpdateSettings() {
   });
 }
 
-export function renderSettings() {
-  return `
-    <section class="settings-screen" aria-label="Settings">
-      <section
-        class="panel-glass settings-identity settings-detail-section"
-        data-settings-primitive="detail-section"
-        data-settings-detail="general"
+function renderGeneralSettings() {
+  return renderSettingsSection({
+    caption: "Profile, persona, hotkey, and app behavior",
+    children: `
+      <div
+        class="panel-glass settings-identity"
+        data-settings-primitive="identity-panel"
         aria-labelledby="settings-identity-title"
       >
         <div class="orb settings-avatar" aria-hidden="true"></div>
         <span class="row__txt">
-          <h1 data-settings-identity-name id="settings-identity-title" class="lx-h2">${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}</h1>
+          <h3 data-settings-identity-name id="settings-identity-title" class="lx-h2">${escapeHtml(SETTINGS_MOCK_DATA.identity.name)}</h3>
           <span data-settings-identity-email class="lx-sm text-dim">${escapeHtml(SETTINGS_MOCK_DATA.identity.email)}</span>
         </span>
         ${renderActionButton({ action: "edit-identity", label: "Edit" })}
@@ -1461,22 +1562,126 @@ export function renderSettings() {
             readonly: true,
           })}
         </div>
-      </section>
+      </div>
 
-      ${renderSettingsOverview()}
-
-      ${renderSettingsSection({
-        caption: "Theme, treatment, and density",
-        children: `
-          ${renderSegmentedControl("theme", "Theme", SETTINGS_MOCK_DATA.appearance.theme)}
-          ${renderSegmentedControl("treatment", "Treatment", SETTINGS_MOCK_DATA.appearance.treatment)}
-          ${renderSegmentedControl("density", "Density", SETTINGS_MOCK_DATA.appearance.density)}
-        `,
-        id: "appearance",
-        title: "Appearance",
+      ${renderDetailRow({
+        children: renderHotkeySettingsContent(),
+        description: formatHotkeyAccelerator(DEFAULT_HOTKEY_ACCELERATOR),
+        id: "hotkey",
+        title: "Keyboard Shortcut",
       })}
 
-      ${renderHotkeySettings()}
+      <div class="settings-list" aria-label="General app behavior">
+        ${GENERAL_SETTING_CONTROLS.map((control) =>
+          renderSwitchControl({
+            checked: control.key === "notificationsEnabled",
+            description: control.description,
+            label: control.label,
+            toggleAttribute: control.key,
+          }),
+        ).join("")}
+      </div>
+    `,
+    id: "general",
+    title: "General",
+  });
+}
+
+function renderThemeSettings() {
+  return renderSettingsSection({
+    caption: "Theme, treatment, and density",
+    children: `
+      <div class="settings-appearance-matrix" aria-label="Appearance controls">
+        ${renderCompactSegmentedControl("theme", "Theme", SETTINGS_MOCK_DATA.appearance.theme)}
+        ${renderCompactSegmentedControl(
+          "treatment",
+          "Treatment",
+          SETTINGS_MOCK_DATA.appearance.treatment,
+        )}
+        ${renderCompactSegmentedControl("density", "Density", SETTINGS_MOCK_DATA.appearance.density)}
+      </div>
+    `,
+    id: "theme",
+    title: "Theme",
+  });
+}
+
+function renderMacAccessSettings() {
+  return renderSettingsSection({
+    caption: "Permissions and local wake controls",
+    children: `
+      <span class="lx-sm text-dim" data-settings-status></span>
+      <div class="settings-list" aria-label="Mac access controls">
+        ${renderSwitchControl({
+          checked: false,
+          description: WAKE_UNAVAILABLE_MESSAGE,
+          disabled: true,
+          label: "Wake Word",
+          title: WAKE_UNAVAILABLE_MESSAGE,
+          toggleAttribute: "wake:enabled",
+        })}
+        ${renderSwitchControl({
+          checked: false,
+          description: "Muted until wake runtime is available",
+          disabled: true,
+          label: "Always Listening",
+          title: WAKE_UNAVAILABLE_MESSAGE,
+          toggleAttribute: "wake:muted",
+        })}
+        <p class="lx-sm text-dim" data-wake-status>${escapeHtml(WAKE_UNAVAILABLE_MESSAGE)}</p>
+      </div>
+    `,
+    id: "mac-access",
+    title: "Mac Access",
+  });
+}
+
+function renderIntegrationsHealthSettings() {
+  return renderSettingsSection({
+    caption: "Read-only summary",
+    children: `
+      <div class="settings-provider-grid" aria-label="Integrations health summary">
+        ${[
+          ["Providers", "OpenAI active; OpenRouter and Ollama available."],
+          ["Custom MCP", "Manage servers from Integrations."],
+          ["Mac Permissions", "Review access before high-power local actions."],
+        ]
+          .map(
+            ([title, description]) => `
+              <article class="settings-provider-cardlet">
+                <div class="settings-provider-cardlet__head">
+                  <span class="tooldot" aria-hidden="true">${escapeHtml(title.at(0))}</span>
+                  <span class="row__txt">
+                    <strong class="lx-body">${escapeHtml(title)}</strong>
+                    <span class="lx-sm">${escapeHtml(description)}</span>
+                  </span>
+                </div>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+      ${renderStatusCallout({
+        message:
+          "Open Integrations to connect Composio, MCP servers, Calendar, Files, or Provider Health.",
+      })}
+    `,
+    id: "integrations-health",
+    title: "Integrations Health",
+  });
+}
+
+export function renderSettings() {
+  return `
+    <section
+      class="settings-screen"
+      aria-label="Settings"
+      data-settings-detail-router
+      data-settings-active-detail="overview"
+    >
+      ${renderSettingsOverview()}
+      ${renderGeneralSettings()}
+      ${renderThemeSettings()}
       ${renderUpdateSettings()}
 
       ${renderSettingsSection({
@@ -1485,42 +1690,8 @@ export function renderSettings() {
         id: "providers",
         title: "Providers",
       })}
-
-      ${renderSettingsSection({
-        caption: "",
-        children: `
-        <span class="lx-sm text-dim" data-settings-status></span>
-        <div class="settings-list">
-          ${renderSwitchControl({
-            checked: false,
-            description: WAKE_UNAVAILABLE_MESSAGE,
-            disabled: true,
-            label: "Wake Word",
-            title: WAKE_UNAVAILABLE_MESSAGE,
-            toggleAttribute: "wake:enabled",
-          })}
-          ${renderSwitchControl({
-            checked: false,
-            description: "Muted until wake runtime is available",
-            disabled: true,
-            label: "Always Listening",
-            title: WAKE_UNAVAILABLE_MESSAGE,
-            toggleAttribute: "wake:muted",
-          })}
-          ${GENERAL_SETTING_CONTROLS.map((control) =>
-            renderSwitchControl({
-              checked: control.key === "notificationsEnabled",
-              description: control.description,
-              label: control.label,
-              toggleAttribute: control.key,
-            }),
-          ).join("")}
-          <p class="lx-sm text-dim" data-wake-status>${escapeHtml(WAKE_UNAVAILABLE_MESSAGE)}</p>
-        </div>
-        `,
-        id: "features",
-        title: "Features",
-      })}
+      ${renderMacAccessSettings()}
+      ${renderIntegrationsHealthSettings()}
     </section>
   `;
 }
@@ -2158,6 +2329,21 @@ function setSettingsStatus(root, message) {
   setNodeText(queryOne(root, "[data-settings-status]"), message);
 }
 
+function resolveSettingsRouterRoot(root) {
+  if (root?.dataset?.settingsDetailRouter !== undefined) {
+    return root;
+  }
+  return root?.querySelector?.("[data-settings-detail-router]") ?? root;
+}
+
+function normalizeSettingsDetailId(detailId) {
+  const normalized = normalizeString(detailId);
+  if (normalized === "appearance") {
+    return "theme";
+  }
+  return SETTINGS_DETAIL_IDS.includes(normalized) ? normalized : "overview";
+}
+
 function queryOne(root, selector) {
   return root?.querySelector?.(selector) ?? null;
 }
@@ -2175,6 +2361,18 @@ function setNodeText(node, value) {
 function setNodeValue(node, value) {
   if (node && "value" in node) {
     node.value = String(value ?? "");
+  }
+}
+
+function setNodeHidden(node, hidden) {
+  if (!node) {
+    return;
+  }
+  node.hidden = Boolean(hidden);
+  if (hidden) {
+    node.setAttribute?.("hidden", "");
+  } else {
+    node.removeAttribute?.("hidden");
   }
 }
 

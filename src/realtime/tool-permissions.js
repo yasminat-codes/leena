@@ -199,9 +199,11 @@ function summarizeToolRequest(name, args) {
     case "update_task_status":
       return summarizeFields(args, ["query", "status"]);
     case "add_calendar_item":
-      return summarizeFields(args, ["title", "date", "time"]);
+      return summarizeFields(args, ["source", "title", "date", "time", "startDate", "endDate"]);
+    case "list_calendar_items":
+      return summarizeFields(args, ["source", "query", "startDate", "endDate"]);
     case "delete_calendar_item":
-      return summarizeFields(args, ["query"]);
+      return summarizeFields(args, ["source", "query"]);
     case "web_search":
       return summarizeFields(args, ["query"]);
     case "web_fetch":

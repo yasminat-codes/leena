@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 16 |
+| Pending | 9 |
 | In-Progress | 0 |
-| Completed | 77 |
+| Completed | 84 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -140,23 +140,23 @@ Created 2026-06-03 from owner review of the shipped app screenshots and approved
 | 124 | 18 | Sidebar Chat route | completed |
 | 125 | 18 | Visual token and orb polish | completed |
 | 126 | 18 | Settings component primitives | completed |
-| 127 | 19 | Settings overview detail router | pending |
+| 127 | 19 | Settings overview detail router | completed |
 | 128 | 20 | Theme detail preservation | pending |
 | 129 | 20 | Providers detail polish | pending |
 | 130 | 20 | Updates detail flow | pending |
 | 131 | 18 | Integrations detail shell | completed |
-| 132 | 19 | Custom MCP form polish | pending |
+| 132 | 19 | Custom MCP form polish | completed |
 | 133 | 18 | Composio secure credential storage | completed |
-| 134 | 19 | Composio MCP tool refresh | pending |
+| 134 | 19 | Composio MCP tool refresh | completed |
 | 135 | 18 | Mac access integration cards | completed |
-| 136 | 19 | Full Disk Access status | pending |
-| 137 | 19 | Apple Calendar adapter | pending |
+| 136 | 19 | Full Disk Access status | completed |
+| 137 | 19 | Apple Calendar adapter | completed |
 | 138 | 20 | File access scope policy | pending |
 | 139 | 21 | Permission confirmation UX | pending |
-| 140 | 19 | Chat workspace shell | pending |
+| 140 | 19 | Chat workspace shell | completed |
 | 141 | 20 | Chat history and detail wiring | pending |
 | 142 | 18 | Voice startup preflight | completed |
-| 143 | 19 | Theme-aware voice orb | pending |
+| 143 | 19 | Theme-aware voice orb | completed |
 | 144 | 21 | UI screenshot regression suite | pending |
 | 145 | 22 | Integration test matrix | pending |
 | 146 | 23 | Post-MVP build smoke handoff | pending |

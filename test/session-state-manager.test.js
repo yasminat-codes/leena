@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   COMMAND_CENTER_VARIANTS,
@@ -9,6 +10,11 @@ import {
   SESSION_STATE_TRANSITION_MS,
   SessionStateManager,
 } from "../src/renderer/session-state.js";
+
+const rendererSource = readFileSync(
+  new URL("../src/renderer/renderer.js", import.meta.url),
+  "utf8",
+);
 
 class FakeEventSource {
   #listeners = new Map();
@@ -331,4 +337,19 @@ test("CommandCenter consumes SessionStateManager snapshots across every variant"
   }
 
   manager.destroy();
+});
+
+test("renderer binds the global voice dock to normalized orb state attributes", () => {
+  assert.match(rendererSource, /import \{ normalizeOrbState \} from "\.\/components\/orb\.js";/);
+  assert.match(rendererSource, /"--legacy-nebula-2", "var\(--orb-b\)"/);
+  assert.match(rendererSource, /"--legacy-orb-core", "var\(--orb-signal\)"/);
+  assert.match(rendererSource, /bindVoiceDockOrbTokens\(\);/);
+  assert.match(rendererSource, /appShellElement\.dataset\.orbState = normalized;/);
+  assert.match(rendererSource, /callStageOrbButton/);
+  assert.match(rendererSource, /element\.dataset\.state = normalized;/);
+  assert.match(rendererSource, /surface\.style\.setProperty\(\s*"--orb-scale"/);
+  assert.match(rendererSource, /surface\.style\.setProperty\("--orb-brightness"/);
+  assert.match(rendererSource, /surface\.style\.setProperty\("--orb-saturation"/);
+  assert.match(rendererSource, /setVoiceOrbState\("tool"\);/);
+  assert.match(rendererSource, /syncVoiceOrbStateForMode\(appShellElement\.dataset\.mode\);/);
 });

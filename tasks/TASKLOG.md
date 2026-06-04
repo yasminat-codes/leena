@@ -743,3 +743,9 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer gate passed with no blockers after checking matrix coverage, fake-only test resources, fail-closed behavior, task counts, released claims, and local privacy hygiene. Reviewer warning addressed: artifact status copy now says completed release-gate artifact instead of worker handoff artifact.
 - Advisor gate passed with no product, architecture, or safety blockers. Non-blocking warnings recorded: this matrix is not owner GUI smoke, task `146` still owns handoff/manual live smoke, and the matrix is contract-alignment coverage rather than live SDK/macOS drift proof.
 - Reviewer/advisor focused checks passed: `node --check test/post-mvp-integration-matrix.test.js`, focused matrix suite (6/6), and `git diff --check`.
+
+## 2026-06-04 — Wave 22 PR and CodeRabbit advisory recorded
+
+- Opened PR #26 from `wave-22` to `main` after reviewer and advisor gates passed.
+- Requested CodeRabbit review on PR #26. CodeRabbit selected all 8 changed files, returned a successful advisory status, but could not start a substantive review because the repository hit review rate/usage limits. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/rate-limited and non-blocking.
+- Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.

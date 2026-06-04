@@ -1136,4 +1136,5 @@
 - Parent review tightened the Composio path so the fake tool schema actually infers `write` risk and denied confirmation prevents the integration call.
 - Independent gates passed: `node --check test/post-mvp-integration-matrix.test.js`, focused matrix suite (6/6), `npm run check`, full `node --test` (637/637), `git diff --check`, output existence checks, active-claims release, and generated screenshot-noise cleanup.
 - Reviewer and advisor gates passed with no blockers. Carry forward the non-blocking advisor warning: this matrix is not owner GUI smoke; task `146` still owns final handoff/manual live smoke.
+- CodeRabbit was requested on PR #26 and selected all 8 changed files, but a substantive review could not start due to rate/usage limits. Treat this as advisory-only with no actionable findings available.
 - **WAL ref:** tasks/.wal/wal.jsonl

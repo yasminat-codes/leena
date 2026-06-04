@@ -185,6 +185,17 @@ const SETTINGS_DETAIL_IDS = Object.freeze([
   "overview",
   ...SETTINGS_OVERVIEW_CARDS.map((card) => card.id),
 ]);
+const UPDATE_STATE_LABELS = Object.freeze({
+  available: "Available",
+  checking: "Checking",
+  current: "Current",
+  development: "Development",
+  downloaded: "Downloaded",
+  downloading: "Downloading",
+  error: "Error",
+  idle: "Idle",
+  installing: "Installing",
+});
 
 function escapeHtml(value) {
   return String(value)
@@ -1229,7 +1240,7 @@ function renderSettingsDetailActions(id, title) {
 }
 
 function renderDetailRow({
-  children,
+  children = "",
   className = "",
   description = "",
   descriptionAttributes = "",
@@ -1377,13 +1388,25 @@ function renderCompactSegmentedControl(key, label, options) {
                 aria-label="${escapeHtml(`${label}: ${option.label}`)}"
                 aria-pressed="${String(option.value === DEFAULT_APPEARANCE[key])}"
               >
-                ${escapeHtml(option.label)}
+                ${renderAppearancePreview(key, option.value)}
+                <span class="settings-segmented__label">${escapeHtml(option.label)}</span>
               </button>
             `,
           )
           .join("")}
       </div>
     </article>
+  `;
+}
+
+function renderAppearancePreview(key, value) {
+  return `
+    <span
+      class="settings-appearance-preview"
+      data-appearance-preview="${escapeHtml(key)}"
+      data-appearance-preview-value="${escapeHtml(value)}"
+      aria-hidden="true"
+    ></span>
   `;
 }
 
@@ -1402,15 +1425,31 @@ export function renderProviderModelSelector(state = createProviderSelectorState(
 
 function renderProviderModelSelectorContent(state) {
   return `
+    <div class="settings-provider-detail" data-provider-detail>
+      <section class="settings-provider-section" data-provider-cards-section aria-label="Provider cards">
+        ${
+          state.providers.length
+            ? `
       <div class="settings-provider-grid" data-provider-cards>
         ${state.providers.map((provider) => renderProviderCard(provider, state)).join("")}
       </div>
+      `
+            : renderStatusCallout({
+                attributes: "data-provider-empty",
+                message: "No providers are available from the local bridge.",
+                tone: "error",
+              })
+        }
+      </section>
+      <section class="settings-provider-section" data-provider-defaults-section aria-label="Capability defaults">
       <div class="settings-capability-map" data-capability-rows>
         ${PROVIDER_SELECTOR_CAPABILITIES.map((capability) =>
           renderCapabilityRow(capability, state),
         ).join("")}
       </div>
-      <div class="settings-ollama-download" aria-label="Ollama model download">
+      </section>
+      <section class="settings-provider-section" data-ollama-section aria-label="Ollama pull">
+      <div class="settings-ollama-download" data-ollama-pull-panel aria-label="Ollama model download">
         ${renderSettingsInputField({
           ariaLabel: "Ollama model to download",
           dataAttribute: "data-ollama-model-input",
@@ -1423,8 +1462,10 @@ function renderProviderModelSelectorContent(state) {
           label: "Download",
           variant: "primary",
         })}
-        ${renderPullProgress(state.pull)}
+        <span class="settings-ollama-download__progress">${renderPullProgress(state.pull)}</span>
       </div>
+      </section>
+    </div>
       ${renderStatusCallout({
         hidden: !state.statusMessage,
         message: state.statusMessage,
@@ -1501,24 +1542,61 @@ function renderUpdateSettings() {
   return renderSettingsSection({
     caption: "Version",
     children: `
+        ${renderDetailRow({
+          description: "Idle",
+          descriptionAttributes: "data-update-state",
+          id: "update-state",
+          title: "State",
+        })}
+        ${renderDetailRow({
+          description: "Unknown",
+          descriptionAttributes: "data-update-version",
+          id: "update-version",
+          title: "App version",
+        })}
+        ${renderDetailRow({
+          description: "Not checked",
+          descriptionAttributes: "data-update-available-version",
+          id: "update-available-version",
+          title: "Available update",
+        })}
+        ${renderDetailRow({
+          children: `
+            <progress
+              class="settings-progress"
+              data-update-progress
+              max="100"
+              value="0"
+              aria-label="Update download progress"
+            >0%</progress>
+          `,
+          description: "Not started",
+          descriptionAttributes: "data-update-progress-label",
+          id: "update-progress",
+          title: "Download progress",
+        })}
         <div class="settings-provider-actions settings-update-actions">
-          ${renderActionButton({ attributes: "data-update-check", label: "Check" })}
+          ${renderActionButton({ attributes: "data-update-check", label: "Check for updates" })}
           ${renderActionButton({
             attributes: "data-update-download",
             disabled: true,
-            label: "Download",
+            label: "Download update",
           })}
           ${renderActionButton({
             attributes: "data-update-install",
             disabled: true,
-            label: "Restart",
+            label: "Restart to install",
             variant: "primary",
           })}
         </div>
-        <span class="lx-sm text-dim" data-update-version>Version</span>
         ${renderStatusCallout({
           attributes: "data-update-status",
           message: "Updates have not been checked yet.",
+        })}
+        ${renderStatusCallout({
+          attributes: "data-update-error",
+          hidden: true,
+          tone: "error",
         })}
     `,
     id: "updates",
@@ -1699,6 +1777,12 @@ export function renderSettings() {
 function renderProviderCard(provider, state) {
   const status = getProviderStatus(provider);
   const testResult = state.testResults[provider.id];
+  const defaultsSummary = getProviderDefaultsSummary(provider.id, state);
+  const capabilityChips = PROVIDER_SELECTOR_CAPABILITIES.filter((capability) =>
+    providerSupportsCapability(provider, capability.id),
+  )
+    .map((capability) => `<span class="chip">${escapeHtml(capability.label)}</span>`)
+    .join("");
   return `
     <article class="settings-provider-cardlet" data-provider-card="${escapeHtml(provider.id)}">
       <div class="settings-provider-cardlet__head">
@@ -1707,17 +1791,16 @@ function renderProviderCard(provider, state) {
           <strong class="lx-body">${escapeHtml(provider.name)}</strong>
           <span class="lx-sm">${escapeHtml(provider.model)}</span>
         </span>
+      </div>
+      <div class="settings-provider-cardlet__meta">
         <span class="chip settings-chip--${escapeHtml(status.tone)}">
           <span class="dot" aria-hidden="true"></span>
           ${escapeHtml(status.label)}
         </span>
+        <span class="lx-sm text-dim">${escapeHtml(defaultsSummary)}</span>
       </div>
       <div class="settings-provider-capabilities" aria-label="${escapeHtml(provider.name)} capabilities">
-        ${PROVIDER_SELECTOR_CAPABILITIES.filter((capability) =>
-          providerSupportsCapability(provider, capability.id),
-        )
-          .map((capability) => `<span class="chip">${escapeHtml(capability.label)}</span>`)
-          .join("")}
+        ${capabilityChips || '<span class="lx-sm text-dim">No supported capabilities</span>'}
       </div>
       <div class="settings-provider-actions">
         ${renderActionButton({
@@ -1729,8 +1812,10 @@ function renderProviderCard(provider, state) {
           label: "Test",
         })}
         ${renderActionButton({
-          attributes: `data-provider-refresh="${escapeHtml(provider.id)}"`,
-          label: "Refresh Models",
+          attributes: `data-provider-refresh="${escapeHtml(
+            provider.id,
+          )}" aria-label="${escapeHtml(`Refresh ${provider.name} models`)}"`,
+          label: "Refresh",
         })}
       </div>
       <p class="lx-sm settings-provider-result" ${testResult ? "" : "hidden"}>
@@ -2176,36 +2261,165 @@ function applyHotkeyPreview(root, accelerator) {
   }
 }
 
-function applyUpdateStatus(root, status) {
+export function applyUpdateStatus(root, status) {
+  const view = getUpdateStateView(status);
+  setNodeText(queryOne(root, "[data-update-state]"), view.stateLabel);
+  setNodeText(queryOne(root, "[data-update-version]"), view.versionText);
+  setNodeText(queryOne(root, "[data-update-available-version]"), view.availableVersionText);
+  setNodeText(queryOne(root, "[data-update-progress-label]"), view.progressText);
+  setNodeText(queryOne(root, "[data-update-status]"), view.message);
+  setNodeText(queryOne(root, "[data-update-error]"), view.errorText);
+  setNodeHidden(queryOne(root, "[data-update-error]"), !view.errorText);
+  setNodeText(queryOne(root, "[data-update-check]"), view.checkLabel);
+  setNodeText(queryOne(root, "[data-update-download]"), view.downloadLabel);
+  setNodeText(queryOne(root, "[data-update-install]"), view.installLabel);
+  setProgressValue(queryOne(root, "[data-update-progress]"), view.progressValue);
+  setButtonEnabled(queryOne(root, "[data-update-check]"), view.checkEnabled);
+  setButtonEnabled(queryOne(root, "[data-update-download]"), view.downloadEnabled);
+  setButtonEnabled(queryOne(root, "[data-update-install]"), view.installEnabled);
+}
+
+export function getUpdateStateView(status) {
   const normalized = normalizeUpdateStatus(status);
-  setNodeText(queryOne(root, "[data-update-version]"), `Version ${normalized.version}`);
-  setNodeText(queryOne(root, "[data-update-status]"), normalized.message);
+  const state = normalizeUpdateState(normalized.state);
+  const percent = Number.isFinite(normalized.percent) ? normalized.percent : null;
+  const isBusy = state === "checking" || state === "downloading" || state === "installing";
+  const availableVersion = getUpdateAvailableVersion(normalized);
+  const errorText = state === "error" ? `Last error: ${getUpdateErrorMessage(normalized)}` : "";
 
-  const isBusy = normalized.state === "checking" || normalized.state === "downloading";
-  const canDownload = normalized.state === "available";
-  const canInstall = normalized.state === "downloaded";
+  return {
+    availableVersionText: availableVersion || getDefaultAvailableVersionText(state),
+    checkEnabled: !isBusy,
+    checkLabel: getUpdateCheckLabel(state),
+    downloadEnabled: state === "available",
+    downloadLabel: getUpdateDownloadLabel(state),
+    errorText,
+    installEnabled: state === "downloaded",
+    installLabel: getUpdateInstallLabel(state),
+    message: normalized.message,
+    progressText: getUpdateProgressText(state, percent),
+    progressValue: getUpdateProgressValue(state, percent),
+    state,
+    stateLabel: UPDATE_STATE_LABELS[state] ?? "Idle",
+    versionText: normalized.version,
+  };
+}
 
-  setButtonEnabled(queryOne(root, "[data-update-check]"), !isBusy);
-  setButtonEnabled(queryOne(root, "[data-update-download]"), canDownload);
-  setButtonEnabled(queryOne(root, "[data-update-install]"), canInstall);
+function normalizeUpdateState(state) {
+  const normalized = normalizeString(state).toLowerCase();
+  return Object.hasOwn(UPDATE_STATE_LABELS, normalized) ? normalized : "idle";
+}
+
+function getUpdateAvailableVersion(status) {
+  const updateInfo = isRecord(status.updateInfo) ? status.updateInfo : {};
+  return (
+    normalizeString(updateInfo.version) ||
+    normalizeString(status.availableVersion) ||
+    normalizeString(status.latestVersion) ||
+    normalizeString(status.updateVersion)
+  );
+}
+
+function getDefaultAvailableVersionText(state) {
+  if (state === "current") {
+    return "None available";
+  }
+  if (state === "development") {
+    return "Packaged builds only";
+  }
+  return "Not checked";
+}
+
+function getUpdateCheckLabel(state) {
+  if (state === "checking") {
+    return "Checking...";
+  }
+  if (state === "error") {
+    return "Retry check";
+  }
+  if (state === "available" || state === "downloaded" || state === "current") {
+    return "Check again";
+  }
+  return "Check for updates";
+}
+
+function getUpdateDownloadLabel(state) {
+  if (state === "downloading") {
+    return "Downloading...";
+  }
+  if (state === "downloaded" || state === "installing") {
+    return "Downloaded";
+  }
+  return "Download update";
+}
+
+function getUpdateInstallLabel(state) {
+  if (state === "installing") {
+    return "Installing...";
+  }
+  return "Restart to install";
+}
+
+function getUpdateProgressText(state, percent) {
+  if (Number.isFinite(percent)) {
+    return `${percent}% downloaded`;
+  }
+  if (state === "available") {
+    return "Ready to download";
+  }
+  if (state === "downloading") {
+    return "Download starting";
+  }
+  if (state === "downloaded" || state === "installing") {
+    return "Download complete";
+  }
+  return "Not started";
+}
+
+function getUpdateProgressValue(state, percent) {
+  if (Number.isFinite(percent)) {
+    return percent;
+  }
+  if (state === "downloaded" || state === "installing") {
+    return 100;
+  }
+  return 0;
+}
+
+function getUpdateErrorMessage(status) {
+  return normalizeString(status.error) || status.message || "Update failed.";
 }
 
 function normalizeUpdateStatus(status) {
   if (typeof status === "string") {
     return {
+      error: "",
       message: status,
       state: "idle",
+      percent: null,
+      updateInfo: null,
       version: "unknown",
     };
   }
   const record = isRecord(status) ? status : {};
   return {
+    availableVersion: normalizeString(record.availableVersion),
+    error: normalizeString(record.error),
+    latestVersion: normalizeString(record.latestVersion),
     message: normalizeString(record.message) || "Updates have not been checked yet.",
-    percent: Number.isFinite(record.percent) ? record.percent : null,
+    percent: normalizeNullablePercent(record.percent),
     state: normalizeString(record.state) || "idle",
+    updateVersion: normalizeString(record.updateVersion),
     updateInfo: isRecord(record.updateInfo) ? record.updateInfo : null,
     version: normalizeString(record.version) || "unknown",
   };
+}
+
+function normalizeNullablePercent(value) {
+  if (value === "" || value === null || typeof value === "undefined") {
+    return null;
+  }
+  return normalizePercent(value, null);
 }
 
 function setButtonEnabled(button, enabled) {
@@ -2218,6 +2432,15 @@ function setButtonEnabled(button, enabled) {
   } else {
     button.setAttribute?.("disabled", "");
   }
+}
+
+function setProgressValue(progress, value) {
+  if (!progress) {
+    return;
+  }
+  const percent = normalizePercent(value, 0);
+  progress.value = percent;
+  progress.setAttribute?.("value", String(percent));
 }
 
 function applyGeneralSetting(root, key, value) {
@@ -2577,6 +2800,27 @@ function formatTestResult(result) {
 
 function getDefaultProviderForCapability(providers, capability) {
   return filterProvidersForCapability(providers, capability)[0] ?? null;
+}
+
+function getSelectedProviderForCapability(state, capability) {
+  return (
+    state.selectedProviders[capability] ||
+    getDefaultProviderForCapability(state.providers, capability)?.id ||
+    ""
+  );
+}
+
+function getProviderDefaultsSummary(providerId, state) {
+  const defaults = PROVIDER_SELECTOR_CAPABILITIES.filter(
+    (capability) => getSelectedProviderForCapability(state, capability.id) === providerId,
+  ).map((capability) => capability.label);
+  if (defaults.length === 1) {
+    return `Default for ${defaults[0]}`;
+  }
+  if (defaults.length > 1) {
+    return `${defaults.length} defaults`;
+  }
+  return "Available";
 }
 
 function getModelsForCapability(state, providerId, capability) {

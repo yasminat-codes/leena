@@ -2,7 +2,7 @@
 id: "130"
 title: "Updates detail flow"
 type: ui
-status: pending
+status: completed
 wave: 20
 priority: high
 complexity: S
@@ -15,7 +15,9 @@ context_files:
   - test/settings-screen.test.js
 skills: []
 tags: [updates, settings, electron-updater]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-04T02:05:17Z"
+completed_at: "2026-06-04T02:36:08Z"
 created_at: "2026-06-03"
 ---
 
@@ -34,10 +36,10 @@ The user wants "Pull the latest update" to collect/apply updates, but not surpri
 6. Add tests for status-to-button-state mapping.
 
 ## Acceptance Criteria
-- [ ] Updates detail states are clear: idle, checking, available, downloading, downloaded, installing, error.
-- [ ] Download does not immediately restart the app.
-- [ ] Restart action appears only after download completes.
-- [ ] Version and available update text are visible.
+- [x] Updates detail states are clear: idle, checking, available, downloading, downloaded, installing, error.
+- [x] Download does not immediately restart the app.
+- [x] Restart action appears only after download completes.
+- [x] Version and available update text are visible.
 
 ## Tests Required
 - `node --test test/settings-screen.test.js`
@@ -46,16 +48,21 @@ The user wants "Pull the latest update" to collect/apply updates, but not surpri
 
 ## Outputs
 - `src/renderer/screens/settings.js`
-- Optional update status helper/test.
+- `test/settings-screen.test.js`
 
 ## Interface Contracts
 `window.leena.updates.download()` downloads only; `window.leena.updates.install()` restarts/installs.
 
 ## Handoff Notes
-To be filled by executor.
+- Ran required kencode-search first; no exact public snippet for `window.leena.updates.download` was found, so implementation followed local bridge contracts.
+- Updates detail now renders explicit state, app version, available update version, progress, status, and last-error targets.
+- Renderer update state mapper covers `idle`, `checking`, `available`, `downloading`, `downloaded`, `installing`, and `error`, while preserving existing `current` and `development` states from main.
+- `window.leena.updates.download()` and `window.leena.updates.install()` remain separate renderer calls; main/preload were not changed.
+- Added focused settings tests for state-to-button mapping and for download/install bridge separation.
+- Parent verification passed after combined Wave 20 integration and reviewer fix: `npm run check`, full `node --test` (623/623), `node --test test/ui-baseline-smoke.test.js`, changed-file `node --check`, and `git diff --check`.
 
 ## Errors Encountered
-To be filled if errors occur.
+- Early worker-local `npm run check` was blocked by concurrent Wave 20 edits; parent integration resolved the combined diff and terminal `npm run check` passed.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

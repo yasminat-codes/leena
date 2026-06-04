@@ -76,7 +76,7 @@ async function withToolHarness(callback) {
         openAI: { accessToken: "test-token", accountId: "acc-test" },
         computerTargetFactory: async () => createComputerHarness(),
       },
-      fileSystem: { rootPath: directory },
+      fileSystem: { rootPath: directory, confirmed: true },
     });
   } finally {
     globalThis.fetch = originalFetch;

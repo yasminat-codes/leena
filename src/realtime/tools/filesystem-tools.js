@@ -2,10 +2,16 @@ import { constants as fsConstants } from "node:fs";
 import { access, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import {
+  createPermissionPendingResult,
+  getToolPermissionRequest,
+  isTrustedWriteAllowed,
+} from "../tool-permissions.js";
 
 const DEFAULT_MAX_READ_BYTES = 60_000;
 const MAX_READ_BYTES = 200_000;
 const MAX_WRITE_BYTES = 1_000_000;
+const FILE_WRITE_TOOLS = new Set(["write_file", "edit_file"]);
 
 /**
  * Local filesystem tools (read/write/edit) for the realtime agent. Every path is
@@ -15,7 +21,14 @@ const MAX_WRITE_BYTES = 1_000_000;
  *
  * @param {string} name Tool name.
  * @param {object} args Tool arguments from the model.
- * @param {{ rootPath?: string }} [options] Sandbox configuration.
+ * @param {{
+ *   rootPath?: string,
+ *   fileAccessScope?: "workspace"|"explicit"|"full-disk",
+ *   fullDiskAccessStatus?: string,
+ *   trustedMacAccess?: boolean,
+ *   trustedWriteMode?: boolean,
+ *   confirmed?: boolean
+ * }} [options] Sandbox and permission configuration.
  * @returns {Promise<object|null>} Result for a filesystem tool, or null otherwise.
  */
 export async function executeFileSystemTool(name, args = {}, options = {}) {
@@ -39,12 +52,16 @@ async function readFileTool(args, options) {
   if (!resolved.ok) {
     return invalidArguments(resolved.message);
   }
+  const policy = enforceFileAccessPolicy("read_file", args, options);
+  if (!policy.ok) {
+    return policy.result;
+  }
   const maxBytes = clampInteger(args.maxBytes, DEFAULT_MAX_READ_BYTES, 1, MAX_READ_BYTES);
 
   try {
     const info = await stat(resolved.value);
     if (info.isDirectory()) {
-      return errorResult(`${args.path} is a directory, not a file.`);
+      return errorResult(`${resolved.relative} is a directory, not a file.`);
     }
     const buffer = await readFile(resolved.value);
     const truncated = buffer.byteLength > maxBytes;
@@ -56,7 +73,7 @@ async function readFileTool(args, options) {
       content: buffer.toString("utf8", 0, Math.min(buffer.byteLength, maxBytes)),
     };
   } catch (error) {
-    return fileSystemError(error, args.path);
+    return fileSystemError(error, resolved.relative);
   }
 }
 
@@ -71,6 +88,10 @@ async function writeFileTool(args, options) {
   if (Buffer.byteLength(args.content, "utf8") > MAX_WRITE_BYTES) {
     return invalidArguments(`content exceeds the ${MAX_WRITE_BYTES} byte write limit.`);
   }
+  const policy = enforceFileAccessPolicy("write_file", args, options);
+  if (!policy.ok) {
+    return policy.result;
+  }
 
   try {
     const existed = await pathExists(resolved.value);
@@ -83,7 +104,7 @@ async function writeFileTool(args, options) {
       message: existed ? "File overwritten." : "File created.",
     };
   } catch (error) {
-    return fileSystemError(error, args.path);
+    return fileSystemError(error, resolved.relative);
   }
 }
 
@@ -98,12 +119,16 @@ async function editFileTool(args, options) {
   if (!resolved.ok) {
     return invalidArguments(resolved.message);
   }
+  const policy = enforceFileAccessPolicy("edit_file", args, options);
+  if (!policy.ok) {
+    return policy.result;
+  }
   const replaceAll = args.replaceAll === true;
 
   try {
     const info = await stat(resolved.value);
     if (info.isDirectory()) {
-      return errorResult(`${args.path} is a directory, not a file.`);
+      return errorResult(`${resolved.relative} is a directory, not a file.`);
     }
     const original = await readFile(resolved.value, "utf8");
     const occurrences = countOccurrences(original, args.oldText);
@@ -126,8 +151,40 @@ async function editFileTool(args, options) {
       message: `Replaced ${replaceAll ? occurrences : 1} occurrence(s).`,
     };
   } catch (error) {
-    return fileSystemError(error, args.path);
+    return fileSystemError(error, resolved.relative);
   }
+}
+
+function enforceFileAccessPolicy(name, args, options) {
+  const fileAccessScope = getFileAccessScope(options);
+  if (fileAccessScope === "full-disk" && options?.fullDiskAccessStatus !== "granted") {
+    return {
+      ok: false,
+      result: createFileScopeDeniedResult(name),
+    };
+  }
+
+  if (FILE_WRITE_TOOLS.has(name)) {
+    if (options?.confirmed === true) {
+      return { ok: true, fileAccessScope };
+    }
+    if (
+      isTrustedWriteAllowed(name, args, {
+        fileAccessScope,
+        fullDiskAccessStatus: options?.fullDiskAccessStatus,
+        trustedMacAccess: options?.trustedMacAccess === true,
+        trustedWriteMode: options?.trustedWriteMode === true,
+      })
+    ) {
+      return { ok: true, fileAccessScope };
+    }
+    return {
+      ok: false,
+      result: createPermissionPendingResult(getToolPermissionRequest(name, args)),
+    };
+  }
+
+  return { ok: true, fileAccessScope };
 }
 
 async function resolveSandboxPath(rawPath, options) {
@@ -231,6 +288,48 @@ async function resolveRealPath(target) {
 function getSandboxRoot(options) {
   const candidate = options?.rootPath;
   return typeof candidate === "string" && candidate.trim() ? path.resolve(candidate) : os.homedir();
+}
+
+function getFileAccessScope(options) {
+  const configured = normalizeFileAccessScope(
+    options?.fileAccessScope ?? options?.scope ?? options?.accessScope,
+  );
+  if (configured) {
+    return configured;
+  }
+  if (options?.explicitScope === true) {
+    return "explicit";
+  }
+  return isBroadMacRoot(getSandboxRoot(options)) ? "full-disk" : "workspace";
+}
+
+function normalizeFileAccessScope(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  return ["workspace", "explicit", "full-disk"].includes(normalized) ? normalized : null;
+}
+
+function isBroadMacRoot(root) {
+  const normalizedRoot = path.resolve(root);
+  const home = path.resolve(os.homedir());
+  const relativeHome = path.relative(normalizedRoot, home);
+  return (
+    normalizedRoot === home ||
+    relativeHome === "" ||
+    (!relativeHome.startsWith("..") && !path.isAbsolute(relativeHome))
+  );
+}
+
+function createFileScopeDeniedResult(name) {
+  return {
+    status: "permission_denied",
+    message:
+      "Full Disk Access or an explicit file scope is required before Leena can use broad file access.",
+    tool: name,
+    permission: getToolPermissionRequest(name),
+  };
 }
 
 function countOccurrences(haystack, needle) {

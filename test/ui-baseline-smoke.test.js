@@ -16,6 +16,7 @@ const artifactDir = join(repoRoot, "tasks", "artifacts", "post-mvp-ui-baseline")
 const rendererUrl = "/renderer/index.html";
 const fixedNow = "2026-06-03T21:08:47.000Z";
 const viewport = Object.freeze({ width: 1060, height: 712 });
+const narrowViewport = Object.freeze({ width: 720, height: 712 });
 const deviceScaleFactor = 1;
 
 const mimeTypes = Object.freeze({
@@ -91,6 +92,32 @@ const baselineStates = Object.freeze([
     ]),
   }),
   Object.freeze({
+    detailTarget: "providers",
+    id: "settings-providers",
+    filename: "settings-providers.png",
+    nav: "Settings",
+    nonOverlapBoundary: ".command-center-mount",
+    nonOverlapSelectors: Object.freeze([
+      "[data-provider-card]",
+      ".settings-capability-row",
+      "[data-ollama-pull-panel]",
+    ]),
+    readySelector:
+      ".settings-screen[data-settings-active-detail='providers'] [data-provider-detail]",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      "[data-settings-detail='providers']",
+      "[data-provider-card='openai']",
+      "[data-provider-card='openrouter']",
+      "[data-provider-card='ollama']",
+      "[data-provider-refresh='openai']",
+      "[data-capability-provider='chat']",
+      "[data-capability-model='chat']",
+      "[data-ollama-pull-panel]",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
     id: "integrations",
     filename: "integrations.png",
     nav: "Integrations",
@@ -100,6 +127,21 @@ const baselineStates = Object.freeze([
       ".integrations-screen",
       ".integrations-header",
       "[data-integrations-list]",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    id: "chat",
+    filename: "chat.png",
+    nav: "Chat",
+    readySelector: "[data-chat-workspace]",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      "[data-chat-workspace]",
+      "[data-chat-history-rail]",
+      "[data-chat-conversation-list]",
+      "[data-chat-transcript]",
+      "[data-chat-send-path='window.leena.chat.send']",
       ".cc[data-state='idle']",
     ]),
   }),
@@ -146,6 +188,14 @@ test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_00
       }
       await page.waitForSelector(state.readySelector, { state: "visible", timeout: 10_000 });
       await assertSelectorsInsideViewport(page, state.requiredSelectors, state.id);
+      if (state.nonOverlapBoundary && state.nonOverlapSelectors) {
+        await assertSelectorsDoNotOverlap(
+          page,
+          state.nonOverlapSelectors,
+          state.nonOverlapBoundary,
+          state.id,
+        );
+      }
       const outputPath = join(artifactDir, state.filename);
       const buffer = state.clipSelector
         ? await page.locator(state.clipSelector).first().screenshot({ path: outputPath })
@@ -169,11 +219,67 @@ test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_00
   await writeBaselineManifest(screenshots);
 });
 
+test("keeps Chat rail and composer separated at narrow panel widths", {
+  timeout: 30_000,
+}, async () => {
+  const server = await startStaticServer(srcRoot);
+  const browser = await chromium.launch({ headless: true });
+
+  try {
+    const page = await browser.newPage({ deviceScaleFactor, viewport: narrowViewport });
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        pageErrors.push(message.text());
+      }
+    });
+
+    await page.addInitScript(installBaselineBridge, { fixedNow });
+    await page.goto(`${server.url}${rendererUrl}`, { waitUntil: "networkidle" });
+    await page.waitForSelector("#app-shell[data-onboarding='complete']", { timeout: 10_000 });
+    await page.waitForSelector(".cc.cc--compact[data-state='idle']", { timeout: 10_000 });
+    await selectScreen(page, "Chat");
+    await page.waitForSelector("[data-chat-workspace]", { state: "visible", timeout: 10_000 });
+
+    await assertSelectorsInsideViewport(
+      page,
+      [
+        "[data-chat-history-rail]",
+        ".chat-screen__workspace",
+        "[data-chat-transcript]",
+        "[data-chat-send-path='window.leena.chat.send']",
+        "[data-chat-message]",
+        "[data-chat-send-button]",
+      ],
+      "chat-narrow",
+      narrowViewport,
+    );
+    await assertSelectorsDoNotOverlap(
+      page,
+      [".chat-screen__workspace"],
+      "[data-chat-history-rail]",
+      "chat-narrow",
+    );
+    await assertSelectorsDoNotOverlap(
+      page,
+      [".chat-screen__composer"],
+      ".command-center-mount",
+      "chat-narrow",
+    );
+
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+});
+
 async function selectScreen(page, screen) {
   await page.locator(`[data-screen="${screen}"]`).click();
 }
 
-async function assertSelectorsInsideViewport(page, selectors, stateId) {
+async function assertSelectorsInsideViewport(page, selectors, stateId, activeViewport = viewport) {
   for (const selector of selectors) {
     const locator = page.locator(selector).first();
     await locator.waitFor({ state: "visible", timeout: 10_000 });
@@ -184,14 +290,41 @@ async function assertSelectorsInsideViewport(page, selectors, stateId) {
     assert.ok(box.x >= 0, `${stateId}: ${selector} starts inside viewport horizontally`);
     assert.ok(box.y >= 0, `${stateId}: ${selector} starts inside viewport vertically`);
     assert.ok(
-      box.x + box.width <= viewport.width + 1,
+      box.x + box.width <= activeViewport.width + 1,
       `${stateId}: ${selector} fits viewport width`,
     );
     assert.ok(
-      box.y + Math.min(box.height, viewport.height) <= viewport.height + 1,
+      box.y + Math.min(box.height, activeViewport.height) <= activeViewport.height + 1,
       `${stateId}: ${selector} fits viewport height (${JSON.stringify(box)})`,
     );
   }
+}
+
+async function assertSelectorsDoNotOverlap(page, selectors, boundarySelector, stateId) {
+  const boundaryBox = await page.locator(boundarySelector).first().boundingBox();
+  assert.ok(boundaryBox, `${stateId}: ${boundarySelector} has a bounding box`);
+
+  for (const selector of selectors) {
+    const locator = page.locator(selector);
+    const count = await locator.count();
+    assert.ok(count > 0, `${stateId}: ${selector} has elements`);
+
+    for (let index = 0; index < count; index += 1) {
+      const box = await locator.nth(index).boundingBox();
+      if (!box) {
+        continue;
+      }
+      assert.equal(
+        boxesOverlap(box, boundaryBox),
+        false,
+        `${stateId}: ${selector}[${index}] does not overlap ${boundarySelector}`,
+      );
+    }
+  }
+}
+
+function boxesOverlap(a, b) {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
 function assertNonblankPng(buffer, stateId) {

@@ -1038,3 +1038,33 @@
 - PR #23 was opened and CodeRabbit review was requested/acknowledged as advisory-only; no actionable findings were available before merge decision.
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 20 — parent verification — Chat screen inherited shared card/input rules
+- **Symptom:** The new Chat screenshot baseline first placed the transcript below the viewport, then showed the composer textarea collapsed into the action column.
+- **Root cause:** Chat reused `.settings-card` and `.chat-input` class names; the shared Settings first-card grid span and later-injected command-center input CSS overrode the screen-level layout.
+- **Fix:** Added Chat-specific grid placement for the rail/workspace and raised specificity on `.chat-screen__composer.chat-input` plus its child placement, preserving command-center styles while keeping Chat controls above the voice dock.
+- **Rule added?:** yes — when a screen reuses shared component class names, prove the final computed layout with the screenshot harness and override with screen-scoped specificity, not by weakening the shared component rule.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 20 — parent verification — Full Disk Access runtime handoff
+- **Symptom:** File policy tests allowed broad reads after `fullDiskAccessStatus: "granted"`, but live main-process tool execution only passed `rootPath`, so broad reads from the home-root sandbox would still fail after a real grant.
+- **Root cause:** The Full Disk Access detector was included in OS permission snapshots but not threaded into `executeRealtimeTool` filesystem runtime options.
+- **Fix:** Reused the audited permission snapshot in `executeRealtimeToolWithAudit()`, passed `fileSystem.fullDiskAccessStatus` into realtime tool execution, and added a Wave 20 integration assertion for the exact main-process handoff.
+- **Rule added?:** yes — permission policy tests must cover the live main-process runtime option path, not only direct tool helper calls.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 20 — reviewer — Chat narrow breakpoint stacking
+- **Symptom:** Reviewer found the Chat rail and workspace would overlap at supported narrow panel widths after the media query collapsed both to column 1.
+- **Root cause:** Base Chat rules put both children on `grid-row: 1`; the breakpoint reset `grid-column` and `min-height` but did not reset rows. The same breakpoint also changed the composer to one column while its children still used explicit columns.
+- **Fix:** At the narrow breakpoint, keep the rail on row 1 and the workspace on row 2, preserve the three-column composer grid, and add a Playwright regression proving Chat rail/workspace/composer stay separated below the breakpoint.
+- **Rule added?:** yes — any responsive override that collapses a grid axis must also reset explicit row/column placements from the desktop layout, with coverage at the breakpoint.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 20 — task terminal gate
+- Completed tasks `128`, `129`, `130`, `138`, and `141` with overview counts reconciled to `pending=4`, `in-progress=0`, `completed=89`, `blocked=6`.
+- Terminal verified gates after reviewer fix: `npm run check`, full `node --test` (623/623), `node --test test/ui-baseline-smoke.test.js`, changed-file `node --check`, `git diff --check`, output existence checks, active-claim release, WAL parse, and privacy scan.
+- Reviewer re-check passed with no blockers. Non-blocking risk: the new narrow Chat coverage uses one representative narrow viewport rather than every exact breakpoint/minimum-width edge.
+- Advisor gate passed with no merge blockers. Non-blocking risk repeated: narrow Chat coverage uses one representative viewport, which is acceptable for this wave but should be expanded in the upcoming screenshot regression task.
+- PR #24 opened and CodeRabbit review requested/acknowledged as advisory-only. No actionable findings were available before merge decision.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl

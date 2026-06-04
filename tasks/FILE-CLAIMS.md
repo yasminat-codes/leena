@@ -21,6 +21,8 @@
 
 ## Claim History
 
+- 2026-06-04T02:36:08Z — Released Wave 20 claims for tasks `128`, `129`, `130`, `138`, `141`, and serialized parent integration/bookkeeping after independent output checks, `npm run check`, UI baseline harness, full `node --test` (622/622), changed-file syntax checks, and `git diff --check` passed.
+- 2026-06-04T02:05:17Z — Opened Wave 20 claims for tasks `128`, `129`, `130`, `138`, and `141`; shared `src/renderer/screens/settings.js`, `src/renderer/leena.css`, and `test/settings-screen.test.js` are reserved for serialized Settings integration across tasks `128`-`130`.
 - 2026-06-04T00:37:29Z — Released Wave 19 claims for tasks `127`, `132`, `134`, `136`, `137`, `140`, `143`, and serialized parent integration/bookkeeping after independent output checks, `npm run check`, focused gates, UI baseline harness, full `node --test` (596/596), and task moves to completed.
 - 2026-06-04T00:04:46Z — Opened Wave 19 claims for tasks `127`, `132`, `134`, `136`, `137`, `140`, and `143`; shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` are reserved for serialized parent integration after worker slices finish.
 - 2026-06-03T23:12:24Z — Released Wave 18 reviewer-fix claims after Settings identity controls were made fully visible, Settings baseline refreshed, and changed-file syntax checks, `npm run check`, focused Settings tests (16/16), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565) passed.

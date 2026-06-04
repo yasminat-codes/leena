@@ -14,6 +14,10 @@ async function withWorkspace(callback) {
   }
 }
 
+function withWriteApproval(options) {
+  return { ...options, confirmed: true };
+}
+
 test("unknown filesystem tool names pass through as null", async () => {
   await withWorkspace(async (_root, options) => {
     assert.equal(await executeFileSystemTool("web_search", {}, options), null);
@@ -25,7 +29,7 @@ test("write_file creates a file then reports overwrite on the second write", asy
     const created = await executeFileSystemTool(
       "write_file",
       { path: "notes/todo.md", content: "first" },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(created.status, "created");
     assert.equal(await readFile(path.join(root, "notes/todo.md"), "utf8"), "first");
@@ -33,7 +37,7 @@ test("write_file creates a file then reports overwrite on the second write", asy
     const overwritten = await executeFileSystemTool(
       "write_file",
       { path: "notes/todo.md", content: "second" },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(overwritten.status, "overwritten");
     assert.equal(await readFile(path.join(root, "notes/todo.md"), "utf8"), "second");
@@ -67,13 +71,109 @@ test("read_file truncates content beyond maxBytes", async () => {
   });
 });
 
+test("broad read requires Full Disk Access or an explicit file scope", async () => {
+  await withWorkspace(async (root, options) => {
+    await writeFile(path.join(root, "notes.txt"), "safe note", "utf8");
+
+    for (const fullDiskAccessStatus of [undefined, "unknown", "stale", "denied", "surprise"]) {
+      const denied = await executeFileSystemTool(
+        "read_file",
+        { path: "notes.txt" },
+        { ...options, fileAccessScope: "full-disk", fullDiskAccessStatus },
+      );
+      assert.equal(denied.status, "permission_denied", String(fullDiskAccessStatus));
+      assert.equal("content" in denied, false);
+    }
+
+    const granted = await executeFileSystemTool(
+      "read_file",
+      { path: "notes.txt" },
+      { ...options, fileAccessScope: "full-disk", fullDiskAccessStatus: "granted" },
+    );
+    assert.equal(granted.status, "read");
+    assert.equal(granted.content, "safe note");
+
+    const explicit = await executeFileSystemTool(
+      "read_file",
+      { path: "notes.txt" },
+      { ...options, fileAccessScope: "explicit", fullDiskAccessStatus: "unknown" },
+    );
+    assert.equal(explicit.status, "read");
+    assert.equal(explicit.content, "safe note");
+  });
+});
+
+test("write_file requires host confirmation or trusted write policy", async () => {
+  await withWorkspace(async (root, options) => {
+    const pending = await executeFileSystemTool(
+      "write_file",
+      { path: "notes/todo.md", content: "first" },
+      options,
+    );
+    assert.equal(pending.status, "permission_pending");
+    await assert.rejects(readFile(path.join(root, "notes/todo.md")));
+
+    const modelSuppliedConfirmation = await executeFileSystemTool(
+      "write_file",
+      { path: "notes/model.md", content: "unsafe", confirmed: true },
+      options,
+    );
+    assert.equal(modelSuppliedConfirmation.status, "permission_pending");
+    await assert.rejects(readFile(path.join(root, "notes/model.md")));
+
+    const trustedWriteWithoutMacTrust = await executeFileSystemTool(
+      "write_file",
+      { path: "notes/untrusted.md", content: "blocked" },
+      { ...options, trustedWriteMode: true },
+    );
+    assert.equal(trustedWriteWithoutMacTrust.status, "permission_pending");
+    await assert.rejects(readFile(path.join(root, "notes/untrusted.md")));
+
+    const trusted = await executeFileSystemTool(
+      "write_file",
+      { path: "notes/trusted.md", content: "allowed" },
+      { ...options, trustedMacAccess: true, trustedWriteMode: true },
+    );
+    assert.equal(trusted.status, "created");
+    assert.equal(await readFile(path.join(root, "notes/trusted.md"), "utf8"), "allowed");
+
+    const broadUnknown = await executeFileSystemTool(
+      "write_file",
+      { path: "notes/broad.md", content: "blocked" },
+      {
+        ...options,
+        fileAccessScope: "full-disk",
+        fullDiskAccessStatus: "unknown",
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+      },
+    );
+    assert.equal(broadUnknown.status, "permission_denied");
+    await assert.rejects(readFile(path.join(root, "notes/broad.md")));
+  });
+});
+
+test("edit_file requires host confirmation by default", async () => {
+  await withWorkspace(async (root, options) => {
+    await writeFile(path.join(root, "doc.txt"), "alpha beta", "utf8");
+
+    const pending = await executeFileSystemTool(
+      "edit_file",
+      { path: "doc.txt", oldText: "beta", newText: "BETA" },
+      options,
+    );
+    assert.equal(pending.status, "permission_pending");
+    assert.equal(await readFile(path.join(root, "doc.txt"), "utf8"), "alpha beta");
+  });
+});
+
 test("edit_file replaces a unique snippet", async () => {
   await withWorkspace(async (root, options) => {
     await writeFile(path.join(root, "doc.txt"), "alpha beta gamma", "utf8");
     const edited = await executeFileSystemTool(
       "edit_file",
       { path: "doc.txt", oldText: "beta", newText: "BETA" },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(edited.status, "edited");
     assert.equal(edited.replacements, 1);
@@ -87,14 +187,14 @@ test("edit_file rejects ambiguous matches unless replaceAll is set", async () =>
     const ambiguous = await executeFileSystemTool(
       "edit_file",
       { path: "dup.txt", oldText: "x", newText: "y" },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(ambiguous.status, "error");
 
     const all = await executeFileSystemTool(
       "edit_file",
       { path: "dup.txt", oldText: "x", newText: "y", replaceAll: true },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(all.status, "edited");
     assert.equal(all.replacements, 3);
@@ -108,7 +208,7 @@ test("edit_file reports when the snippet is not found", async () => {
     const missing = await executeFileSystemTool(
       "edit_file",
       { path: "doc.txt", oldText: "absent", newText: "x" },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(missing.status, "error");
   });
@@ -180,7 +280,7 @@ test("protected secret paths are denied for read, write, and edit", async () => 
     const ok = await executeFileSystemTool(
       "write_file",
       { path: "notes/todo.md", content: "fine" },
-      options,
+      withWriteApproval(options),
     );
     assert.equal(ok.status, "created");
   });

@@ -693,7 +693,7 @@ function renderActivityList(data = {}) {
     return renderEmptyState(data.query);
   }
 
-  return groupConversationsByDate(groupActivityEntriesByConversation(entries))
+  return groupConversationsByDate(groupActivityEntriesByConversation(entries), data.now)
     .map(renderDateGroup)
     .join("");
 }

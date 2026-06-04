@@ -164,6 +164,7 @@ test("renderActivityData shows date headers, relevance badges, and search empty 
         relevance: { level: "high", score: 0.82 },
       },
     ],
+    now: fixedNow,
     query: "espresso",
   });
   const empty = renderActivityData({ entries: [], query: "coffee <milk>" });

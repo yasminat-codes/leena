@@ -1,0 +1,480 @@
+{
+  "commands": {
+    "full": "node --test",
+    "regression": "node --test test/ui-baseline-smoke.test.js",
+    "staticCheck": "npm run check"
+  },
+  "coverage": [
+    {
+      "file": "home.png",
+      "id": "home",
+      "nav": "Home",
+      "selectors": [
+        "#leena-shell",
+        ".home-screen",
+        ".home-command__surface",
+        ".home-command__input",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-overview.png",
+      "id": "settings-overview",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        ".settings-screen",
+        "[data-settings-detail='overview']",
+        "[data-settings-detail-target='general']",
+        "[data-settings-detail-target='theme']",
+        "[data-settings-detail-target='providers']",
+        "[data-settings-detail-target='updates']",
+        "[data-settings-detail-target='mac-access']",
+        "[data-settings-detail-target='integrations-health']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-general.png",
+      "id": "settings-general",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        ".settings-identity",
+        "[data-agent-name]",
+        "[data-persona-select]",
+        "[data-persona-tone]",
+        "[data-settings-detail-back='general']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-theme.png",
+      "id": "settings-theme",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        "#settings-theme-title",
+        "[data-appearance-key='theme']",
+        "[data-appearance-key='treatment']",
+        "[data-appearance-key='density']",
+        "[data-settings-detail-back='theme']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-updates.png",
+      "id": "settings-updates",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        "[data-settings-detail='updates']",
+        "[data-update-state]",
+        "[data-update-version]",
+        "[data-update-check]",
+        "[data-update-download]",
+        "[data-update-install]",
+        "[data-settings-detail-back='updates']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-providers.png",
+      "id": "settings-providers",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        "[data-settings-detail='providers']",
+        "[data-provider-card='openai']",
+        "[data-provider-card='openrouter']",
+        "[data-provider-card='ollama']",
+        "[data-provider-refresh='openai']",
+        "[data-capability-provider='chat']",
+        "[data-capability-model='chat']",
+        "[data-ollama-pull-panel]",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-mac-access.png",
+      "id": "settings-mac-access",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        "[data-settings-detail='mac-access']",
+        "[data-wake-enabled]",
+        "[data-wake-muted]",
+        "[data-wake-status]",
+        "[data-settings-detail-back='mac-access']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "settings-integrations-health.png",
+      "id": "settings-integrations-health",
+      "nav": "Settings",
+      "selectors": [
+        "#leena-shell",
+        "[data-settings-detail='integrations-health']",
+        "[data-settings-detail-back='integrations-health']",
+        "[data-settings-detail='integrations-health'] [data-settings-primitive='status-callout']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "integrations.png",
+      "id": "integrations",
+      "nav": "Integrations",
+      "selectors": [
+        "#leena-shell",
+        ".integrations-screen",
+        ".integrations-header",
+        "[data-integrations-list]",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "integrations-composio.png",
+      "id": "integrations-composio",
+      "nav": "Integrations",
+      "selectors": [
+        "#leena-shell",
+        ".integrations-screen[data-integrations-detail='composio']",
+        "[data-integrations-detail-card][data-integrations-detail='composio'][aria-pressed='true']",
+        "[data-integrations-detail-panel][data-integrations-detail-active='composio']",
+        "[data-integrations-list]",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "integrations-mcp.png",
+      "id": "integrations-mcp",
+      "nav": "Integrations",
+      "selectors": [
+        "#leena-shell",
+        ".integrations-screen[data-integrations-detail='custom-mcp']",
+        "[data-integrations-detail-card][data-integrations-detail='custom-mcp'][aria-pressed='true']",
+        "[data-integrations-field='name']",
+        "[data-integrations-field='transport']",
+        "[data-integrations-list]",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "integrations-mac-access.png",
+      "id": "integrations-mac-access",
+      "nav": "Integrations",
+      "selectors": [
+        "#leena-shell",
+        ".integrations-screen[data-integrations-detail='full-disk-access']",
+        "[data-integrations-detail-card][data-integrations-detail='full-disk-access'][aria-pressed='true']",
+        "[data-integrations-permission-actions='full-disk-access']",
+        "[data-integrations-action='open-permission-settings'][data-permission-id='full-disk-access']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "chat.png",
+      "id": "chat",
+      "nav": "Chat",
+      "selectors": [
+        "#leena-shell",
+        "[data-chat-workspace]",
+        "[data-chat-history-rail]",
+        "[data-chat-conversation-list]",
+        "[data-chat-transcript]",
+        "[data-chat-send-path='window.leena.chat.send']",
+        ".cc[data-state='idle']"
+      ]
+    },
+    {
+      "file": "voice-starting.png",
+      "id": "voice-starting",
+      "nav": "Home",
+      "selectors": [
+        ".command-center-mount",
+        "#app-shell.leena[data-orb-state='starting']",
+        "#app-shell.leena[data-voice-startup='starting']",
+        ".cc.cc--compact[data-state='thinking']",
+        ".cc__orb",
+        ".cc__transcript"
+      ]
+    },
+    {
+      "file": "voice-listening.png",
+      "id": "voice-listening",
+      "nav": "Home",
+      "selectors": [
+        ".command-center-mount",
+        "#app-shell.leena[data-orb-state='listening']",
+        "#app-shell.leena[data-voice-startup='listening']",
+        ".cc.cc--compact[data-state='listening']",
+        ".cc__orb",
+        ".cc__transcript"
+      ]
+    },
+    {
+      "file": "voice-error.png",
+      "id": "voice-error",
+      "nav": "Home",
+      "selectors": [
+        ".command-center-mount",
+        "#app-shell.leena[data-orb-state='error']",
+        "#app-shell.leena[data-voice-startup='session']",
+        ".cc.cc--compact[data-state='error']",
+        ".cc__orb",
+        ".cc__transcript"
+      ]
+    }
+  ],
+  "deviceScaleFactor": 1,
+  "fixedNow": "2026-06-03T21:08:47.000Z",
+  "narrowViewport": {
+    "width": 720,
+    "height": 712
+  },
+  "rendererUrl": "/renderer/index.html",
+  "screenshots": [
+    {
+      "colorBuckets": 160,
+      "height": 712,
+      "luminanceRange": 223.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "home.png",
+      "id": "home",
+      "nav": "Home",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 149,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-overview.png",
+      "id": "settings-overview",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 151,
+      "height": 712,
+      "luminanceRange": 223.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-general.png",
+      "id": "settings-general",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 298,
+      "height": 712,
+      "luminanceRange": 250,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-theme.png",
+      "id": "settings-theme",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 149,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-updates.png",
+      "id": "settings-updates",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 150,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-providers.png",
+      "id": "settings-providers",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 149,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-mac-access.png",
+      "id": "settings-mac-access",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 149,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-integrations-health.png",
+      "id": "settings-integrations-health",
+      "nav": "Settings",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 171,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "integrations.png",
+      "id": "integrations",
+      "nav": "Integrations",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 171,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "integrations-composio.png",
+      "id": "integrations-composio",
+      "nav": "Integrations",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 172,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "integrations-mcp.png",
+      "id": "integrations-mcp",
+      "nav": "Integrations",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 110,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "integrations-mac-access.png",
+      "id": "integrations-mac-access",
+      "nav": "Integrations",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 153,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "chat.png",
+      "id": "chat",
+      "nav": "Chat",
+      "orbState": null,
+      "selector": null,
+      "voiceState": null
+    },
+    {
+      "colorBuckets": 54,
+      "height": 60,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 480,
+      "capture": "clip",
+      "file": "voice-starting.png",
+      "id": "voice-starting",
+      "nav": "Home",
+      "orbState": "starting",
+      "selector": ".command-center-mount",
+      "voiceState": {
+        "commandCenterState": "thinking",
+        "requestedState": "starting"
+      }
+    },
+    {
+      "colorBuckets": 60,
+      "height": 60,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 480,
+      "capture": "clip",
+      "file": "voice-listening.png",
+      "id": "voice-listening",
+      "nav": "Home",
+      "orbState": "listening",
+      "selector": ".command-center-mount",
+      "voiceState": {
+        "commandCenterState": "listening",
+        "requestedState": "listening"
+      }
+    },
+    {
+      "colorBuckets": 61,
+      "height": 60,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 480,
+      "capture": "clip",
+      "file": "voice-error.png",
+      "id": "voice-error",
+      "nav": "Home",
+      "orbState": "error",
+      "selector": ".command-center-mount",
+      "voiceState": {
+        "commandCenterState": "error",
+        "requestedState": "error"
+      }
+    }
+  ],
+  "suite": "post-mvp-ui-regression",
+  "viewport": {
+    "width": 1060,
+    "height": 712
+  },
+  "voiceStateNotes": {
+    "starting": "Renderer orb state uses data-orb-state='starting'; command-center visual state maps to thinking."
+  }
+}

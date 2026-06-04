@@ -170,10 +170,18 @@ function normalizeToolSnapshot(tool) {
     return null;
   }
 
+  const resultPreview =
+    typeof tool.resultPreview === "string" ? tool.resultPreview : summarizePermissionResult(tool);
+
   return {
     name: typeof tool.name === "string" && tool.name ? tool.name : "tool",
     argsSummary: typeof tool.argsSummary === "string" ? tool.argsSummary : "",
-    resultPreview: typeof tool.resultPreview === "string" ? tool.resultPreview : "",
+    resultPreview,
+    permission: normalizePermissionSnapshot(
+      tool.permission ?? tool.result?.permission ?? tool.result,
+      tool.name,
+      resultPreview,
+    ),
   };
 }
 
@@ -189,6 +197,13 @@ function createStateCopy(state, snapshot) {
     copy.hint = "Reconnect or try the request again.";
     copy.preview = snapshot.error;
     return copy;
+  }
+
+  if ((state === "acting" || state === "done") && snapshot.tool) {
+    const permissionCopy = createPermissionStateCopy(snapshot.tool);
+    if (permissionCopy) {
+      return permissionCopy;
+    }
   }
 
   if (state === "acting" && snapshot.tool) {
@@ -226,6 +241,206 @@ function formatToolPreview(tool) {
   }
 
   return name;
+}
+
+function createPermissionStateCopy(tool) {
+  const permission = tool.permission ?? inferPermissionFromPreview(tool);
+  if (!permission) {
+    return null;
+  }
+
+  const blocked = ["blocked", "setup_required", "denied"].includes(permission.kind);
+  const label = blocked ? "BLOCKED" : "CONFIRM";
+  const toolName = formatToolName(permission.toolName || tool.name);
+  const action = blocked ? "blocked" : "needs approval";
+  const details = permission.summary || tool.argsSummary || "No tool arguments.";
+
+  return {
+    label,
+    transcript: `${toolName} ${action}.`,
+    hint: permission.message || "Review the permission request before continuing.",
+    preview: `Risk: ${permission.level || "unknown"} · ${details}`,
+  };
+}
+
+function inferPermissionFromPreview(tool) {
+  const preview = String(tool.resultPreview || "");
+  const lowerPreview = preview.toLowerCase();
+  if (!preview) {
+    return null;
+  }
+
+  if (lowerPreview.includes("requires") && /approval|confirmation/.test(lowerPreview)) {
+    return {
+      kind: "confirmation_required",
+      toolName: tool.name,
+      level: inferPermissionLevelForTool(tool.name),
+      message: preview,
+      summary: tool.argsSummary,
+    };
+  }
+
+  if (
+    lowerPreview.includes("permission metadata is unknown or stale") ||
+    lowerPreview.includes("blocked") ||
+    lowerPreview.includes("grant ")
+  ) {
+    return {
+      kind: "blocked",
+      toolName: tool.name,
+      level: inferPermissionLevelForTool(tool.name),
+      message: preview,
+      summary: tool.argsSummary,
+    };
+  }
+
+  return null;
+}
+
+function normalizePermissionSnapshot(permission, toolName, resultPreview = "") {
+  if (!permission || typeof permission !== "object") {
+    return inferPermissionFromPreview({ name: toolName, argsSummary: "", resultPreview });
+  }
+
+  const status = typeof permission.status === "string" ? permission.status : "";
+  const source = typeof permission.source === "string" ? permission.source : "";
+  const nested =
+    permission.permission && typeof permission.permission === "object"
+      ? permission.permission
+      : permission;
+  const normalizedToolName =
+    typeof nested.toolName === "string" && nested.toolName
+      ? nested.toolName
+      : typeof toolName === "string" && toolName
+        ? toolName
+        : "tool";
+  const level =
+    typeof nested.level === "string" && nested.level
+      ? nested.level
+      : inferPermissionLevelForTool(normalizedToolName);
+  const kind =
+    status === "permission_pending" || status === "confirmation_required"
+      ? "confirmation_required"
+      : status === "permission_required"
+        ? "setup_required"
+        : status === "permission_denied"
+          ? level === "unknown"
+            ? "blocked"
+            : "denied"
+          : level === "unknown"
+            ? "blocked"
+            : "";
+
+  if (!kind) {
+    return null;
+  }
+
+  return {
+    kind,
+    toolName: normalizedToolName,
+    label:
+      typeof nested.label === "string" && nested.label
+        ? nested.label
+        : formatToolName(normalizedToolName),
+    level,
+    message:
+      typeof permission.message === "string" && permission.message
+        ? permission.message
+        : resultPreview,
+    summary: typeof nested.summary === "string" ? nested.summary : "",
+    source:
+      typeof nested.source === "string" && nested.source
+        ? nested.source
+        : typeof nested.integration === "string" && nested.integration
+          ? nested.integration
+          : source,
+    actions: getPermissionActions(normalizedToolName, level, nested),
+  };
+}
+
+function summarizePermissionResult(tool) {
+  if (!tool?.result || typeof tool.result !== "object") {
+    return "";
+  }
+  for (const key of ["message", "summary", "status"]) {
+    if (typeof tool.result[key] === "string" && tool.result[key]) {
+      return tool.result[key];
+    }
+  }
+  return "";
+}
+
+function getPermissionActions(toolName, level, permission) {
+  if (level === "unknown") {
+    return ["Refresh permissions"];
+  }
+
+  const actions = ["Allow once", "Deny"];
+  const source = String(permission?.source ?? permission?.integration ?? "").toLowerCase();
+  if (["apple-calendar", "composio", "mcp"].includes(source) || toolName.startsWith("mcp__")) {
+    actions.push("Trust this integration");
+  }
+  if (["write", "destructive", "control"].includes(level)) {
+    actions.push("Allow trusted write actions");
+  }
+  return actions;
+}
+
+function inferPermissionLevelForTool(toolName) {
+  if (["write_file", "edit_file", "update_task_status", "add_calendar_item"].includes(toolName)) {
+    return "write";
+  }
+  if (["delete_task", "delete_calendar_item"].includes(toolName)) {
+    return "destructive";
+  }
+  if (toolName === "computer_use_task") {
+    return "control";
+  }
+  if (String(toolName || "").startsWith("mcp__")) {
+    return "unknown";
+  }
+  return "unknown";
+}
+
+function createPermissionMarkdown(permission) {
+  const lines = [
+    `**${permission.kind === "confirmation_required" ? "Confirm" : "Blocked"} ${permission.label}**`,
+    permission.message,
+    `- Risk: \`${permission.level}\``,
+  ];
+
+  if (permission.source) {
+    lines.push(`- Source: ${permission.source}`);
+  }
+  if (permission.summary) {
+    lines.push(`- Details: ${permission.summary}`);
+  }
+  if (permission.actions.length > 0) {
+    lines.push(`- Actions: ${permission.actions.join(", ")}`);
+  }
+
+  return lines.filter(Boolean).join("\n");
+}
+
+function getPermissionNoticeFromToolResult(toolResult) {
+  if (!toolResult || typeof toolResult !== "object") {
+    return null;
+  }
+
+  const result = toolResult.result;
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+
+  const permission = normalizePermissionSnapshot(result, toolResult.name, result.message);
+  if (!permission) {
+    return null;
+  }
+
+  return {
+    status: permission.kind === "confirmation_required" ? "Needs confirmation" : "Blocked",
+    markdown: createPermissionMarkdown(permission),
+  };
 }
 
 function normalizeChatOptions(chat) {
@@ -783,7 +998,12 @@ export class CommandCenter {
     } else if (payload.type === "tool_call") {
       bubble.setStatus(`Running ${formatToolName(payload.toolCall?.name)}`);
     } else if (payload.type === "tool_result") {
-      bubble.setStatus("Tool complete");
+      const permissionNotice = getPermissionNoticeFromToolResult(payload.toolResult);
+      if (permissionNotice) {
+        bubble.setContent(permissionNotice.markdown).setStatus(permissionNotice.status);
+      } else {
+        bubble.setStatus("Tool complete");
+      }
     } else if (payload.type === "done") {
       bubble.setContent(payload.content ?? bubble.content).setStatus("");
     } else if (payload.type === "error") {

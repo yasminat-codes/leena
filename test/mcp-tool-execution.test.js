@@ -140,8 +140,15 @@ test("MCP execution fails closed for malformed names and stale metadata", async 
   });
   assert.deepEqual(stale, {
     status: "permission_denied",
-    message: "Ken did not approve MCP tool. Ask before trying this tool again.",
+    message: "Leena blocked MCP tool because its permission metadata is unknown or stale.",
     tool: NAMESPACED_TOOL_NAME,
+    permission: {
+      toolName: NAMESPACED_TOOL_NAME,
+      label: "MCP tool",
+      level: "unknown",
+      description: "MCP tool requires confirmation.",
+      summary: "",
+    },
   });
   assert.deepEqual(permissionCalls, []);
   assert.deepEqual(manager.calls.callTool, []);

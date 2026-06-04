@@ -29,12 +29,20 @@ export function parseToolArguments(rawArguments) {
   }
 }
 
+const PERMISSION_RESULT_STATUSES = new Set([
+  "permission_pending",
+  "confirmation_required",
+  "permission_required",
+  "permission_denied",
+]);
+
 export function createRealtimeToolHandler({
   executeTool,
   sendEvent,
   setMode,
   setStatus,
   onEndCall,
+  onPermissionState,
   onToolStart,
   onToolEnd,
 }) {
@@ -77,6 +85,11 @@ export function createRealtimeToolHandler({
       } finally {
         onToolEnd?.(toolCall.name, result);
       }
+      const permissionState = getRealtimePermissionState(toolCall.name, toolCall.arguments, result);
+      if (permissionState) {
+        setStatus(permissionState.statusText);
+        onPermissionState?.(permissionState);
+      }
       if (isRecord(result?.realtimeInput)) {
         sendRealtimeToolOutput(sendEvent, toolCall.callId, createRealtimeImageToolOutput(result), {
           createResponse: false,
@@ -87,6 +100,40 @@ export function createRealtimeToolHandler({
       }
       return true;
     },
+  };
+}
+
+export function getRealtimePermissionState(name, args = {}, result = {}) {
+  if (!isRecord(result) || !PERMISSION_RESULT_STATUSES.has(result.status)) {
+    return null;
+  }
+
+  const permission = normalizePermissionPayload(name, args, result);
+  const kind =
+    result.status === "permission_pending" || result.status === "confirmation_required"
+      ? "confirmation_required"
+      : result.status === "permission_required"
+        ? "setup_required"
+        : permission.level === "unknown"
+          ? "blocked"
+          : "denied";
+  const statusText =
+    kind === "confirmation_required"
+      ? "Approval needed…"
+      : kind === "setup_required"
+        ? "Permission setup needed…"
+        : "Permission blocked…";
+
+  return {
+    kind,
+    statusText,
+    toolName: permission.toolName,
+    label: permission.label,
+    level: permission.level,
+    message: permission.message,
+    summary: permission.summary,
+    source: permission.source,
+    actions: permission.actions,
   };
 }
 
@@ -157,6 +204,118 @@ export function formatToolStatus(name) {
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizePermissionPayload(name, args, result) {
+  const rawPermission = isRecord(result.permission) ? result.permission : {};
+  const toolName = normalizeString(rawPermission.toolName ?? rawPermission.tool ?? name) || "tool";
+  const level =
+    normalizeString(rawPermission.level).toLowerCase() || inferToolLevel(toolName, args);
+  const label =
+    normalizeString(rawPermission.label) ||
+    normalizeString(rawPermission.action) ||
+    formatToolName(toolName);
+  const summary =
+    normalizeString(rawPermission.summary) ||
+    normalizeString(result.setup?.message) ||
+    summarizeToolArgs(args);
+
+  return {
+    toolName,
+    label,
+    level,
+    message: normalizeString(result.message) || "Tool permission is required.",
+    summary,
+    source:
+      normalizeString(rawPermission.source ?? rawPermission.integration ?? result.source) ||
+      inferPermissionSource(toolName),
+    actions: normalizePermissionActions(rawPermission, result.status),
+  };
+}
+
+function normalizePermissionActions(permission, status) {
+  if (status === "permission_denied" || permission?.level === "unknown") {
+    return ["Refresh permissions"];
+  }
+
+  const actions = ["Allow once", "Deny"];
+  if (isIntegrationSource(permission?.integration ?? permission?.source)) {
+    actions.push("Trust this integration");
+  }
+  if (["write", "destructive", "control"].includes(permission?.level)) {
+    actions.push("Allow trusted write actions");
+  }
+  return actions;
+}
+
+function inferToolLevel(toolName, args) {
+  if (["write_file", "edit_file", "update_task_status", "add_calendar_item"].includes(toolName)) {
+    return "write";
+  }
+  if (["delete_task", "delete_calendar_item"].includes(toolName)) {
+    return "destructive";
+  }
+  if (toolName === "computer_use_task" && args?.target === "computer") {
+    return "control";
+  }
+  if (toolName?.startsWith?.("mcp__")) {
+    return "unknown";
+  }
+  return "unknown";
+}
+
+function inferPermissionSource(toolName) {
+  if (toolName?.startsWith?.("mcp__")) {
+    return "mcp";
+  }
+  if (["read_file", "write_file", "edit_file"].includes(toolName)) {
+    return "file";
+  }
+  if (["add_calendar_item", "list_calendar_items", "delete_calendar_item"].includes(toolName)) {
+    return "calendar";
+  }
+  if (toolName === "computer_use_task") {
+    return "computer";
+  }
+  return "leena";
+}
+
+function isIntegrationSource(source) {
+  return ["apple-calendar", "composio", "mcp"].includes(normalizeString(source).toLowerCase());
+}
+
+function summarizeToolArgs(args) {
+  if (!isRecord(args)) {
+    return "";
+  }
+  return Object.entries(args)
+    .slice(0, 3)
+    .map(([field, value]) => `${field}: ${summarizeValue(value)}`)
+    .join(", ");
+}
+
+function summarizeValue(value) {
+  if (typeof value === "string") {
+    return value.replace(/\s+/g, " ").trim().slice(0, 80);
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.length} items]`;
+  }
+  if (isRecord(value)) {
+    return "{...}";
+  }
+  return "";
+}
+
+function normalizeString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatToolName(name) {
+  return String(name || "tool").replace(/[_-]+/g, " ");
 }
 
 function normalizeToolCall({ callId, name, rawArguments }) {

@@ -339,6 +339,49 @@ test("CommandCenter consumes SessionStateManager snapshots across every variant"
   manager.destroy();
 });
 
+test("CommandCenter renders permission confirmation states inside stable voice dock dimensions", () => {
+  globalThis.document = createDocument();
+
+  const commandCenter = new CommandCenter({ variant: "compact" });
+  commandCenter.setSessionSnapshot({
+    state: "done",
+    tool: {
+      name: "write_file",
+      argsSummary: "path: notes.txt",
+      resultPreview: "Write file requires Ken's approval before it can run.",
+    },
+  });
+
+  assert.equal(commandCenter.state, "done");
+  assert.equal(commandCenter.element.dataset.variant, "compact");
+  assert.equal(commandCenter.element.dataset.height, "60");
+  assert.equal(commandCenter.element.querySelector(".cc__status").textContent, "CONFIRM");
+  assert.match(
+    commandCenter.element.querySelector(".cc__transcript").textContent,
+    /write file needs approval/i,
+  );
+  assert.match(
+    commandCenter.element.querySelector(".cc__preview-text").textContent,
+    /Risk: write .*path: notes\.txt/,
+  );
+
+  commandCenter.setSessionSnapshot({
+    state: "done",
+    tool: {
+      name: "mcp__calendar__stale_event",
+      resultPreview: "Leena blocked MCP tool because its permission metadata is unknown or stale.",
+    },
+  });
+
+  assert.equal(commandCenter.element.querySelector(".cc__status").textContent, "BLOCKED");
+  assert.match(
+    commandCenter.element.querySelector(".cc__preview-text").textContent,
+    /Risk: unknown/,
+  );
+
+  commandCenter.destroy();
+});
+
 test("renderer binds the global voice dock to normalized orb state attributes", () => {
   assert.match(rendererSource, /import \{ normalizeOrbState \} from "\.\/components\/orb\.js";/);
   assert.match(rendererSource, /"--legacy-nebula-2", "var\(--orb-b\)"/);

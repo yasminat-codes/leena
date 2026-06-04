@@ -749,3 +749,38 @@ _(wave execution entries appended below as the build runs)_
 - Opened PR #26 from `wave-22` to `main` after reviewer and advisor gates passed.
 - Requested CodeRabbit review on PR #26. CodeRabbit selected all 8 changed files, returned a successful advisory status, but could not start a substantive review because the repository hit review rate/usage limits. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/rate-limited and non-blocking.
 - Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.
+
+## 2026-06-04 — Wave 23 started
+
+- Created clean branch/worktree `wave-23` from `origin/main` commit `6c70973` because the primary checkout is dirty and behind remote truth.
+- Read Wave 23, task `146`, dependency handoffs for `144` and `145`, `tasks/DELIVERABLE.md`, Wave 21-22 proof artifacts, `tasks/FILE-CLAIMS.md`, and the full `tasks/LEARNINGS.md`.
+- Moved task `146` to `in-progress` with `attempts=1`, updated overview counts to `pending=0`, `in-progress=1`, `completed=92`, `blocked=6`, wrote the WAL `pre_run` entry, and opened active file claims for the final handoff/build slice.
+- Dispatched task `146` for post-MVP build smoke handoff. The worker must run task-local kencode-search before code, keep owner GUI smoke as an unchecked manual checklist, build unsigned with `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`, verify DMG/ZIP structure, and run `npm run check`, full `node --test`, `git diff --check`, and hdiutil gates.
+
+## 2026-06-04 — Wave 23 task 146 worker handoff
+
+- Rebuilt the unsigned/ad-hoc post-MVP macOS artifacts with `CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:mac`; Electron Builder skipped notarization, and no owner GUI launch was performed.
+- Gates passed after environment setup: `npm run check`, full `node --test` (637/637), `git diff --check`, `hdiutil verify`, `hdiutil imageinfo`, DMG read-only mount checks, ZIP extraction checks, ASAR font/native-binary checks, and deep code-sign verification.
+- Updated `tasks/DELIVERABLE.md` with current local artifact hashes and sizes: DMG `2cbc7ed5f696941a9e4c63bded6daf7c0c5d5855b7a9cab28c7a645ef009d906` / 128566660 bytes; ZIP `5b7fbd7f908d4a4f4b63d08b13220a4ebfbe40eb21b2c6f43654e45c9c29972b` / 124425803 bytes.
+- Filled `tasks/in-progress/146-post-mvp-build-smoke-handoff.md` with dependency proof, exact gates, artifact metadata, structural checks, and the documented errors/fixes. The task remains `in_progress` with active claims for orchestrator terminal verification.
+
+## 2026-06-04 — Wave 23 task 146 completed
+
+- Parent independent verification passed: `npm run check`, full `node --test` (637/637), `git diff --check`, `hdiutil verify`, `hdiutil imageinfo`, DMG read-only mount checks, ZIP extraction checks, ASAR font/native-binary checks, deep codesign verification, WAL parse, count audit, and task-artifact privacy scan.
+- Completed task `146`; moved the task file to `tasks/completed/`, released active claims, and updated overview counts to `pending=0`, `in-progress=0`, `completed=93`, `blocked=6`.
+- Owner GUI smoke remains an unchecked manual checklist in `tasks/DELIVERABLE.md`; no autonomous step claims voice, Chat, Composio, Custom MCP, Full Disk Access, Apple Calendar, or visual manual review completion.
+- Initial reviewer/advisor gates found merge-readiness blockers only: possible generated screenshot-regression churn, a stale partial git index, no pushed `origin/wave-23`, and no Wave 23 CodeRabbit record yet.
+- Reconciled the verified working tree before commit: Wave 23 no longer carries screenshot-regression artifact diffs, and the index will be restaged from the terminal task state before PR creation.
+- Next gates pending: reviewer/advisor re-check, CodeRabbit advisory PR request, and merge to `main`.
+
+## 2026-06-04 — Wave 23 reviewer and advisor re-check passed
+
+- Reviewer re-check passed with no blockers after confirming the final diff excludes generated screenshot-regression artifact churn, preserves deliverable lane separation, keeps owner GUI smoke unchecked, and has consistent counts plus empty active claims.
+- Advisor re-check passed with no product, architecture, or safety blockers. Non-blocking warnings remain: commit/push/PR-head parity still need to happen before merge, manual owner GUI smoke remains real release risk, and unsigned/ad-hoc non-notarized artifacts must not be presented as notarized or owner-smoked.
+- Final pre-PR gates remain green: `npm run check`, full `node --test` (637/637), `git diff --check`, hdiutil verification, DMG/ZIP structure checks, count audit, active-claims audit, WAL parse, and task-artifact privacy scan.
+
+## 2026-06-04 — Wave 23 PR and CodeRabbit advisory recorded
+
+- Opened PR #27 from `wave-23` to `main` after reviewer and advisor gates passed.
+- Requested CodeRabbit review on PR #27 with `@coderabbitai review`; CodeRabbit status was pending at merge-decision time and no actionable findings were available yet. This is advisory-only and does not block Wave 23 merge.
+- Checked for `codex` and `codex-automation` labels before PR creation; neither label exists in this repo, so no PR labels were applied.

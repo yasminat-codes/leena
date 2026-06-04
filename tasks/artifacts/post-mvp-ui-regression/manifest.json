@@ -435,7 +435,7 @@
       }
     },
     {
-      "colorBuckets": 62,
+      "colorBuckets": 60,
       "height": 60,
       "luminanceRange": 222.88,
       "visibleRatio": 1,
@@ -452,7 +452,7 @@
       }
     },
     {
-      "colorBuckets": 59,
+      "colorBuckets": 61,
       "height": 60,
       "luminanceRange": 222.88,
       "visibleRatio": 1,

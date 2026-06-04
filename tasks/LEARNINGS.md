@@ -1107,5 +1107,6 @@
 - Final parent gates passed: `npm run check`, focused permission/UI gates, changed-file syntax checks, `git diff --check`, and full `node --test` (631/631). Active Wave 21 file claims were released and tasks `139`/`144` moved to completed.
 - Reviewer gate passed with no blockers. Non-blocking risk: screenshot regression proof is not pixel-golden comparison, and renderer permission display logic intentionally mirrors central permission concepts to keep Node-only permission code out of renderer bundles.
 - Advisor gate passed with no blockers. Non-blocking warning: dedicated permission-prompt screenshot artifacts are still outside this suite; current proof is unit/session rendering plus broad UI regression screenshots.
+- PR #25 opened and CodeRabbit advisory review requested/acknowledged as processing. No actionable findings were available before merge decision; `codex` and `codex-automation` labels are not configured in this repo.
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl

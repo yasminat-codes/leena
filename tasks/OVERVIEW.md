@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 2 |
+| Pending | 1 |
 | In-Progress | 0 |
-| Completed | 91 |
+| Completed | 92 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -160,7 +160,7 @@ Created 2026-06-03 from owner review of the shipped app screenshots and approved
 | 142 | 18 | Voice startup preflight | completed |
 | 143 | 19 | Theme-aware voice orb | completed |
 | 144 | 21 | UI screenshot regression suite | completed |
-| 145 | 22 | Integration test matrix | pending |
+| 145 | 22 | Integration test matrix | completed |
 | 146 | 23 | Post-MVP build smoke handoff | pending |
 
 ## Discovered Tasks

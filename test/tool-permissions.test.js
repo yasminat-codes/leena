@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createPermissionDeniedResult,
+  createPermissionPendingResult,
   formatPermissionPrompt,
   getToolPermissionRequest,
+  isTrustedWriteAllowed,
+  shouldRequireToolConfirmation,
 } from "../src/realtime/tool-permissions.js";
 
 test("getToolPermissionRequest classifies every active tool with a summary", () => {
@@ -81,4 +84,121 @@ test("createPermissionDeniedResult returns a model-visible denial", () => {
     message: "Ken did not approve Analyze screen. Ask before trying this tool again.",
     tool: "analyze_screen",
   });
+});
+
+test("createPermissionPendingResult returns a model-visible pending approval", () => {
+  assert.deepEqual(createPermissionPendingResult(getToolPermissionRequest("write_file", {})), {
+    status: "permission_pending",
+    message: "Write file requires Ken's approval before it can run.",
+    permission: {
+      toolName: "write_file",
+      label: "Write file",
+      level: "write",
+      description: "Create or overwrite a file in your local workspace.",
+      summary: "",
+    },
+    tool: "write_file",
+  });
+});
+
+test("trusted write mode requires Trusted Mac Access and a current file scope", () => {
+  assert.equal(shouldRequireToolConfirmation("write_file", {}, {}), true);
+  assert.equal(
+    isTrustedWriteAllowed(
+      "write_file",
+      {},
+      { trustedWriteMode: true, fileAccessScope: "workspace" },
+    ),
+    false,
+  );
+  assert.equal(
+    isTrustedWriteAllowed(
+      "write_file",
+      {},
+      { trustedMacAccess: true, fileAccessScope: "workspace" },
+    ),
+    false,
+  );
+  assert.equal(
+    isTrustedWriteAllowed(
+      "write_file",
+      {},
+      {
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+        fileAccessScope: "workspace",
+      },
+    ),
+    true,
+  );
+  assert.equal(
+    shouldRequireToolConfirmation(
+      "write_file",
+      {},
+      {
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+        fileAccessScope: "workspace",
+      },
+    ),
+    false,
+  );
+  assert.equal(
+    isTrustedWriteAllowed(
+      "write_file",
+      {},
+      {
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+        fileAccessScope: "full-disk",
+        fullDiskAccessStatus: "unknown",
+      },
+    ),
+    false,
+  );
+  assert.equal(
+    isTrustedWriteAllowed(
+      "write_file",
+      {},
+      {
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+        fileAccessScope: "full-disk",
+        fullDiskAccessStatus: "granted",
+      },
+    ),
+    true,
+  );
+});
+
+test("trusted write helper fails closed for unknown tools and sanitizes absolute paths", () => {
+  assert.equal(
+    isTrustedWriteAllowed(
+      "unmapped_tool",
+      {},
+      {
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+        fileAccessScope: "workspace",
+      },
+    ),
+    false,
+  );
+  assert.equal(
+    isTrustedWriteAllowed(
+      "add_calendar_item",
+      {},
+      {
+        trustedMacAccess: true,
+        trustedWriteMode: true,
+        fileAccessScope: "workspace",
+      },
+    ),
+    false,
+  );
+  const request = getToolPermissionRequest("read_file", {
+    path: "/Users/example/Private/passwords.txt",
+  });
+  assert.equal(request.summary, "path: [absolute path]/passwords.txt");
+  assert.doesNotMatch(request.summary, /Users\/example\/Private/);
 });

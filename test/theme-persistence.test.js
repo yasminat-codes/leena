@@ -6,6 +6,7 @@ import {
   applyAppearancePreference,
   DEFAULT_APPEARANCE,
   loadAppearancePreferences,
+  SETTINGS_MOCK_DATA,
 } from "../src/renderer/screens/settings.js";
 import { initShell } from "../src/renderer/shell.js";
 
@@ -170,6 +171,19 @@ test("appearance preferences write and read back for all keys", () => {
   assert.equal(wrapper.dataset.theme, "vercel-dark");
   assert.equal(wrapper.dataset.treatment, "coral");
   assert.equal(wrapper.dataset.density, "compact");
+});
+
+test("all appearance values persist under exact localStorage keys", () => {
+  const storage = installLocalStorage();
+  const { root, wrapper } = createShellRoot();
+
+  for (const [key, options] of Object.entries(SETTINGS_MOCK_DATA.appearance)) {
+    for (const option of options) {
+      assert.equal(applyAppearancePreference(root, key, option.value), option.value);
+      assert.equal(storage.get(APPEARANCE_STORAGE_KEYS[key]), option.value);
+      assert.equal(wrapper.dataset[key], option.value);
+    }
+  }
 });
 
 test("appearance preferences default when localStorage is empty", () => {

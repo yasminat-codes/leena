@@ -2,6 +2,12 @@ import { parseMCPToolName } from "../mcp/schema-converter.js";
 
 const AUTO_APPROVED_MCP_LEVELS = new Set(["read", "low"]);
 const MCP_PERMISSION_LEVELS = new Set(["auto", "confirm", "trust"]);
+const TRUSTED_WRITE_LEVELS = new Set(["write", "destructive", "control"]);
+const FILE_ACCESS_SCOPES = new Set(["workspace", "explicit", "full-disk"]);
+const TRUSTED_WRITE_GRANT_BY_TOOL = Object.freeze({
+  write_file: "file",
+  edit_file: "file",
+});
 const MCP_RISK_PROPERTY_LEVELS = Object.freeze([
   ["command", "destructive"],
   ["delete", "destructive"],
@@ -174,6 +180,15 @@ export function createPermissionDeniedResult(request) {
   };
 }
 
+export function createPermissionPendingResult(request) {
+  return {
+    status: "permission_pending",
+    message: `${request.label} requires Ken's approval before it can run.`,
+    permission: request,
+    tool: request.toolName,
+  };
+}
+
 export function formatPermissionPrompt(request) {
   const parts = [
     `${request.label}?`,
@@ -182,6 +197,28 @@ export function formatPermissionPrompt(request) {
     `Risk: ${request.level}`,
   ].filter(Boolean);
   return parts.join("\n\n");
+}
+
+export function shouldRequireToolConfirmation(name, args = {}, context = {}) {
+  const request = getToolPermissionRequest(name, args);
+  if (!isKnownRealtimeTool(name) || request.level === "unknown") {
+    return true;
+  }
+  if (!TRUSTED_WRITE_LEVELS.has(request.level)) {
+    return false;
+  }
+  return !isTrustedWriteAllowed(name, args, context);
+}
+
+export function isTrustedWriteAllowed(name, args = {}, context = {}) {
+  const request = getToolPermissionRequest(name, args);
+  if (!isKnownRealtimeTool(name) || !TRUSTED_WRITE_LEVELS.has(request.level)) {
+    return false;
+  }
+  if (context.trustedMacAccess !== true || context.trustedWriteMode !== true) {
+    return false;
+  }
+  return hasRequiredTrustedWriteGrant(name, context);
 }
 
 function resolveToolLevel(name, level, args) {
@@ -367,7 +404,8 @@ function formatField(field, value) {
     return "";
   }
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  return `${field}: ${text.slice(0, 140)}`;
+  const formattedText = shouldSanitizePathField(field) ? summarizePathForPermission(text) : text;
+  return `${field}: ${formattedText.slice(0, 140)}`;
 }
 
 function isRecord(value) {
@@ -376,6 +414,54 @@ function isRecord(value) {
 
 function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isKnownRealtimeTool(name) {
+  return Object.hasOwn(toolPermissionMetadata, name);
+}
+
+function hasRequiredFileGrant(context) {
+  const scope = normalizeFileAccessScope(context.fileAccessScope ?? context.scope);
+  if (scope === "workspace" || scope === "explicit") {
+    return true;
+  }
+  return scope === "full-disk" && normalizeString(context.fullDiskAccessStatus) === "granted";
+}
+
+function hasRequiredTrustedWriteGrant(name, context) {
+  const requiredGrant = TRUSTED_WRITE_GRANT_BY_TOOL[name];
+  if (requiredGrant === "file") {
+    return hasRequiredFileGrant(context);
+  }
+  return false;
+}
+
+function normalizeFileAccessScope(value) {
+  const normalized = normalizeString(value).toLowerCase();
+  return FILE_ACCESS_SCOPES.has(normalized) ? normalized : "workspace";
+}
+
+function shouldSanitizePathField(field) {
+  return normalizeString(field).toLowerCase().includes("path");
+}
+
+function summarizePathForPermission(value) {
+  const trimmed = normalizeString(value);
+  if (!isPrivateAbsolutePath(trimmed)) {
+    return trimmed;
+  }
+  const withoutTrailingSeparators = trimmed.replace(/[\\/]+$/g, "");
+  const basename = withoutTrailingSeparators.split(/[\\/]/).filter(Boolean).at(-1);
+  return basename ? `[absolute path]/${basename}` : "[absolute path]";
+}
+
+function isPrivateAbsolutePath(value) {
+  return (
+    value.startsWith("/") ||
+    value.startsWith("~/") ||
+    value.startsWith("~\\") ||
+    /^[A-Za-z]:[\\/]/.test(value)
+  );
 }
 
 function sanitizeMCPText(value, maxLength) {

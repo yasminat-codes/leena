@@ -167,7 +167,10 @@ function createBridge() {
     },
     providers: {
       getConfig: async (providerId) => configs[providerId] ?? {},
-      getModels: async (providerId, capability) => models[providerId]?.[capability] ?? [],
+      getModels: async (providerId, capability) => {
+        calls.push({ capability, providerId, type: "getModels" });
+        return models[providerId]?.[capability] ?? [];
+      },
       list: async () => providers.map((provider) => ({ ...provider })),
       setConfig: async (providerId, config) => {
         calls.push({ config, providerId, type: "setConfig" });
@@ -190,12 +193,18 @@ test("provider selector renders provider cards and capability rows", () => {
   const html = renderProviderModelSelector(createProviderSelectorState({ providers }));
 
   assert.match(html, /data-provider-model-selector/);
+  assert.match(html, /data-provider-detail/);
+  assert.match(html, /data-provider-cards-section/);
+  assert.match(html, /data-provider-defaults-section/);
   assert.match(html, /OpenAI/);
   assert.match(html, /OpenRouter/);
   assert.match(html, /Ollama/);
+  assert.match(html, /5 defaults/);
   assert.match(html, /data-provider-configure="openai"/);
+  assert.match(html, /data-provider-refresh="openai"/);
   assert.match(html, /data-capability-provider="chat"/);
   assert.match(html, /data-capability-provider="realtime"/);
+  assert.match(html, /data-ollama-pull-panel/);
   assert.match(html, /data-ollama-download/);
 });
 
@@ -212,7 +221,8 @@ test("capability filtering restricts realtime to OpenAI while keeping Ollama cha
 
 test("controller load populates model dropdown state from provider model responses", async () => {
   const mount = new TestMount();
-  const controller = createProviderModelSelectorController(mount, createBridge());
+  const bridge = createBridge();
+  const controller = createProviderModelSelectorController(mount, bridge);
 
   controller.bind();
   await controller.load();
@@ -222,6 +232,10 @@ test("controller load populates model dropdown state from provider model respons
   assert.equal(controller.state.models.openai.chat[0].id, "gpt-4o");
   assert.match(mount.innerHTML, /GPT-4o/);
   assert.match(mount.innerHTML, /GPT Realtime 2/);
+  assert.equal(
+    bridge.calls.some((call) => call.type === "setSetting"),
+    false,
+  );
 });
 
 test("API key input masks by default and the toggle switches to text", () => {
@@ -278,6 +292,30 @@ test("save provider config sends set-config payload with selected default models
   assert.equal(saveCall.config.apiKey, "sk-openai-new");
   assert.equal(saveCall.config.baseUrl, "https://api.openai.test/v1");
   assert.equal(saveCall.config.defaultModels.chat, "gpt-4o");
+});
+
+test("refresh provider models reloads supported capabilities without changing defaults", async () => {
+  const mount = new TestMount();
+  const bridge = createBridge();
+  const controller = createProviderModelSelectorController(mount, bridge);
+
+  controller.bind();
+  await controller.load();
+  bridge.calls.length = 0;
+
+  await controller.refreshProviderModels("openrouter");
+
+  assert.deepEqual(
+    bridge.calls
+      .filter((call) => call.type === "getModels")
+      .map((call) => `${call.providerId}:${call.capability}`),
+    ["openrouter:chat", "openrouter:embeddings"],
+  );
+  assert.equal(
+    bridge.calls.some((call) => call.type === "setSetting"),
+    false,
+  );
+  assert.match(mount.innerHTML, /OpenRouter/);
 });
 
 test("Ollama download reports progress and makes chat and embedding models selectable", async () => {

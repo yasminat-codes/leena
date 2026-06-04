@@ -600,7 +600,7 @@ _(wave execution entries appended below as the build runs)_
 - Completed tasks `127`, `132`, `134`, `136`, `137`, `140`, and `143`; moved task files to `tasks/completed/` and released active claims.
 - Parent integration completed shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` wiring for Settings viewport proof, Composio live MCP refresh, and Full Disk Access status.
 - Independent gates passed before terminal bookkeeping: `npm run check`, focused task gates, UI baseline harness, output existence checks, and full `node --test` (596/596).
-- Next gates pending: reviewer agent, advisor gate, CodeRabbit advisory PR request, and merge to `main`.
+- Next gates pending: advisor gate, CodeRabbit advisory PR request, and merge to `main`.
 
 ## 2026-06-04 — Wave 19 advisor schema fix
 
@@ -667,3 +667,23 @@ _(wave execution entries appended below as the build runs)_
 - Opened PR #23 from `wave-19` to `main` after reviewer and advisor gates passed.
 - Requested CodeRabbit review on PR #23; CodeRabbit acknowledged the request and began processing. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/in-progress and non-blocking.
 - Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.
+
+## 2026-06-04 — Wave 20 started
+
+- Created clean branch/worktree `wave-20` from `origin/main` commit `c4c056c2dd8d7a3030feafa6d34d73c0aaf6365c` because the primary checkout is dirty and behind remote truth.
+- Installed dependencies in the fresh worktree and verified the baseline before task work: `npm run check` passed and full `node --test` passed 607/607.
+- Required pre-code kencode-search was attempted for compact Settings detail patterns, Electron updater state anchors, trusted file access policy, and Chat memory history anchors. No exact reusable public snippets matched the local Leena contracts; Wave 17-19 contracts and source remain authoritative.
+- Moved Wave 20 tasks `128`, `129`, `130`, `138`, and `141` to `in-progress` with `attempts=1`, updated overview counts to `pending=4`, `in-progress=5`, `completed=84`, `blocked=6`, and wrote WAL `pre_run` entries.
+- Opened active file claims for all Wave 20 slices. Shared `src/renderer/screens/settings.js`, `src/renderer/leena.css`, and `test/settings-screen.test.js` are reserved for serialized Settings integration across tasks `128`-`130`; file policy and Chat work are independent.
+
+## 2026-06-04 — Wave 20 tasks completed
+
+- Completed tasks `128`, `129`, `130`, `138`, and `141`; moved task files to `tasks/completed/`, released active claims, and updated overview counts to `pending=4`, `in-progress=0`, `completed=89`, `blocked=6`.
+- Parent integration preserved existing theme values, fixed Providers and Updates detail flows, enforced file access scope policy, wired Chat history/detail/send behavior, and added Chat to the post-MVP screenshot baseline.
+- Fixed two parent verification issues: Chat inherited the Settings first-card grid span, then inherited command-center `.chat-input` CSS; both now have Chat-scoped layout overrides.
+- Fixed file policy runtime reachability by passing the audited Full Disk Access status into main-process filesystem tool options.
+- Reviewer initially blocked on Chat overlap below the 920px breakpoint; fixed by stacking the Chat rail and workspace on separate rows and keeping the composer three-column placement under the breakpoint.
+- Terminal gates passed after reviewer fix: `npm run check`, full `node --test` (623/623), `node --test test/ui-baseline-smoke.test.js`, changed-file syntax checks, and `git diff --check`.
+- Reviewer re-check passed with no blockers after independently verifying the narrow Chat fix. Non-blocking risk recorded: coverage exercises one narrow viewport, not every boundary/minimum width.
+- Advisor gate passed with no merge blockers after reviewing Settings detail preservation, file policy and Full Disk Access runtime handoff, Chat history/detail/narrow layout coverage, task counts, empty active claims, WAL, and privacy hygiene.
+- Next gates pending: CodeRabbit advisory PR request and merge to `main`.

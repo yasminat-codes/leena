@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   applyAppearancePreference,
+  applyUpdateStatus,
   bindSettingsControls,
   bindSettingsDetailRouter,
+  bindUpdateControls,
   loadAppearancePreferences,
   renderSettings,
   SETTINGS_MOCK_DATA,
@@ -19,7 +21,10 @@ class TestElement {
     this.listeners = new Map();
     this.children = [];
     this.hidden = false;
+    this.disabled = false;
     this.focusCount = 0;
+    this.textContent = "";
+    this.value = "";
     this.classList = {
       contains: (className) => classes.includes(className),
     };
@@ -166,6 +171,51 @@ function createSettingsRouterRoot() {
   return { back, close, general, generalCard, overview, providers, root, theme, themeCard };
 }
 
+function createUpdateRoot() {
+  const root = new TestElement();
+  const state = new TestElement({ dataset: { updateState: "" } });
+  const version = new TestElement({ dataset: { updateVersion: "" } });
+  const availableVersion = new TestElement({ dataset: { updateAvailableVersion: "" } });
+  const progressLabel = new TestElement({ dataset: { updateProgressLabel: "" } });
+  const progress = new TestElement({ dataset: { updateProgress: "" } });
+  const status = new TestElement({ dataset: { updateStatus: "" } });
+  const error = new TestElement({ dataset: { updateError: "" } });
+  const check = new TestElement({ dataset: { updateCheck: "" } });
+  const download = new TestElement({ dataset: { updateDownload: "" } });
+  const install = new TestElement({ dataset: { updateInstall: "" } });
+
+  root.children.push(
+    state,
+    version,
+    availableVersion,
+    progressLabel,
+    progress,
+    status,
+    error,
+    check,
+    download,
+    install,
+  );
+  return {
+    availableVersion,
+    check,
+    download,
+    error,
+    install,
+    progress,
+    progressLabel,
+    root,
+    state,
+    status,
+    version,
+  };
+}
+
+async function flushPromises() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 function getHtmlTags(html, tagName) {
   return html.match(new RegExp(`<${tagName}\\b[^>]*>`, "g")) ?? [];
 }
@@ -180,6 +230,15 @@ function getDetailSectionTag(html, detailId) {
   );
   assert.ok(tag, `expected ${detailId} detail section`);
   return tag;
+}
+
+function getDetailSectionHtml(html, detailId) {
+  const tag = getDetailSectionTag(html, detailId);
+  const start = html.indexOf(tag);
+  assert.notEqual(start, -1, `expected ${detailId} section start`);
+  const end = html.indexOf("</section>", start);
+  assert.notEqual(end, -1, `expected ${detailId} section end`);
+  return html.slice(start, end + "</section>".length);
 }
 
 test.afterEach(() => {
@@ -270,6 +329,70 @@ test("bindSettingsControls loads preferences and wires segmented clicks", () => 
   assert.equal(storage.get("leena-density"), "compact");
 });
 
+test("theme detail owns exact appearance controls and previews", () => {
+  const html = renderSettings();
+  const expectedAppearance = {
+    density: [
+      { label: "Compact", value: "compact" },
+      { label: "Comfortable", value: "comfortable" },
+    ],
+    theme: [
+      { label: "Workspace", value: "workspace" },
+      { label: "Light", value: "light" },
+      { label: "Dark", value: "dark" },
+      { label: "Vercel Dark", value: "vercel-dark" },
+    ],
+    treatment: [
+      { label: "Workspace", value: "workspace" },
+      { label: "Aurora", value: "aurora" },
+      { label: "Coral", value: "coral" },
+      { label: "Iris", value: "iris" },
+    ],
+  };
+  const appearanceOptions = Object.fromEntries(
+    Object.entries(SETTINGS_MOCK_DATA.appearance).map(([key, options]) => [
+      key,
+      options.map(({ label, value }) => ({ label, value })),
+    ]),
+  );
+
+  assert.deepEqual(appearanceOptions, expectedAppearance);
+
+  const themeHtml = getDetailSectionHtml(html, "theme");
+  assert.doesNotMatch(
+    themeHtml,
+    /Keyboard Shortcut|Launch on Login|Notifications|OpenAI|Ollama|Wake Word|data-hotkey-input|data-provider-model-selector|data-settings-toggle|data-update-check/,
+  );
+
+  for (const [key, options] of Object.entries(expectedAppearance)) {
+    const groupLabel = key === "theme" ? "Theme" : key === "treatment" ? "Treatment" : "Density";
+    assert.match(themeHtml, new RegExp(`data-settings-row="${key}"`));
+    for (const option of options) {
+      assert.match(themeHtml, new RegExp(`data-appearance-key="${key}"`));
+      assert.match(themeHtml, new RegExp(`data-appearance-value="${option.value}"`));
+      assert.match(themeHtml, new RegExp(`aria-label="${groupLabel}: ${option.label}"`));
+      assert.match(
+        themeHtml,
+        new RegExp(
+          `data-appearance-preview="${key}"\\s+data-appearance-preview-value="${option.value}"`,
+        ),
+      );
+      assert.match(themeHtml, new RegExp(`>${option.label}<\\/span>`));
+    }
+  }
+
+  for (const detail of [
+    "overview",
+    "general",
+    "updates",
+    "providers",
+    "mac-access",
+    "integrations-health",
+  ]) {
+    assert.doesNotMatch(getDetailSectionHtml(html, detail), /data-appearance-key=/);
+  }
+});
+
 test("renderSettings returns settings sections, providers, toggles, and no inline hex colors", () => {
   const html = renderSettings();
 
@@ -284,6 +407,7 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /data-settings-detail="general"/);
   assert.match(html, /data-settings-detail="overview"/);
   assert.match(html, /data-settings-detail="theme"/);
+  assert.match(html, /data-settings-detail="providers"/);
   assert.match(html, /data-settings-detail="mac-access"/);
   assert.match(html, /data-settings-detail="integrations-health"/);
   assert.match(html, /data-settings-primitive="overview-card"/);
@@ -311,7 +435,7 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /data-appearance-value="workspace"/);
   assert.match(html, /data-appearance-value="vercel-dark"/);
   assert.match(html, /data-appearance-key="treatment"/);
-  assert.match(html, />\s*Workspace\s*<\/button>/);
+  assert.match(html, /class="settings-segmented__label">Workspace<\/span>/);
   assert.match(html, /data-appearance-value="coral"/);
   assert.match(html, /data-appearance-key="density"/);
   assert.match(html, /data-appearance-value="compact"/);
@@ -323,17 +447,34 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   assert.match(html, /data-hotkey-default/);
   assert.match(html, /data-hotkey-save/);
   assert.match(html, /Updates/);
+  assert.match(html, /State/);
+  assert.match(html, /data-update-state/);
+  assert.match(html, /App version/);
   assert.match(html, /data-update-version/);
+  assert.match(html, /Available update/);
+  assert.match(html, /data-update-available-version/);
+  assert.match(html, /Download progress/);
+  assert.match(html, /data-update-progress-label/);
+  assert.match(html, /data-update-progress/);
   assert.match(html, /data-update-check/);
+  assert.match(html, /Check for updates/);
   assert.match(html, /data-update-download[\s\S]*disabled/);
+  assert.match(html, /Download update/);
   assert.match(html, /data-update-install[\s\S]*disabled/);
+  assert.match(html, /Restart to install/);
+  assert.match(html, /data-update-error[\s\S]*hidden/);
   assert.match(html, /Providers/);
+  assert.match(html, /data-provider-detail/);
+  assert.match(html, /data-provider-cards-section/);
+  assert.match(html, /data-provider-defaults-section/);
   assert.match(html, /OpenAI/);
   assert.match(html, /settings-chip--success/);
   assert.match(html, /OpenRouter/);
   assert.match(html, /Ollama/);
   assert.match(html, /Choose a hosted model/);
   assert.match(html, /Choose a local model/);
+  assert.match(html, /data-provider-refresh="openai"/);
+  assert.match(html, /data-ollama-pull-panel/);
   assert.match(html, /Mac Access/);
   assert.match(html, /Integrations Health/);
   assert.match(html, /Wake Word/);
@@ -389,6 +530,190 @@ test("renderSettings returns settings sections, providers, toggles, and no inlin
   for (const tag of buttonTags) {
     assert.match(tag, /data-settings-primitive="(?:action-button|segmented-option|toggle)"/);
   }
+});
+
+test("applyUpdateStatus maps required update states to detail metadata and controls", () => {
+  const cases = [
+    {
+      state: "idle",
+      expected: {
+        checkDisabled: false,
+        downloadDisabled: true,
+        installDisabled: true,
+        progressLabel: "Not started",
+        progressValue: "0",
+        stateLabel: "Idle",
+      },
+    },
+    {
+      state: "checking",
+      expected: {
+        checkDisabled: true,
+        checkLabel: "Checking...",
+        downloadDisabled: true,
+        installDisabled: true,
+        stateLabel: "Checking",
+      },
+    },
+    {
+      state: "available",
+      expected: {
+        availableVersion: "0.1.3",
+        checkDisabled: false,
+        checkLabel: "Check again",
+        downloadDisabled: false,
+        installDisabled: true,
+        progressLabel: "Ready to download",
+        stateLabel: "Available",
+      },
+      updateInfo: { version: "0.1.3" },
+    },
+    {
+      state: "downloading",
+      expected: {
+        availableVersion: "0.1.3",
+        checkDisabled: true,
+        downloadDisabled: true,
+        downloadLabel: "Downloading...",
+        installDisabled: true,
+        progressLabel: "42% downloaded",
+        progressValue: "42",
+        stateLabel: "Downloading",
+      },
+      percent: 42,
+      updateInfo: { version: "0.1.3" },
+    },
+    {
+      state: "downloaded",
+      expected: {
+        availableVersion: "0.1.3",
+        checkDisabled: false,
+        checkLabel: "Check again",
+        downloadDisabled: true,
+        downloadLabel: "Downloaded",
+        installDisabled: false,
+        installLabel: "Restart to install",
+        progressLabel: "Download complete",
+        progressValue: "100",
+        stateLabel: "Downloaded",
+      },
+      updateInfo: { version: "0.1.3" },
+    },
+    {
+      state: "installing",
+      expected: {
+        availableVersion: "0.1.3",
+        checkDisabled: true,
+        downloadDisabled: true,
+        downloadLabel: "Downloaded",
+        installDisabled: true,
+        installLabel: "Installing...",
+        progressLabel: "Download complete",
+        progressValue: "100",
+        stateLabel: "Installing",
+      },
+      updateInfo: { version: "0.1.3" },
+    },
+    {
+      state: "error",
+      error: "Signature rejected",
+      expected: {
+        checkDisabled: false,
+        checkLabel: "Retry check",
+        downloadDisabled: true,
+        errorHidden: false,
+        errorText: "Last error: Signature rejected",
+        installDisabled: true,
+        stateLabel: "Error",
+      },
+    },
+  ];
+
+  for (const updateCase of cases) {
+    const view = createUpdateRoot();
+    applyUpdateStatus(view.root, {
+      error: updateCase.error,
+      message: `${updateCase.state} message`,
+      percent: updateCase.percent,
+      state: updateCase.state,
+      updateInfo: updateCase.updateInfo,
+      version: "0.1.2",
+    });
+
+    assert.equal(view.state.textContent, updateCase.expected.stateLabel);
+    assert.equal(view.version.textContent, "0.1.2");
+    assert.equal(
+      view.availableVersion.textContent,
+      updateCase.expected.availableVersion ?? "Not checked",
+    );
+    assert.equal(view.check.disabled, updateCase.expected.checkDisabled);
+    assert.equal(view.download.disabled, updateCase.expected.downloadDisabled);
+    assert.equal(view.install.disabled, updateCase.expected.installDisabled);
+    assert.equal(
+      view.progressLabel.textContent,
+      updateCase.expected.progressLabel ?? "Not started",
+    );
+    assert.equal(view.progress.getAttribute("value"), updateCase.expected.progressValue ?? "0");
+    assert.equal(view.check.textContent, updateCase.expected.checkLabel ?? "Check for updates");
+    assert.equal(view.download.textContent, updateCase.expected.downloadLabel ?? "Download update");
+    assert.equal(
+      view.install.textContent,
+      updateCase.expected.installLabel ?? "Restart to install",
+    );
+    assert.equal(view.error.hidden, updateCase.expected.errorHidden ?? true);
+    assert.equal(view.error.textContent, updateCase.expected.errorText ?? "");
+  }
+});
+
+test("bindUpdateControls keeps download and install bridge actions separate", async () => {
+  const view = createUpdateRoot();
+  const calls = [];
+  const bridge = {
+    updates: {
+      getStatus: async () => ({
+        message: "Leena 0.1.3 is available.",
+        state: "available",
+        updateInfo: { version: "0.1.3" },
+        version: "0.1.2",
+      }),
+      download: async () => {
+        calls.push("download");
+        return {
+          message: "Update downloaded. Restart Leena to install it.",
+          state: "downloaded",
+          updateInfo: { version: "0.1.3" },
+          version: "0.1.2",
+        };
+      },
+      install: async () => {
+        calls.push("install");
+        return {
+          message: "Restarting Leena to install the update.",
+          state: "installing",
+          updateInfo: { version: "0.1.3" },
+          version: "0.1.2",
+        };
+      },
+      onStatus: () => () => {},
+    },
+  };
+
+  const binding = bindUpdateControls(view.root, bridge);
+  assert.equal(typeof binding.dispose, "function");
+  await flushPromises();
+
+  assert.equal(view.download.disabled, false);
+  assert.equal(view.install.disabled, true);
+
+  view.download.click();
+  assert.deepEqual(calls, ["download"]);
+
+  await flushPromises();
+  assert.equal(view.download.disabled, true);
+  assert.equal(view.install.disabled, false);
+
+  view.install.click();
+  assert.deepEqual(calls, ["download", "install"]);
 });
 
 test("settings detail router opens cards and returns to overview", () => {

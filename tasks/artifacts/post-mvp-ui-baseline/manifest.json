@@ -43,14 +43,25 @@
       "selector": null
     },
     {
-      "colorBuckets": 149,
+      "colorBuckets": 298,
       "height": 712,
-      "luminanceRange": 222.88,
+      "luminanceRange": 250,
       "visibleRatio": 1,
       "width": 1060,
       "capture": "viewport",
       "file": "settings-theme.png",
       "id": "settings-theme",
+      "selector": null
+    },
+    {
+      "colorBuckets": 150,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-providers.png",
+      "id": "settings-providers",
       "selector": null
     },
     {
@@ -62,6 +73,17 @@
       "capture": "viewport",
       "file": "integrations.png",
       "id": "integrations",
+      "selector": null
+    },
+    {
+      "colorBuckets": 153,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "chat.png",
+      "id": "chat",
       "selector": null
     },
     {

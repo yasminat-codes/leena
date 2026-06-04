@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 9 |
+| Pending | 4 |
 | In-Progress | 0 |
-| Completed | 84 |
+| Completed | 89 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -126,6 +126,7 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 - Wave 16 — MVP DMG guaranteed deliverable (`046`) completed 2026-06-03; final gates passed with 529/529 tests and `dist/Leena-MVP.dmg` recorded in `tasks/DELIVERABLE.md`.
 - Wave 17 — Post-MVP research, UI baseline proof, Mac access trust contract, and Settings IA contract (`120`, `121`, `122`, `123`) completed 2026-06-03; final gates passed with 542/542 tests and baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
 - Wave 18 — Shell, visual system, integration foundations, Mac access cards, and voice preflight (`124`, `125`, `126`, `131`, `133`, `135`, `142`) completed 2026-06-03; reviewer/advisor gates passed with 565/565 tests and refreshed baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
+- Wave 20 — Focused settings details, file policy, and live chat wiring (`128`, `129`, `130`, `138`, `141`) completed 2026-06-04; parent gates passed with `npm run check`, full `node --test` (623/623), `git diff --check`, and refreshed post-MVP baseline screenshots including Chat plus narrow-width overlap coverage.
 
 ## Post-MVP Refinement Tasks
 
@@ -141,9 +142,9 @@ Created 2026-06-03 from owner review of the shipped app screenshots and approved
 | 125 | 18 | Visual token and orb polish | completed |
 | 126 | 18 | Settings component primitives | completed |
 | 127 | 19 | Settings overview detail router | completed |
-| 128 | 20 | Theme detail preservation | pending |
-| 129 | 20 | Providers detail polish | pending |
-| 130 | 20 | Updates detail flow | pending |
+| 128 | 20 | Theme detail preservation | completed |
+| 129 | 20 | Providers detail polish | completed |
+| 130 | 20 | Updates detail flow | completed |
 | 131 | 18 | Integrations detail shell | completed |
 | 132 | 19 | Custom MCP form polish | completed |
 | 133 | 18 | Composio secure credential storage | completed |
@@ -151,10 +152,10 @@ Created 2026-06-03 from owner review of the shipped app screenshots and approved
 | 135 | 18 | Mac access integration cards | completed |
 | 136 | 19 | Full Disk Access status | completed |
 | 137 | 19 | Apple Calendar adapter | completed |
-| 138 | 20 | File access scope policy | pending |
+| 138 | 20 | File access scope policy | completed |
 | 139 | 21 | Permission confirmation UX | pending |
 | 140 | 19 | Chat workspace shell | completed |
-| 141 | 20 | Chat history and detail wiring | pending |
+| 141 | 20 | Chat history and detail wiring | completed |
 | 142 | 18 | Voice startup preflight | completed |
 | 143 | 19 | Theme-aware voice orb | completed |
 | 144 | 21 | UI screenshot regression suite | pending |

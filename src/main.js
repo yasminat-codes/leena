@@ -731,13 +731,17 @@ function cancelComputerUse() {
 
 async function executeRealtimeToolWithAudit(name, args = {}, options = {}) {
   const startedAt = Date.now();
+  const permissionSnapshot = await getOsPermissionStatus();
   await writeDiagnosticLog("tool.execute.start", {
     tool: name,
     args: sanitizeDiagnosticValue(args),
-    permissions: summarizePermissionSnapshot(await getOsPermissionStatus()),
+    permissions: summarizePermissionSnapshot(permissionSnapshot),
   });
   try {
-    const result = await executeRealtimeToolWithRuntimeOptions(name, args, options);
+    const result = await executeRealtimeToolWithRuntimeOptions(name, args, {
+      ...options,
+      permissionSnapshot,
+    });
     await writeDiagnosticLog("tool.execute.finish", {
       tool: name,
       elapsedMs: Date.now() - startedAt,
@@ -762,7 +766,11 @@ async function executeRealtimeToolWithAudit(name, args = {}, options = {}) {
   }
 }
 
-async function executeRealtimeToolWithRuntimeOptions(name, args = {}, { abortController } = {}) {
+async function executeRealtimeToolWithRuntimeOptions(
+  name,
+  args = {},
+  { abortController, permissionSnapshot } = {},
+) {
   const ownedAbortController =
     name === "computer_use_task" && !abortController ? new AbortController() : null;
   const toolAbortController = abortController ?? ownedAbortController;
@@ -780,6 +788,10 @@ async function executeRealtimeToolWithRuntimeOptions(name, args = {}, { abortCon
       logger: createToolLogger(name),
       ...(credentials ? { openAI: { accessToken: credentials.accessToken } } : {}),
     };
+
+    const fullDiskAccessStatus =
+      getPermissionStatusFromSnapshot(permissionSnapshot, "full-disk-access") ??
+      (await detectFullDiskAccessStatus());
 
     return await executeRealtimeTool(name, args, {
       screenshot: screenshotOptions,
@@ -804,6 +816,7 @@ async function executeRealtimeToolWithRuntimeOptions(name, args = {}, { abortCon
       },
       fileSystem: {
         rootPath: app.getPath("home"),
+        fullDiskAccessStatus,
       },
       planner: {
         appleCalendar: {
@@ -1531,6 +1544,13 @@ async function getOsPermissionStatus() {
     computer: await getComputerUseBrowserStatus(),
     "full-disk-access": await detectFullDiskAccessStatus(),
   });
+}
+
+function getPermissionStatusFromSnapshot(snapshot, id) {
+  if (!Array.isArray(snapshot)) {
+    return null;
+  }
+  return snapshot.find((permission) => permission?.id === id)?.status ?? null;
 }
 
 async function requestOsPermission(id) {

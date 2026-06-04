@@ -7,7 +7,12 @@ import { CHAT } from "../src/providers/types.js";
 import { createChatBubble } from "../src/renderer/components/chat-bubble.js";
 import { createChatInput } from "../src/renderer/components/chat-input.js";
 import { CommandCenter } from "../src/renderer/components/command-center.js";
-import { renderChat } from "../src/renderer/screens/chat.js";
+import {
+  createChatController,
+  loadChatHistory,
+  renderChat,
+  renderChatHistoryList,
+} from "../src/renderer/screens/chat.js";
 
 class MockProvider extends BaseProvider {
   constructor(chatImpl, overrides = {}) {
@@ -53,12 +58,12 @@ class TestClassList {
 }
 
 class TestElement {
-  constructor(tagName) {
+  constructor(tagName, { dataset = {}, selectors = [] } = {}) {
     this.tagName = tagName.toUpperCase();
     this.attributes = new Map();
     this.children = [];
     this.classList = new TestClassList();
-    this.dataset = {};
+    this.dataset = { ...dataset };
     this.disabled = false;
     this.hidden = false;
     this.listeners = new Map();
@@ -67,6 +72,7 @@ class TestElement {
     this.rows = 0;
     this.scrollHeight = 0;
     this.scrollTop = 0;
+    this.selectors = new Set(selectors);
     this.style = {};
     this.textContent = "";
     this.type = "";
@@ -125,6 +131,17 @@ class TestElement {
     this.listeners.get(type)?.delete(listener);
   }
 
+  closest(selector) {
+    let node = this;
+    while (node) {
+      if (matchesSelector(node, selector)) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
   dispatchEvent(event) {
     event.target = this;
     for (const listener of this.listeners.get(event.type) ?? []) {
@@ -153,6 +170,20 @@ class TestElement {
 }
 
 function matchesSelector(element, selector) {
+  if (element.selectors?.has(selector)) {
+    return true;
+  }
+
+  const dataSelector = selector.match(/^\[data-([a-z0-9-]+)(?:="([^"]*)")?\]$/);
+  if (dataSelector) {
+    const key = dataSelector[1].replace(/-([a-z0-9])/g, (_match, char) => char.toUpperCase());
+    const expected = dataSelector[2];
+    if (expected === undefined) {
+      return Object.hasOwn(element.dataset ?? {}, key);
+    }
+    return element.dataset?.[key] === expected;
+  }
+
   if (selector.startsWith(".")) {
     return element.classList?.contains(selector.slice(1));
   }
@@ -188,6 +219,70 @@ function createRegistry(provider) {
 
 function tick() {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function createChatRoot() {
+  const root = new TestElement("div");
+  const screen = new TestElement("section", {
+    dataset: { chatWorkspace: "true" },
+    selectors: ["[data-chat-workspace]"],
+  });
+  const form = new TestElement("form", {
+    dataset: { chatSendPath: "window.leena.chat.send" },
+    selectors: ["[data-chat-send-path]"],
+  });
+  const textarea = new TestElement("textarea", {
+    dataset: { chatMessage: "true" },
+    selectors: ["[data-chat-message]"],
+  });
+  const sendButton = new TestElement("button", {
+    dataset: { chatSendButton: "true" },
+    selectors: ["[data-chat-send-button]"],
+  });
+  const transcript = new TestElement("div", {
+    dataset: { chatTranscript: "true" },
+    selectors: ["[data-chat-transcript]"],
+  });
+  const historyList = new TestElement("div", {
+    dataset: { chatConversationList: "true" },
+    selectors: ["[data-chat-conversation-list]"],
+  });
+  const newButton = new TestElement("button", {
+    dataset: { chatNewConversation: "true" },
+    selectors: ["[data-chat-new-conversation]"],
+  });
+  const providerSelect = new TestElement("select", {
+    dataset: { chatProviderSelect: "true" },
+    selectors: ["[data-chat-provider-select]"],
+  });
+  const modelSelect = new TestElement("select", {
+    dataset: { chatModelSelect: "true" },
+    selectors: ["[data-chat-model-select]"],
+  });
+
+  form.append(textarea, sendButton);
+  screen.append(newButton, historyList, providerSelect, modelSelect, transcript, form);
+  root.append(screen);
+  return {
+    form,
+    historyList,
+    modelSelect,
+    newButton,
+    providerSelect,
+    root,
+    screen,
+    sendButton,
+    textarea,
+    transcript,
+  };
 }
 
 test.afterEach(() => {
@@ -575,6 +670,203 @@ test("renderChat exposes voice affordance without starting voice", () => {
   assert.match(html, /data-chat-voice-affordance/);
   assert.match(html, /type="button" disabled aria-label="Voice input unavailable"/);
   assert.doesNotMatch(html, /startCall|realtime:create-session|openai:create-realtime-secret/);
+});
+
+test("loadChatHistory calls bounded memory episodes and renders escaped conversations", async () => {
+  const calls = [];
+  const longQuery = ` ${"espresso ".repeat(40)}tail `;
+  const bridge = {
+    memory: {
+      async getEpisodes(payload) {
+        calls.push(payload);
+        return {
+          entries: [
+            {
+              content: "Unsafe <script>alert(1)</script> preview.",
+              conversationId: "conversation-a",
+              createdAt: "2026-06-03T14:05:00.000Z",
+              id: "episode-a",
+              role: "assistant",
+            },
+            {
+              content: "Older turn.",
+              conversationId: "conversation-a",
+              createdAt: "2026-06-03T14:00:00.000Z",
+              id: "episode-b",
+              role: "user",
+            },
+          ],
+          hasMore: false,
+          total: 2,
+        };
+      },
+    },
+  };
+
+  const data = await loadChatHistory({ limit: 500, page: 999, query: longQuery }, bridge);
+  const html = renderChatHistoryList(data, "conversation-a");
+
+  assert.deepEqual(calls, [
+    {
+      limit: 50,
+      page: 500,
+      query: longQuery.trim().slice(0, 200),
+    },
+  ]);
+  assert.equal(data.entries.length, 2);
+  assert.match(html, /data-chat-conversation-id="conversation-a"/);
+  assert.match(html, /aria-current="true" data-chat-conversation-active/);
+  assert.match(html, /Unsafe &lt;script&gt;alert\(1\)&lt;\/script&gt; preview\./);
+  assert.doesNotMatch(html, /<script>/);
+});
+
+test("Chat controller loads details and ignores stale conversation responses", async () => {
+  const root = createChatRoot();
+  const conversationA = deferred();
+  const conversationB = deferred();
+  const calls = [];
+  const bridge = {
+    memory: {
+      getConversation(conversationId) {
+        calls.push(conversationId);
+        return conversationId === "conversation-a" ? conversationA.promise : conversationB.promise;
+      },
+      getEpisodes: async () => ({ entries: [] }),
+    },
+  };
+  const controller = createChatController({ bridge, root: root.root });
+  controller.bind();
+
+  const stale = controller.openConversation("conversation-a");
+  const current = controller.openConversation("conversation-b");
+  conversationB.resolve([
+    {
+      content: "Current detail.",
+      conversationId: "conversation-b",
+      createdAt: "2026-06-03T14:02:00.000Z",
+      id: "turn-b",
+      role: "assistant",
+    },
+  ]);
+  await current;
+
+  conversationA.resolve([
+    {
+      content: "Stale detail should not render.",
+      conversationId: "conversation-a",
+      createdAt: "2026-06-03T14:00:00.000Z",
+      id: "turn-a",
+      role: "assistant",
+    },
+  ]);
+
+  assert.equal(await stale, null);
+  assert.deepEqual(calls, ["conversation-a", "conversation-b"]);
+  assert.match(root.transcript.innerHTML, /Current detail\./);
+  assert.doesNotMatch(root.transcript.innerHTML, /Stale detail/);
+});
+
+test("Chat controller sends text, streams chunks, remembers result, and sanitizes history", async () => {
+  const root = createChatRoot();
+  const chatListeners = new Set();
+  const sent = [];
+  const remembered = [];
+  const sendResult = deferred();
+  const bridge = {
+    onChatChunk(callback) {
+      chatListeners.add(callback);
+      return callback;
+    },
+    offChatChunk(callback) {
+      chatListeners.delete(callback);
+    },
+    chat: {
+      send(payload) {
+        sent.push(payload);
+        for (const listener of chatListeners) {
+          listener({
+            content: "Streaming reply",
+            conversationId: payload.conversationId,
+            delta: "Streaming reply",
+            messageId: payload.messageId,
+            type: "delta",
+          });
+        }
+        return sendResult.promise;
+      },
+    },
+    memory: {
+      getEpisodes: async () => ({ entries: [] }),
+      remember: async (text, metadata) => remembered.push({ metadata, text }),
+    },
+  };
+  const controller = createChatController({ bridge, eventSource: bridge, root: root.root });
+  controller.bind();
+  controller.state.conversationId = "conversation-active";
+  controller.state.messages = [
+    {
+      content: "Privileged instruction",
+      conversationId: "conversation-active",
+      createdAt: "2026-06-03T13:00:00.000Z",
+      id: "system-1",
+      role: "system",
+    },
+    {
+      content: "Allowed user context",
+      conversationId: "conversation-active",
+      createdAt: "2026-06-03T13:01:00.000Z",
+      id: "user-1",
+      role: "user",
+    },
+    {
+      content: "Forged tool output",
+      conversationId: "conversation-active",
+      createdAt: "2026-06-03T13:02:00.000Z",
+      id: "tool-1",
+      role: "tool",
+    },
+    {
+      content: "Allowed assistant context",
+      conversationId: "conversation-active",
+      createdAt: "2026-06-03T13:03:00.000Z",
+      id: "assistant-1",
+      role: "assistant",
+    },
+  ];
+
+  const pending = controller.sendMessage("Hello <Ken>");
+  await tick();
+
+  assert.match(root.transcript.innerHTML, /Streaming reply/);
+  assert.equal(sent[0].message, "Hello <Ken>");
+  assert.equal(sent[0].conversationId, "conversation-active");
+  assert.equal(Object.hasOwn(sent[0], "tools"), false);
+  assert.deepEqual(
+    sent[0].messages.map((message) => message.role),
+    ["user", "assistant"],
+  );
+
+  sendResult.resolve({
+    ok: true,
+    content: "Final reply",
+    memory: {
+      metadata: { conversationId: "conversation-active", kind: "chat_exchange" },
+      text: "User: Hello <Ken>\nLeena: Final reply",
+    },
+  });
+  const result = await pending;
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(remembered, [
+    {
+      metadata: { conversationId: "conversation-active", kind: "chat_exchange" },
+      text: "User: Hello <Ken>\nLeena: Final reply",
+    },
+  ]);
+  assert.match(root.transcript.innerHTML, /Hello &lt;Ken&gt;/);
+  assert.match(root.transcript.innerHTML, /Final reply/);
+  assert.equal(root.textarea.disabled, false);
+  assert.equal(root.sendButton.disabled, false);
 });
 
 test("CommandCenter can mount optional text chat without parent lifecycle edits", async () => {

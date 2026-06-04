@@ -4,6 +4,8 @@ import { LeenaError } from "../utils/errors.js";
 
 const MCP_PERMISSION_LEVELS = new Set(["auto", "confirm", "trust"]);
 const MCP_TRANSPORTS = new Set(["http", "stdio"]);
+const MCP_HTTP_HEADER_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const PROTECTED_HEADERS_TYPE = "leena:mcp:headers:v1";
 const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
   "http",
   "streamable-http",
@@ -14,6 +16,7 @@ const UPDATE_FIELDS = Object.freeze([
   "name",
   "transport",
   "url",
+  "headers",
   "command",
   "args",
   "enabled",
@@ -24,10 +27,11 @@ const UPDATE_FIELDS = Object.freeze([
 export class ServerStore {
   constructor(options = {}) {
     this.storePath = typeof options === "string" ? options : options.storePath;
+    this.secretCodec = typeof options === "string" ? undefined : options.secretCodec;
   }
 
   addServer(config) {
-    return addServer(config, this.storePath);
+    return addServer(config, this.storePath, { secretCodec: this.secretCodec });
   }
 
   removeServer(id) {
@@ -35,19 +39,25 @@ export class ServerStore {
   }
 
   updateServer(id, updates) {
-    return updateServer(id, updates, this.storePath);
+    return updateServer(id, updates, this.storePath, { secretCodec: this.secretCodec });
   }
 
-  listServers() {
-    return listServers(this.storePath);
+  listServers(options = {}) {
+    return listServers(this.storePath, {
+      secretCodec: this.secretCodec,
+      redactSecrets: options.redactSecrets === true,
+    });
   }
 
-  getServer(id) {
-    return getServer(id, this.storePath);
+  getServer(id, options = {}) {
+    return getServer(id, this.storePath, {
+      secretCodec: this.secretCodec,
+      redactSecrets: options.redactSecrets === true,
+    });
   }
 
   getAutoConnectServers() {
-    return getAutoConnectServers(this.storePath);
+    return getAutoConnectServers(this.storePath, { secretCodec: this.secretCodec });
   }
 }
 
@@ -55,25 +65,27 @@ export function getMCPServerStorePath() {
   return getDatabasePath();
 }
 
-export function addServer(config, storePath = getMCPServerStorePath()) {
+export function addServer(config, storePath = getMCPServerStorePath(), options = {}) {
   const db = getServerDatabase(storePath);
+  const storageOptions = normalizeStorageOptions(options);
   const server = normalizeServerConfig(config, { id: randomUUID() });
   db.prepare(
     `INSERT INTO mcp_servers
-      (id, name, transport, url, command, args, enabled, auto_connect, permission_level)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, name, transport, url, headers, command, args, enabled, auto_connect, permission_level)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     server.id,
     server.name,
     server.transport,
-    toStoredValue("url", server.url),
-    toStoredValue("command", server.command),
+    toStoredValue("url", server.url, storageOptions),
+    toStoredValue("headers", server.headers, storageOptions),
+    toStoredValue("command", server.command, storageOptions),
     JSON.stringify(server.args),
     server.enabled ? 1 : 0,
     server.auto_connect ? 1 : 0,
     server.permission_level,
   );
-  return getServer(server.id, storePath);
+  return getServer(server.id, storePath, storageOptions);
 }
 
 export function removeServer(id, storePath = getMCPServerStorePath()) {
@@ -90,12 +102,13 @@ export function removeServer(id, storePath = getMCPServerStorePath()) {
   return true;
 }
 
-export function updateServer(id, updates, storePath = getMCPServerStorePath()) {
+export function updateServer(id, updates, storePath = getMCPServerStorePath(), options = {}) {
   const serverId = normalizeId(id);
   if (!serverId) {
     return null;
   }
-  const existing = getServer(serverId, storePath);
+  const storageOptions = normalizeStorageOptions(options);
+  const existing = getServer(serverId, storePath, storageOptions);
   if (!existing) {
     return null;
   }
@@ -109,6 +122,9 @@ export function updateServer(id, updates, storePath = getMCPServerStorePath()) {
       patch[field] = updates[field];
     }
   }
+  if (patch.transport === "stdio") {
+    patch.headers = {};
+  }
   if (Object.keys(patch).length === 0) {
     return existing;
   }
@@ -121,54 +137,57 @@ export function updateServer(id, updates, storePath = getMCPServerStorePath()) {
       continue;
     }
     setClauses.push(`${field} = ?`);
-    values.push(toStoredValue(field, next[field]));
+    values.push(toStoredValue(field, next[field], storageOptions));
   }
   values.push(serverId);
 
   const db = getServerDatabase(storePath);
   db.prepare(`UPDATE mcp_servers SET ${setClauses.join(", ")} WHERE id = ?`).run(...values);
-  return getServer(serverId, storePath);
+  return getServer(serverId, storePath, storageOptions);
 }
 
-export function listServers(storePath = getMCPServerStorePath()) {
+export function listServers(storePath = getMCPServerStorePath(), options = {}) {
   const db = getServerDatabase(storePath);
+  const storageOptions = normalizeStorageOptions(options);
   return db
     .prepare(
-      `SELECT id, name, transport, url, command, args, enabled, auto_connect, permission_level, created_at
+      `SELECT id, name, transport, url, headers, command, args, enabled, auto_connect, permission_level, created_at
        FROM mcp_servers
        ORDER BY created_at ASC, name COLLATE NOCASE ASC, id ASC`,
     )
     .all()
-    .map(rowToServer);
+    .map((row) => rowToServer(row, storageOptions));
 }
 
-export function getServer(id, storePath = getMCPServerStorePath()) {
+export function getServer(id, storePath = getMCPServerStorePath(), options = {}) {
   const serverId = normalizeId(id);
   if (!serverId) {
     return null;
   }
+  const storageOptions = normalizeStorageOptions(options);
   const db = getServerDatabase(storePath);
   const row = db
     .prepare(
-      `SELECT id, name, transport, url, command, args, enabled, auto_connect, permission_level, created_at
+      `SELECT id, name, transport, url, headers, command, args, enabled, auto_connect, permission_level, created_at
        FROM mcp_servers
        WHERE id = ?`,
     )
     .get(serverId);
-  return rowToServer(row);
+  return rowToServer(row, storageOptions);
 }
 
-export function getAutoConnectServers(storePath = getMCPServerStorePath()) {
+export function getAutoConnectServers(storePath = getMCPServerStorePath(), options = {}) {
   const db = getServerDatabase(storePath);
+  const storageOptions = normalizeStorageOptions(options);
   return db
     .prepare(
-      `SELECT id, name, transport, url, command, args, enabled, auto_connect, permission_level, created_at
+      `SELECT id, name, transport, url, headers, command, args, enabled, auto_connect, permission_level, created_at
        FROM mcp_servers
        WHERE enabled = 1 AND auto_connect = 1
        ORDER BY created_at ASC, name COLLATE NOCASE ASC, id ASC`,
     )
     .all()
-    .map(rowToServer);
+    .map((row) => rowToServer(row, storageOptions));
 }
 
 function getServerDatabase(storePath) {
@@ -184,6 +203,7 @@ function ensureMCPServersTable(db) {
       name TEXT NOT NULL,
       transport TEXT NOT NULL CHECK(transport IN ('http','stdio')),
       url TEXT,
+      headers TEXT,
       command TEXT,
       args TEXT,
       enabled INTEGER DEFAULT 1,
@@ -192,6 +212,15 @@ function ensureMCPServersTable(db) {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+  const columns = new Set(
+    db
+      .prepare("PRAGMA table_info(mcp_servers)")
+      .all()
+      .map((column) => column.name),
+  );
+  if (!columns.has("headers")) {
+    db.exec("ALTER TABLE mcp_servers ADD COLUMN headers TEXT;");
+  }
 }
 
 function normalizeServerConfig(config, { id }) {
@@ -205,6 +234,7 @@ function normalizeServerConfig(config, { id }) {
     name: normalizeName(config.name),
     transport,
     url: normalizeOptionalString(config.url),
+    headers: normalizeHeaders(config.headers),
     command: normalizeOptionalString(config.command),
     args: normalizeArgs(config.args),
     enabled: normalizeBoolean(config.enabled, true, "enabled"),
@@ -214,6 +244,8 @@ function normalizeServerConfig(config, { id }) {
 
   if (transport === "http") {
     server.url = normalizeRequiredHttpUrl(server.url);
+  } else {
+    server.headers = {};
   }
   if (transport === "stdio" && !server.command) {
     throwInvalidConfig("MCP stdio servers require a command.");
@@ -222,7 +254,7 @@ function normalizeServerConfig(config, { id }) {
   return server;
 }
 
-function rowToServer(row) {
+function rowToServer(row, options = {}) {
   if (!row) {
     return null;
   }
@@ -231,6 +263,7 @@ function rowToServer(row) {
     name: row.name,
     transport: row.transport,
     url: normalizeStoredOptionalString(row.url),
+    headers: parseHeaders(row.headers, options),
     command: normalizeStoredOptionalString(row.command),
     args: parseArgs(row.args),
     enabled: row.enabled !== 0,
@@ -240,7 +273,10 @@ function rowToServer(row) {
   };
 }
 
-function toStoredValue(field, value) {
+function toStoredValue(field, value, options = {}) {
+  if (field === "headers") {
+    return serializeHeaders(value, options);
+  }
   if (field === "args") {
     return JSON.stringify(value);
   }
@@ -316,6 +352,136 @@ function parseArgs(value) {
   } catch {
     return [];
   }
+}
+
+function normalizeHeaders(value) {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (!isRecord(value)) {
+    throwInvalidConfig("MCP HTTP headers must be an object with string values.");
+  }
+
+  const headers = {};
+  for (const [rawName, rawValue] of Object.entries(value)) {
+    const name = normalizeOptionalString(rawName);
+    if (!MCP_HTTP_HEADER_NAME_PATTERN.test(name)) {
+      throwInvalidConfig("MCP HTTP header names must be non-empty HTTP tokens.");
+    }
+    if (typeof rawValue !== "string") {
+      throwInvalidConfig("MCP HTTP header values must be strings.");
+    }
+    const headerValue = rawValue.trim();
+    if (!headerValue) {
+      throwInvalidConfig("MCP HTTP header values must be non-empty strings.");
+    }
+    headers[name] = headerValue;
+  }
+  return headers;
+}
+
+function serializeHeaders(value, options = {}) {
+  const headers = normalizeHeaders(value);
+  const names = Object.keys(headers);
+  if (names.length === 0) {
+    return JSON.stringify({});
+  }
+
+  const secretCodec = options.secretCodec;
+  assertSecretCodec(secretCodec);
+  return JSON.stringify({
+    type: PROTECTED_HEADERS_TYPE,
+    names,
+    payload: secretCodec.protect(JSON.stringify(headers)),
+  });
+}
+
+function parseHeaders(value, options = {}) {
+  if (typeof value !== "string" || !value.trim()) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (isProtectedHeadersPayload(parsed)) {
+      return parseProtectedHeaders(parsed, options);
+    }
+    const headers = normalizeHeaders(parsed);
+    return options.redactSecrets === true ? redactHeaders(headers) : headers;
+  } catch {
+    return {};
+  }
+}
+
+function parseProtectedHeaders(payload, options = {}) {
+  const names = normalizeHeaderNames(payload.names);
+  if (options.redactSecrets === true) {
+    return namesToRedactedHeaders(names);
+  }
+  const secretCodec = options.secretCodec;
+  if (!secretCodec || typeof secretCodec.reveal !== "function") {
+    return {};
+  }
+  try {
+    return normalizeHeaders(JSON.parse(secretCodec.reveal(payload.payload)));
+  } catch {
+    return {};
+  }
+}
+
+function isProtectedHeadersPayload(value) {
+  return (
+    isRecord(value) &&
+    value.type === PROTECTED_HEADERS_TYPE &&
+    Array.isArray(value.names) &&
+    typeof value.payload === "string" &&
+    value.payload.trim().length > 0
+  );
+}
+
+function normalizeHeaderNames(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const names = [];
+  for (const rawName of value) {
+    const name = normalizeOptionalString(rawName);
+    if (!name || /[\s:]/.test(name)) {
+      continue;
+    }
+    names.push(name);
+  }
+  return [...new Set(names)];
+}
+
+function namesToRedactedHeaders(names) {
+  const headers = {};
+  for (const name of names) {
+    headers[name] = "[REDACTED]";
+  }
+  return headers;
+}
+
+function redactHeaders(headers) {
+  return namesToRedactedHeaders(Object.keys(headers));
+}
+
+function assertSecretCodec(secretCodec) {
+  if (
+    !secretCodec ||
+    typeof secretCodec.protect !== "function" ||
+    typeof secretCodec.reveal !== "function"
+  ) {
+    throwInvalidConfig("MCP HTTP headers require protected storage.");
+  }
+}
+
+function normalizeStorageOptions(options) {
+  return isRecord(options)
+    ? {
+        secretCodec: options.secretCodec,
+        redactSecrets: options.redactSecrets === true,
+      }
+    : {};
 }
 
 function normalizeBoolean(value, defaultValue, field) {

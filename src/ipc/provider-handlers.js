@@ -58,7 +58,9 @@ export function registerProviderHandlers(ipcMain, options = {}) {
   );
   ipcMain.handle(PROVIDER_IPC_CHANNELS.saveComposioCredential, handlers.saveComposioCredential);
   ipcMain.handle(PROVIDER_IPC_CHANNELS.clearComposioCredential, handlers.clearComposioCredential);
-  ipcMain.handle(PROVIDER_IPC_CHANNELS.testComposioConnection, handlers.testComposioConnection);
+  if (options.registerComposioTestConnection !== false) {
+    ipcMain.handle(PROVIDER_IPC_CHANNELS.testComposioConnection, handlers.testComposioConnection);
+  }
   return handlers;
 }
 

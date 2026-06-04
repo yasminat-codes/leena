@@ -21,6 +21,8 @@
 
 ## Claim History
 
+- 2026-06-04T00:37:29Z — Released Wave 19 claims for tasks `127`, `132`, `134`, `136`, `137`, `140`, `143`, and serialized parent integration/bookkeeping after independent output checks, `npm run check`, focused gates, UI baseline harness, full `node --test` (596/596), and task moves to completed.
+- 2026-06-04T00:04:46Z — Opened Wave 19 claims for tasks `127`, `132`, `134`, `136`, `137`, `140`, and `143`; shared `src/renderer/leena.css`, `src/main.js`, and `src/preload.js` are reserved for serialized parent integration after worker slices finish.
 - 2026-06-03T23:12:24Z — Released Wave 18 reviewer-fix claims after Settings identity controls were made fully visible, Settings baseline refreshed, and changed-file syntax checks, `npm run check`, focused Settings tests (16/16), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565) passed.
 - 2026-06-03T23:10:32Z — Opened Wave 18 reviewer-fix claims for the clipped Settings identity panel: Settings renderer, CSS, focused Settings/UI-baseline tests, and refreshed Settings baseline artifacts.
 - 2026-06-03T23:00:43Z — Released Wave 18 task `135` claims after parent verification passed changed-file syntax checks, `npm run check`, focused integration/onboarding/permission tests (28/28), UI baseline harness (1/1), `git diff --check`, and full `node --test` (565/565). Parent fixed the initial UI baseline height failure by making the marketplace a horizontal strip.

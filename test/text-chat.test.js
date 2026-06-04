@@ -7,6 +7,7 @@ import { CHAT } from "../src/providers/types.js";
 import { createChatBubble } from "../src/renderer/components/chat-bubble.js";
 import { createChatInput } from "../src/renderer/components/chat-input.js";
 import { CommandCenter } from "../src/renderer/components/command-center.js";
+import { renderChat } from "../src/renderer/screens/chat.js";
 
 class MockProvider extends BaseProvider {
   constructor(chatImpl, overrides = {}) {
@@ -537,6 +538,43 @@ test("chat input submits on Cmd+Enter while plain Enter remains multiline", () =
   assert.equal(prevented, true);
   assert.deepEqual(submissions, [{ message: "line one" }]);
   assert.equal(textarea.value, "");
+});
+
+test("renderChat returns a full workspace shell with rail transcript and composer", () => {
+  const html = renderChat();
+
+  assert.match(html, /class="chat-screen integrations-detail-layout"/);
+  assert.match(html, /data-chat-workspace/);
+  assert.match(html, /data-chat-history-rail/);
+  assert.match(html, /data-chat-conversation-list/);
+  assert.match(html, /data-chat-conversation-active/);
+  assert.match(html, /data-chat-transcript/);
+  assert.match(html, /role="log"/);
+  assert.match(html, /data-chat-empty="true"/);
+  assert.match(html, /class="chat-input chat-screen__composer"/);
+  assert.match(html, /placeholder="Message Leena"/);
+  assert.match(html, /data-chat-send-path="window\.leena\.chat\.send"/);
+  assert.match(html, /data-chat-chunk-channel="chat:chunk"/);
+});
+
+test("renderChat keeps provider model controls compact and unset by default", () => {
+  const html = renderChat();
+
+  assert.match(html, /data-chat-provider-select/);
+  assert.match(html, /data-chat-model-select/);
+  assert.match(html, /<option value="">Default provider<\/option>/);
+  assert.match(html, /<option value="">Default model<\/option>/);
+  assert.doesNotMatch(html, /selected/);
+  assert.doesNotMatch(html, /data-chat-provider="openai"/);
+  assert.doesNotMatch(html, /data-chat-model="gpt/);
+});
+
+test("renderChat exposes voice affordance without starting voice", () => {
+  const html = renderChat();
+
+  assert.match(html, /data-chat-voice-affordance/);
+  assert.match(html, /type="button" disabled aria-label="Voice input unavailable"/);
+  assert.doesNotMatch(html, /startCall|realtime:create-session|openai:create-realtime-secret/);
 });
 
 test("CommandCenter can mount optional text chat without parent lifecycle edits", async () => {

@@ -98,24 +98,46 @@ export const realtimeToolDefinitions = Object.freeze([
         },
         description: {
           type: "string",
-          description: "One concise sentence, about 7-12 words.",
+          description: "One concise sentence, about 7-12 words. Required for local calendar items.",
           minLength: 1,
           maxLength: 120,
         },
         date: {
           type: "string",
-          description: "Short visible date label, such as 'Today', 'Tomorrow', or 'Jun 12'.",
+          description:
+            "Short visible date label for local items, such as 'Today', 'Tomorrow', or 'Jun 12'.",
           minLength: 1,
           maxLength: 24,
         },
         time: {
           type: "string",
-          description: "Short visible time label, such as '10:00 AM' or '1:30 PM'.",
+          description: "Short visible local item time label, such as '10:00 AM' or '1:30 PM'.",
           minLength: 1,
           maxLength: 24,
         },
+        source: {
+          type: "string",
+          description:
+            "Calendar backend. Omit or use local for Leena's local planner; use apple only after Apple Calendar access and write confirmation are available.",
+          enum: ["local", "apple"],
+        },
+        startDate: {
+          type: "string",
+          description: "ISO date-time for Apple Calendar event creation.",
+          maxLength: 40,
+        },
+        endDate: {
+          type: "string",
+          description: "ISO date-time after startDate for Apple Calendar event creation.",
+          maxLength: 40,
+        },
+        calendarName: {
+          type: "string",
+          description: "Optional Apple Calendar name when source is apple.",
+          maxLength: 160,
+        },
       },
-      required: ["title", "description", "date", "time"],
+      required: ["title"],
       additionalProperties: false,
     },
   },
@@ -123,17 +145,52 @@ export const realtimeToolDefinitions = Object.freeze([
     type: "function",
     name: "list_calendar_items",
     description:
-      "Read the current local Calendar list before answering calendar questions or choosing an id to delete.",
-    parameters: emptyObjectParameters,
+      "Read the current local Calendar list before answering calendar questions or choosing an id to delete. Use source apple only after Apple Calendar access is granted.",
+    parameters: {
+      type: "object",
+      properties: {
+        source: {
+          type: "string",
+          description: "Calendar backend. Defaults to local.",
+          enum: ["local", "apple"],
+        },
+        query: {
+          type: "string",
+          description: "Optional search text for Apple Calendar events.",
+          maxLength: 120,
+        },
+        startDate: {
+          type: "string",
+          description: "Optional ISO date-time window start for Apple Calendar reads.",
+          maxLength: 40,
+        },
+        endDate: {
+          type: "string",
+          description: "Optional ISO date-time window end for Apple Calendar reads.",
+          maxLength: 40,
+        },
+        calendarName: {
+          type: "string",
+          description: "Optional Apple Calendar name when source is apple.",
+          maxLength: 160,
+        },
+        limit: {
+          type: "integer",
+          description: "Maximum Apple Calendar events to return, default 20 and cap 50.",
+          minimum: 1,
+          maximum: 50,
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
   },
   {
     type: "function",
     name: "delete_calendar_item",
     description:
       "Delete one local calendar item. Pass the calendar item id or a short exact-ish title query when Ken asks to remove an event.",
-    parameters: createLookupParameters(
-      "Calendar item id or title query, such as 'calendar-product-review' or 'Product review'.",
-    ),
+    parameters: createCalendarLookupParameters(),
   },
   {
     type: "function",
@@ -433,4 +490,17 @@ function createLookupParameters(description) {
     required: ["query"],
     additionalProperties: false,
   };
+}
+
+function createCalendarLookupParameters() {
+  const parameters = createLookupParameters(
+    "Calendar item id or title query, such as 'calendar-product-review' or 'Product review'.",
+  );
+  parameters.properties.source = {
+    type: "string",
+    description:
+      "Calendar backend. Omit or use local for Leena's local planner; use apple only after Apple Calendar access and delete confirmation are available.",
+    enum: ["local", "apple"],
+  };
+  return parameters;
 }

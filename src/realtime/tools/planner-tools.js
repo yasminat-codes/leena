@@ -1,3 +1,4 @@
+import { createAppleCalendarAdapter } from "../../apple-calendar-adapter.js";
 import {
   normalizeCalendarDate,
   normalizeCalendarDescription,
@@ -32,7 +33,7 @@ export async function executePlannerTool(name, args, options = {}) {
     case "add_calendar_item":
       return addCalendarItem(args, options);
     case "list_calendar_items":
-      return listCalendarItemsTool(options);
+      return listCalendarItemsTool(args, options);
     case "delete_calendar_item":
       return deleteCalendarItemTool(args, options);
     default:
@@ -102,6 +103,10 @@ async function updateTaskStatusTool(args, options) {
 }
 
 async function addCalendarItem(args, options) {
+  if (isAppleCalendarSource(args)) {
+    return getAppleCalendarAdapter(options).createEvent(args, getAppleCalendarRuntime(options));
+  }
+
   const validation = validateStrings(args, {
     title: { min: 1, max: 48 },
     description: { min: 1, max: 120 },
@@ -127,7 +132,14 @@ async function addCalendarItem(args, options) {
   };
 }
 
-async function listCalendarItemsTool(options) {
+async function listCalendarItemsTool(args, options) {
+  if (isAppleCalendarSource(args)) {
+    const adapter = getAppleCalendarAdapter(options);
+    return args?.query || args?.search
+      ? adapter.searchEvents(args, getAppleCalendarRuntime(options))
+      : adapter.listEvents(args, getAppleCalendarRuntime(options));
+  }
+
   const calendarItems = await listCalendarItems(options.storePath);
   return {
     status: "listed",
@@ -146,8 +158,32 @@ async function listCalendarItemsTool(options) {
 }
 
 async function deleteCalendarItemTool(args, options) {
+  if (isAppleCalendarSource(args)) {
+    return getAppleCalendarAdapter(options).deleteEvent(args, getAppleCalendarRuntime(options));
+  }
+
   const validation = validateStrings(args, { query: { min: 1, max: 80 } });
   return validation.ok ? deleteCalendarItem(args.query, options.storePath) : validation.error;
+}
+
+function isAppleCalendarSource(args) {
+  return isRecord(args) && args.source === "apple";
+}
+
+function getAppleCalendarAdapter(options) {
+  if (isRecord(options.appleCalendarAdapter)) {
+    return options.appleCalendarAdapter;
+  }
+  return createAppleCalendarAdapter(options.appleCalendar);
+}
+
+function getAppleCalendarRuntime(options) {
+  const calendarOptions = isRecord(options.appleCalendar) ? options.appleCalendar : {};
+  return {
+    permissionStatus: calendarOptions.permissionStatus,
+    confirmed: calendarOptions.confirmed === true,
+    trustedWriteMode: calendarOptions.trustedWriteMode === true,
+  };
 }
 
 function validateStrings(args, shape) {

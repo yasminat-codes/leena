@@ -29,6 +29,8 @@ const STREAMABLE_HTTP_TRANSPORT_ALIASES = new Set([
   "streamable_http",
   "streamable",
 ]);
+const MCP_FORM_ERROR_ORDER = Object.freeze(["name", "transport", "url", "command", "headers"]);
+const MCP_HTTP_HEADER_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const MAC_ACCESS_PERMISSION_IDS = Object.freeze([
   "microphone",
   "screen",
@@ -600,39 +602,54 @@ function renderDetailHeader(detailId, statusClass, statusLabel) {
   `;
 }
 
+function renderFieldError(fieldName) {
+  return `<p class="lx-sm text-dim" id="integrations-mcp-${escapeHtml(fieldName)}-error" data-integrations-error-for="${escapeHtml(fieldName)}" role="alert" hidden></p>`;
+}
+
 function renderAddServerDialog() {
   return `
     <section class="integrations-dialog" data-integrations-dialog aria-label="Add custom MCP server">
       <form data-integrations-add-form>
         <div class="integrations-form-grid">
-          <label class="settings-field">
+          <label class="settings-field integrations-detail-row" data-integrations-field="name">
             <span class="lx-mono text-faint">Name</span>
-            <input class="settings-input" name="name" autocomplete="off" placeholder="Project tools" />
+            <input class="settings-input" name="name" autocomplete="off" placeholder="Project tools" aria-describedby="integrations-mcp-name-error" />
+            ${renderFieldError("name")}
           </label>
-          <label class="settings-field">
+          <label class="settings-field integrations-detail-row" data-integrations-field="transport">
             <span class="lx-mono text-faint">Transport</span>
-            <select class="settings-select" name="transport" data-integrations-transport-select>
+            <select class="settings-select" name="transport" data-integrations-transport-select aria-describedby="integrations-mcp-transport-error">
               <option value="http">Streamable HTTP URL</option>
               <option value="stdio">Stdio command</option>
             </select>
+            ${renderFieldError("transport")}
           </label>
-          <label class="settings-field" data-integrations-field="url">
+          <label class="settings-field integrations-detail-row" data-integrations-field="url">
             <span class="lx-mono text-faint">MCP endpoint URL</span>
-            <input class="settings-input" name="url" autocomplete="off" placeholder="https://example.com/mcp" />
+            <input class="settings-input" name="url" autocomplete="off" placeholder="https://example.com/mcp" aria-describedby="integrations-mcp-url-error" />
+            ${renderFieldError("url")}
           </label>
-          <label class="settings-field" data-integrations-field="command" hidden>
+          <label class="settings-field integrations-detail-row" data-integrations-field="headers">
+            <span class="lx-mono text-faint">HTTP headers (optional)</span>
+            <input class="settings-input" name="headers" autocomplete="off" placeholder="Authorization: Bearer token; X-Team: ops" aria-describedby="integrations-mcp-headers-error" />
+            ${renderFieldError("headers")}
+          </label>
+          <label class="settings-field integrations-detail-row" data-integrations-field="command" hidden>
             <span class="lx-mono text-faint">Command</span>
-            <input class="settings-input" name="command" autocomplete="off" placeholder="npx @modelcontextprotocol/server-filesystem" />
+            <input class="settings-input" name="command" autocomplete="off" placeholder="npx @modelcontextprotocol/server-filesystem" aria-describedby="integrations-mcp-command-error" />
+            ${renderFieldError("command")}
           </label>
-          <label class="settings-field" data-integrations-field="args" hidden>
+          <label class="settings-field integrations-detail-row" data-integrations-field="args" hidden>
             <span class="lx-mono text-faint">Args</span>
             <input class="settings-input" name="args" autocomplete="off" placeholder="workspace-root" />
           </label>
         </div>
+        <p class="lx-sm text-dim" data-integrations-test-status role="status" hidden></p>
         <p class="lx-sm text-dim" data-integrations-form-error role="alert" hidden></p>
         <div class="integrations-dialog__actions">
+          <button class="btn btn--ghost" type="button" data-integrations-action="test-connection">Test connection</button>
           <button class="btn btn--primary" type="submit">Add MCP Server</button>
-          <button class="btn btn--ghost" type="button" data-integrations-action="cancel-add">Clear</button>
+          <button class="btn btn--ghost" type="button" data-integrations-action="cancel-add">Cancel</button>
         </div>
       </form>
     </section>
@@ -879,46 +896,136 @@ export async function refreshIntegrationsScreen(
   return updateIntegrationsScreen(root, data);
 }
 
-export function validateMCPServerDraft(draft = {}) {
+function getNormalizedSetupTransport(value) {
+  return normalizeTransport(value) === "stdio" ? "stdio" : "http";
+}
+
+export function getMCPSetupFieldVisibility(transportValue) {
+  const transport = getNormalizedSetupTransport(transportValue);
+  const isStdio = transport === "stdio";
+  return {
+    args: isStdio,
+    command: isStdio,
+    headers: !isStdio,
+    name: true,
+    transport: true,
+    url: !isStdio,
+  };
+}
+
+function parseMCPHeaderDraft(value) {
+  const raw = firstString(value);
+  if (!raw) {
+    return { headers: null };
+  }
+
+  if (raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        return { error: "HTTP headers must be a JSON object or Name: value pairs." };
+      }
+      return normalizeHeaderEntries(Object.entries(parsed));
+    } catch {
+      return { error: "HTTP headers must be valid JSON or Name: value pairs." };
+    }
+  }
+
+  return normalizeHeaderEntries(
+    raw
+      .split(/\r?\n|;/)
+      .map((entry) => {
+        const separator = entry.indexOf(":");
+        return separator < 0
+          ? [entry, ""]
+          : [entry.slice(0, separator), entry.slice(separator + 1)];
+      })
+      .filter(([name, value]) => firstString(name, value)),
+  );
+}
+
+function normalizeHeaderEntries(entries) {
+  const headers = {};
+  for (const [rawName, rawValue] of entries) {
+    const name = firstString(rawName);
+    const value = firstString(rawValue);
+    if (!name || !MCP_HTTP_HEADER_NAME_PATTERN.test(name) || !value) {
+      return { error: "HTTP headers must use Name: value pairs with non-empty values." };
+    }
+    headers[name] = value;
+  }
+  return Object.keys(headers).length > 0 ? { headers } : { headers: null };
+}
+
+function getFirstValidationError(errors) {
+  for (const field of MCP_FORM_ERROR_ORDER) {
+    if (errors[field]) {
+      return errors[field];
+    }
+  }
+  return Object.values(errors).find(Boolean) ?? "";
+}
+
+export function validateMCPServerDraftFields(draft = {}) {
   const name = firstString(draft.name);
   const transport = normalizeTransport(draft.transport);
   const args = firstString(draft.args)
     .split(/\s+/)
     .map((arg) => arg.trim())
     .filter(Boolean);
+  const errors = {};
 
   if (!name) {
-    return { error: "MCP server name is required." };
+    errors.name = "MCP server name is required.";
   }
   if (transport !== "http" && transport !== "stdio") {
-    return { error: "Choose Streamable HTTP URL or stdio command." };
+    errors.transport = "Choose Streamable HTTP URL or stdio command.";
   }
 
   if (transport === "http") {
     const url = firstString(draft.url);
     if (!url) {
-      return { error: "Streamable HTTP MCP servers require a URL." };
+      errors.url = "Streamable HTTP MCP servers require a URL.";
     }
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-        return { error: "Streamable HTTP MCP server URL must use http or https." };
+
+    let parsedUrl = null;
+    if (url) {
+      try {
+        parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          errors.url = "Streamable HTTP MCP server URL must use http or https.";
+        }
+      } catch {
+        errors.url = "Streamable HTTP MCP server URL must be valid.";
       }
-      return {
-        config: {
-          name,
-          transport,
-          url: parsed.href,
-        },
-      };
-    } catch {
-      return { error: "Streamable HTTP MCP server URL must be valid." };
     }
+
+    const headerResult = parseMCPHeaderDraft(draft.headers);
+    if (headerResult.error) {
+      errors.headers = headerResult.error;
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return { errors };
+    }
+
+    return {
+      config: {
+        ...(headerResult.headers ? { headers: headerResult.headers } : {}),
+        name,
+        transport,
+        url: parsedUrl.href,
+      },
+      errors,
+    };
   }
 
   const command = firstString(draft.command);
   if (!command) {
-    return { error: "Stdio MCP servers require a command." };
+    errors.command = "Stdio MCP servers require a command.";
+  }
+  if (Object.keys(errors).length > 0) {
+    return { errors };
   }
   return {
     config: {
@@ -927,7 +1034,16 @@ export function validateMCPServerDraft(draft = {}) {
       name,
       transport,
     },
+    errors,
   };
+}
+
+export function validateMCPServerDraft(draft = {}) {
+  const validation = validateMCPServerDraftFields(draft);
+  if (validation.config) {
+    return { config: validation.config };
+  }
+  return { error: getFirstValidationError(validation.errors ?? {}) };
 }
 
 export async function addIntegrationServer(draft, bridge = getDefaultMCPBridge()) {
@@ -939,6 +1055,17 @@ export async function addIntegrationServer(draft, bridge = getDefaultMCPBridge()
     throw new Error("Integrations screen requires window.leena.mcp.addServer().");
   }
   return bridge.addServer(validation.config);
+}
+
+export async function testMCPServerConnection(draft, bridge = getDefaultMCPBridge()) {
+  const validation = validateMCPServerDraft(draft);
+  if (!validation.config) {
+    throw new Error(validation.error);
+  }
+  if (!bridge || typeof bridge.testConnection !== "function") {
+    throw new Error("Integrations screen requires window.leena.mcp.testConnection().");
+  }
+  return bridge.testConnection(validation.config);
 }
 
 export async function toggleIntegrationConnection(server, bridge = getDefaultMCPBridge()) {
@@ -1077,6 +1204,51 @@ function setFormError(form, message = "") {
   error.hidden = !message;
 }
 
+function setTestConnectionStatus(form, message = "", status = "") {
+  const node = form?.querySelector?.("[data-integrations-test-status]");
+  if (!node) {
+    return;
+  }
+  node.textContent = message;
+  node.hidden = !message;
+  if (node.dataset) {
+    node.dataset.integrationsTestStatus = message ? status : "";
+  }
+}
+
+function setFieldError(form, fieldName, message = "") {
+  const error = form?.querySelector?.(`[data-integrations-error-for="${fieldName}"]`);
+  const control =
+    form?.elements?.namedItem?.(fieldName) ?? form?.querySelector?.(`[name="${fieldName}"]`);
+
+  if (error) {
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  if (control?.setAttribute) {
+    control.setAttribute("aria-invalid", message ? "true" : "false");
+  }
+}
+
+function setValidationErrors(form, errors = {}) {
+  for (const field of MCP_FORM_ERROR_ORDER) {
+    setFieldError(form, field, errors[field] ?? "");
+  }
+}
+
+function applyValidationFeedback(form, validation) {
+  const errors = validation.errors ?? {};
+  setValidationErrors(form, errors);
+  if (!validation.config) {
+    setFormError(form, getFirstValidationError(errors));
+    setTestConnectionStatus(form);
+    return false;
+  }
+
+  setFormError(form);
+  return true;
+}
+
 function readFormValue(form, name) {
   const field = form?.elements?.namedItem?.(name) ?? form?.querySelector?.(`[name="${name}"]`);
   return firstString(field?.value);
@@ -1086,6 +1258,7 @@ function getAddServerDraft(form) {
   return {
     args: readFormValue(form, "args"),
     command: readFormValue(form, "command"),
+    headers: readFormValue(form, "headers"),
     name: readFormValue(form, "name"),
     transport: readFormValue(form, "transport"),
     url: readFormValue(form, "url"),
@@ -1093,19 +1266,17 @@ function getAddServerDraft(form) {
 }
 
 function syncAddServerFields(form) {
-  const transport = normalizeTransport(readFormValue(form, "transport")) || "http";
-  const urlField = form?.querySelector?.('[data-integrations-field="url"]');
-  const commandField = form?.querySelector?.('[data-integrations-field="command"]');
-  const argsField = form?.querySelector?.('[data-integrations-field="args"]');
+  const visibility = getMCPSetupFieldVisibility(readFormValue(form, "transport"));
 
-  if (urlField) {
-    urlField.hidden = transport !== "http";
-  }
-  if (commandField) {
-    commandField.hidden = transport !== "stdio";
-  }
-  if (argsField) {
-    argsField.hidden = transport !== "stdio";
+  for (const fieldName of ["url", "headers", "command", "args"]) {
+    const field = form?.querySelector?.(`[data-integrations-field="${fieldName}"]`);
+    if (!field) {
+      continue;
+    }
+    field.hidden = !visibility[fieldName];
+    if (!visibility[fieldName]) {
+      setFieldError(form, fieldName);
+    }
   }
 }
 
@@ -1121,6 +1292,57 @@ function toggleAddServerDialog(screen, isOpen) {
     }
     syncAddServerFields(form);
     setFormError(form);
+    setTestConnectionStatus(form);
+    setValidationErrors(form);
+  }
+}
+
+function formatTestConnectionSuccess(result = {}) {
+  const toolCount = Number.isInteger(result.toolCount) ? result.toolCount : null;
+  const tools =
+    toolCount === null ? "" : ` with ${toolCount} ${toolCount === 1 ? "tool" : "tools"}`;
+  const latency = Number.isInteger(result.latencyMs) ? ` in ${result.latencyMs}ms` : "";
+  return `Connection succeeded${tools}${latency}.`;
+}
+
+function formatTestConnectionFailure(result = {}) {
+  return firstString(result.error)
+    ? `Connection failed: ${firstString(result.error)}`
+    : "Connection failed.";
+}
+
+async function handleTestConnection(action, root, bridge) {
+  const form =
+    action.closest?.("[data-integrations-add-form]") ??
+    findScreen(root)?.querySelector?.("[data-integrations-add-form]");
+  const draft = getAddServerDraft(form);
+  const validation = validateMCPServerDraftFields(draft);
+  if (!applyValidationFeedback(form, validation)) {
+    return;
+  }
+  if (!bridge || typeof bridge.testConnection !== "function") {
+    setFormError(form, "Test connection is not available in this build.");
+    setTestConnectionStatus(form);
+    return;
+  }
+
+  action.disabled = true;
+  setFormError(form);
+  setTestConnectionStatus(form, "Testing MCP connection...", "pending");
+  try {
+    const result = await bridge.testConnection(validation.config);
+    if (result?.reachable === true) {
+      setTestConnectionStatus(form, formatTestConnectionSuccess(result), "success");
+      setFormError(form);
+    } else {
+      setTestConnectionStatus(form);
+      setFormError(form, formatTestConnectionFailure(result));
+    }
+  } catch (error) {
+    setTestConnectionStatus(form);
+    setFormError(form, error instanceof Error ? error.message : String(error));
+  } finally {
+    action.disabled = false;
   }
 }
 
@@ -1139,6 +1361,10 @@ async function handleIntegrationAction(action, root, bridge, permissionBridge) {
   }
   if (type === "cancel-add") {
     toggleAddServerDialog(screen, false);
+    return;
+  }
+  if (type === "test-connection") {
+    await handleTestConnection(action, root, bridge);
     return;
   }
   if (type === "select-detail") {
@@ -1196,13 +1422,13 @@ async function handleAddServerSubmit(event, root, bridge, permissionBridge) {
   event.preventDefault();
   const form = event.target;
   const draft = getAddServerDraft(form);
-  const validation = validateMCPServerDraft(draft);
-  if (!validation.config) {
-    setFormError(form, validation.error);
+  const validation = validateMCPServerDraftFields(draft);
+  if (!applyValidationFeedback(form, validation)) {
     return;
   }
 
   setFormError(form);
+  setTestConnectionStatus(form);
   const submit = form.querySelector?.('[type="submit"]');
   if (submit) {
     submit.disabled = true;
@@ -1255,13 +1481,25 @@ export function bindIntegrationsControls(
   const handleChange = (event) => {
     if (event.target?.matches?.("[data-integrations-transport-select]")) {
       syncAddServerFields(event.target.form);
+      setFormError(event.target.form);
+      setTestConnectionStatus(event.target.form);
     }
+  };
+  const handleInput = (event) => {
+    const form = event.target?.closest?.("[data-integrations-add-form]");
+    if (!form) {
+      return;
+    }
+    setFieldError(form, event.target?.name);
+    setFormError(form);
+    setTestConnectionStatus(form);
   };
   const statusCleanup = subscribeToMCPStatusChanges(bridge, handleStatusChange);
 
   screen.addEventListener("click", handleClick);
   screen.addEventListener("submit", handleSubmit);
   screen.addEventListener("change", handleChange);
+  screen.addEventListener("input", handleInput);
 
   activeBinding = {
     data: normalizeIntegrationsData({}),
@@ -1269,6 +1507,7 @@ export function bindIntegrationsControls(
       screen.removeEventListener?.("click", handleClick);
       screen.removeEventListener?.("submit", handleSubmit);
       screen.removeEventListener?.("change", handleChange);
+      screen.removeEventListener?.("input", handleInput);
       statusCleanup();
     },
     permissionBridge,

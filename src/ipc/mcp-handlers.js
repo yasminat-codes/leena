@@ -1,6 +1,6 @@
 import { MCPClientManager } from "../mcp/client-manager.js";
 import { ServerStore } from "../mcp/server-store.js";
-import { MCPError, serializeError } from "../utils/errors.js";
+import { MCPError, redactSensitiveText, serializeError } from "../utils/errors.js";
 
 export const MCP_IPC_CHANNELS = Object.freeze({
   listServers: "mcp:list-servers",
@@ -28,6 +28,7 @@ const MCP_UPDATE_FIELDS = Object.freeze([
   "name",
   "transport",
   "url",
+  "headers",
   "command",
   "args",
   "enabled",
@@ -35,7 +36,9 @@ const MCP_UPDATE_FIELDS = Object.freeze([
   "permission_level",
 ]);
 const TEST_SERVER_ID = "mcp-test-connection";
-const MCP_CHANGED_CHANNEL = "mcp:changed";
+const MCP_CHANGED_CHANNEL = "mcp:status-changed";
+const MCP_HTTP_HEADER_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const REDACTED_HEADER_VALUE = "[REDACTED]";
 
 export function registerMCPHandlers(options = {}) {
   const { ipcMain } = options;
@@ -64,7 +67,7 @@ export function createMCPHandlers(options = {}) {
   const deps = normalizeDependencies(options);
 
   return {
-    listServers: () => deps.serverStore.listServers(),
+    listServers: () => deps.serverStore.listServers().map(redactServerForRenderer),
     addServer: async (_event, payload) => addServer(payload, deps),
     removeServer: async (_event, idOrPayload) => removeServer(idOrPayload, deps),
     updateServer: async (_event, idOrPayload, updates) => updateServer(idOrPayload, updates, deps),
@@ -112,11 +115,12 @@ async function addServer(payload, deps) {
   const server = await deps.serverStore.addServer(config);
 
   if (server?.auto_connect === true) {
-    await connectStoredServer(server, deps);
+    const connectionServer = (await deps.serverStore.getServer(server.id)) ?? server;
+    await connectStoredServer(connectionServer, deps);
   }
 
   broadcastMCPChanged(deps, "add", server?.id);
-  return server;
+  return redactServerForRenderer(server);
 }
 
 async function removeServer(idOrPayload, deps) {
@@ -135,13 +139,13 @@ async function updateServer(idOrPayload, maybeUpdates, deps) {
   }
 
   if (Object.keys(updates).length === 0) {
-    return existing;
+    return redactServerForRenderer(existing);
   }
 
   normalizeServerConfig({ ...existing, ...updates }, { requireName: true });
   const updated = await deps.serverStore.updateServer(serverId, updates);
   broadcastMCPChanged(deps, "update", serverId);
-  return updated;
+  return redactServerForRenderer(updated);
 }
 
 async function connectServer(idOrPayload, deps) {
@@ -169,7 +173,7 @@ async function connectStoredServer(server, deps) {
     if (connected) {
       await disconnectQuietly(deps.mcpClientManager, clientConfig.serverId);
     }
-    throw error;
+    throw sanitizeErrorForRenderer(error);
   }
 }
 
@@ -183,7 +187,11 @@ async function disconnectServer(idOrPayload, deps) {
 async function listTools(idOrPayload, deps) {
   const serverId = extractServerId(idOrPayload);
   await getRequiredServer(serverId, deps);
-  return deps.mcpClientManager.listTools(serverId);
+  try {
+    return await deps.mcpClientManager.listTools(serverId);
+  } catch (error) {
+    throw sanitizeErrorForRenderer(error);
+  }
 }
 
 async function testConnection(payload, deps) {
@@ -220,12 +228,43 @@ async function testConnection(payload, deps) {
   } catch (error) {
     return {
       reachable: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: sanitizeErrorMessage(error),
       latencyMs: elapsedMs(deps, startedAt),
     };
   } finally {
     await disconnectQuietly(tempClientManager, clientConfig.serverId);
   }
+}
+
+function sanitizeErrorForRenderer(error) {
+  const message = sanitizeErrorMessage(error);
+  if (error instanceof MCPError) {
+    if (message === error.message) {
+      return error;
+    }
+    return new MCPError(message, {
+      code: error.code,
+      serverName: error.serverName,
+      transport: error.transport,
+      cause: error.cause,
+    });
+  }
+  if (error instanceof Error) {
+    if (message === error.message) {
+      return error;
+    }
+    const sanitized = new Error(
+      message,
+      error.cause === undefined ? undefined : { cause: error.cause },
+    );
+    sanitized.name = error.name;
+    return sanitized;
+  }
+  return new MCPError(message);
+}
+
+function sanitizeErrorMessage(error) {
+  return redactSensitiveText(error instanceof Error ? error.message : String(error));
 }
 
 function getStatus(deps) {
@@ -298,10 +337,12 @@ function normalizeServerConfig(payload, options = {}) {
 
   if (transport === "http") {
     config.url = normalizeHttpUrl(payload.url);
+    config.headers = normalizeHeaders(payload.headers);
     return config;
   }
 
   config.command = normalizeCommand(payload.command);
+  config.headers = {};
   return config;
 }
 
@@ -323,6 +364,9 @@ function parseUpdateArgs(idOrPayload, maybeUpdates) {
       updates[field] = normalizeUpdateField(field, source[field]);
     }
   }
+  if (updates.transport === "stdio") {
+    updates.headers = {};
+  }
 
   return { serverId, updates };
 }
@@ -339,6 +383,9 @@ function normalizeUpdateField(field, value) {
   }
   if (field === "args") {
     return normalizeArgs(value);
+  }
+  if (field === "headers") {
+    return normalizeHeaders(value);
   }
   if (field === "enabled" || field === "auto_connect") {
     return normalizeBoolean(value, false, field);
@@ -377,6 +424,32 @@ function toClientConfig(server) {
     id: serverId,
     args: normalizeArgs(server.args),
   };
+}
+
+function normalizeHeaders(value) {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (!isRecord(value)) {
+    throw new MCPError("MCP HTTP headers must be an object with string values.");
+  }
+
+  const headers = {};
+  for (const [rawName, rawValue] of Object.entries(value)) {
+    const name = normalizeString(rawName);
+    if (!MCP_HTTP_HEADER_NAME_PATTERN.test(name)) {
+      throw new MCPError("MCP HTTP header names must be non-empty HTTP tokens.");
+    }
+    if (typeof rawValue !== "string") {
+      throw new MCPError("MCP HTTP header values must be strings.");
+    }
+    const headerValue = rawValue.trim();
+    if (!headerValue) {
+      throw new MCPError("MCP HTTP header values must be non-empty strings.");
+    }
+    headers[name] = headerValue;
+  }
+  return headers;
 }
 
 function normalizeTransport(value) {
@@ -525,6 +598,29 @@ function broadcastMCPChanged(deps, action, serverId) {
     action,
     serverId,
   });
+}
+
+function redactServerForRenderer(server) {
+  if (!isRecord(server)) {
+    return server;
+  }
+  return {
+    ...server,
+    headers: redactHeaders(server.headers),
+    headers_configured: Object.keys(normalizeHeaderRecord(server.headers)).length > 0,
+  };
+}
+
+function redactHeaders(headers) {
+  const redacted = {};
+  for (const name of Object.keys(normalizeHeaderRecord(headers))) {
+    redacted[name] = REDACTED_HEADER_VALUE;
+  }
+  return redacted;
+}
+
+function normalizeHeaderRecord(value) {
+  return isRecord(value) ? value : {};
 }
 
 function elapsedMs(deps, startedAt) {

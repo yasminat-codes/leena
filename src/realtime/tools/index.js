@@ -1,5 +1,5 @@
 import { parseMCPToolName } from "../../mcp/schema-converter.js";
-import { MCPError } from "../../utils/errors.js";
+import { MCPError, redactSensitiveText } from "../../utils/errors.js";
 import {
   createPermissionDeniedResult,
   getMCPToolPermissionRequest,
@@ -108,12 +108,12 @@ async function executeMCPTool(name, args, options) {
     if (error instanceof MCPError) {
       return {
         status: "error",
-        message: `MCP tool failed: ${error.message}`,
+        message: `MCP tool failed: ${redactSensitiveText(error.message)}`,
       };
     }
     return {
       status: "error",
-      message: `MCP tool failed: ${error?.message ?? "Unknown error"}`,
+      message: `MCP tool failed: ${redactSensitiveText(error?.message ?? "Unknown error")}`,
     };
   }
 }

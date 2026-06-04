@@ -46,15 +46,47 @@ const baselineStates = Object.freeze([
     id: "settings",
     filename: "settings.png",
     nav: "Settings",
-    readySelector: ".settings-screen",
+    readySelector: ".settings-screen[data-settings-active-detail='overview']",
     requiredSelectors: Object.freeze([
       "#leena-shell",
       ".settings-screen",
+      "[data-settings-detail='overview']",
+      "[data-settings-detail-target='general']",
+      "[data-settings-detail-target='theme']",
+      "[data-settings-detail-target='providers']",
+      "[data-settings-detail-target='integrations-health']",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    detailTarget: "general",
+    id: "settings-general",
+    filename: "settings-general.png",
+    nav: "Settings",
+    readySelector: ".settings-screen[data-settings-active-detail='general']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
       ".settings-identity",
       "[data-agent-name]",
       "[data-persona-select]",
       "[data-persona-tone]",
-      "#settings-appearance-title",
+      "[data-settings-detail-back='general']",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    detailTarget: "theme",
+    id: "settings-theme",
+    filename: "settings-theme.png",
+    nav: "Settings",
+    readySelector: ".settings-screen[data-settings-active-detail='theme']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      "#settings-theme-title",
+      "[data-appearance-key='theme']",
+      "[data-appearance-key='treatment']",
+      "[data-appearance-key='density']",
+      "[data-settings-detail-back='theme']",
       ".cc[data-state='idle']",
     ]),
   }),
@@ -109,6 +141,9 @@ test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_00
 
     for (const state of baselineStates) {
       await selectScreen(page, state.nav);
+      if (state.detailTarget) {
+        await page.locator(`[data-settings-detail-target="${state.detailTarget}"]`).first().click();
+      }
       await page.waitForSelector(state.readySelector, { state: "visible", timeout: 10_000 });
       await assertSelectorsInsideViewport(page, state.requiredSelectors, state.id);
       const outputPath = join(artifactDir, state.filename);
@@ -154,7 +189,7 @@ async function assertSelectorsInsideViewport(page, selectors, stateId) {
     );
     assert.ok(
       box.y + Math.min(box.height, viewport.height) <= viewport.height + 1,
-      `${stateId}: ${selector} fits viewport height`,
+      `${stateId}: ${selector} fits viewport height (${JSON.stringify(box)})`,
     );
   }
 }

@@ -12,10 +12,18 @@ import {
   ServerStore,
   updateServer,
 } from "../src/mcp/server-store.js";
-import { closeDatabase } from "../src/realtime/tools/database.js";
+import { closeDatabase, getDatabase } from "../src/realtime/tools/database.js";
 import { LeenaError } from "../src/utils/errors.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TEST_SECRET_CODEC = Object.freeze({
+  protect(value) {
+    return Buffer.from(String(value), "utf8").toString("base64");
+  },
+  reveal(value) {
+    return Buffer.from(String(value), "base64").toString("utf8");
+  },
+});
 
 async function withServerStore(callback) {
   const directory = await mkdtemp(path.join(tmpdir(), "leena-mcp-server-"));
@@ -42,10 +50,12 @@ test("adds HTTP and stdio servers, then lists and gets them", async () => {
         name: "Remote MCP",
         transport: "http",
         url: "https://mcp.example.test/mcp",
+        headers: { Authorization: "Bearer test-token", "X-MCP-Team": "Wave19" },
         auto_connect: true,
         permission_level: "auto",
       },
       filePath,
+      { secretCodec: TEST_SECRET_CODEC },
     );
     const stdioServer = addServer(
       {
@@ -63,6 +73,10 @@ test("adds HTTP and stdio servers, then lists and gets them", async () => {
     assert.equal(httpServer.name, "Remote MCP");
     assert.equal(httpServer.transport, "http");
     assert.equal(httpServer.url, "https://mcp.example.test/mcp");
+    assert.deepEqual(httpServer.headers, {
+      Authorization: "Bearer test-token",
+      "X-MCP-Team": "Wave19",
+    });
     assert.equal(httpServer.command, null);
     assert.deepEqual(httpServer.args, []);
     assert.equal(httpServer.enabled, true);
@@ -72,25 +86,43 @@ test("adds HTTP and stdio servers, then lists and gets them", async () => {
 
     assert.match(stdioServer.id, UUID_PATTERN);
     assert.equal(stdioServer.transport, "stdio");
+    assert.deepEqual(stdioServer.headers, {});
     assert.equal(stdioServer.command, "node");
     assert.deepEqual(stdioServer.args, ["server.js", "--flag"]);
     assert.equal(stdioServer.enabled, false);
     assert.equal(stdioServer.auto_connect, false);
     assert.equal(stdioServer.permission_level, "trust");
 
-    const servers = listServers(filePath);
+    const rawHeaders = getStoredHeaders(filePath, httpServer.id);
+    assert.match(rawHeaders, /leena:mcp:headers:v1/);
+    assert.doesNotMatch(rawHeaders, /test-token/);
+    assert.doesNotMatch(rawHeaders, /Wave19/);
+
+    const servers = listServers(filePath, { secretCodec: TEST_SECRET_CODEC });
     assert.equal(servers.length, 2);
     assert.deepEqual(
       servers.map((server) => server.id).sort(),
       [httpServer.id, stdioServer.id].sort(),
     );
-    assert.deepEqual(getServer(stdioServer.id, filePath), stdioServer);
+    assert.deepEqual(
+      listServers(filePath, { secretCodec: TEST_SECRET_CODEC, redactSecrets: true }).find(
+        (server) => server.id === httpServer.id,
+      ).headers,
+      {
+        Authorization: "[REDACTED]",
+        "X-MCP-Team": "[REDACTED]",
+      },
+    );
+    assert.deepEqual(
+      getServer(stdioServer.id, filePath, { secretCodec: TEST_SECRET_CODEC }),
+      stdioServer,
+    );
   });
 });
 
 test("ServerStore class uses its configured database path", async () => {
   await withServerStore((filePath) => {
-    const store = new ServerStore({ storePath: filePath });
+    const store = new ServerStore({ storePath: filePath, secretCodec: TEST_SECRET_CODEC });
     const server = store.addServer({
       name: "Class Store",
       transport: "http",
@@ -208,6 +240,104 @@ test("updateServer applies partial updates and preserves omitted fields", async 
   });
 });
 
+test("updateServer persists and clears HTTP headers across transport changes", async () => {
+  await withServerStore((filePath) => {
+    const server = addServer(
+      {
+        name: "Remote",
+        transport: "http",
+        url: "https://remote.example.test/mcp",
+        headers: { Authorization: "Bearer original" },
+      },
+      filePath,
+      { secretCodec: TEST_SECRET_CODEC },
+    );
+
+    const withHeaders = updateServer(server.id, { headers: { "X-MCP-Team": "Wave19" } }, filePath, {
+      secretCodec: TEST_SECRET_CODEC,
+    });
+    assert.deepEqual(withHeaders.headers, { "X-MCP-Team": "Wave19" });
+    assert.deepEqual(getServer(server.id, filePath, { secretCodec: TEST_SECRET_CODEC }).headers, {
+      "X-MCP-Team": "Wave19",
+    });
+    assert.doesNotMatch(getStoredHeaders(filePath, server.id), /Wave19/);
+
+    const stdio = updateServer(
+      server.id,
+      { transport: "stdio", command: "node", args: ["server.js"] },
+      filePath,
+      { secretCodec: TEST_SECRET_CODEC },
+    );
+    assert.equal(stdio.transport, "stdio");
+    assert.deepEqual(stdio.headers, {});
+  });
+});
+
+test("server store rejects invalid HTTP header names", async () => {
+  await withServerStore((filePath) => {
+    assert.throws(
+      () =>
+        addServer(
+          {
+            name: "Remote",
+            transport: "http",
+            url: "https://remote.example.test/mcp",
+            headers: { "Bad Header": "value" },
+          },
+          filePath,
+          { secretCodec: TEST_SECRET_CODEC },
+        ),
+      /HTTP header names/,
+    );
+    assert.throws(
+      () =>
+        addServer(
+          {
+            name: "Remote",
+            transport: "http",
+            url: "https://remote.example.test/mcp",
+            headers: { "Bad:Header": "value" },
+          },
+          filePath,
+          { secretCodec: TEST_SECRET_CODEC },
+        ),
+      /HTTP header names/,
+    );
+    assert.throws(
+      () =>
+        addServer(
+          {
+            name: "Remote",
+            transport: "http",
+            url: "https://remote.example.test/mcp",
+            headers: { Authorization: " " },
+          },
+          filePath,
+          { secretCodec: TEST_SECRET_CODEC },
+        ),
+      /HTTP header values/,
+    );
+  });
+});
+
+test("persisting HTTP headers requires protected storage", async () => {
+  await withServerStore((filePath) => {
+    assert.throws(
+      () =>
+        addServer(
+          {
+            name: "Remote",
+            transport: "http",
+            url: "https://remote.example.test/mcp",
+            headers: { Authorization: "Bearer plaintext" },
+          },
+          filePath,
+        ),
+      /protected storage/,
+    );
+  });
+});
+
 test("updateServer validates merged transport requirements", async () => {
   await withServerStore((filePath) => {
     const server = addServer(
@@ -236,6 +366,11 @@ test("updateServer validates merged transport requirements", async () => {
     assert.deepEqual(updated.args, ["server.js"]);
   });
 });
+
+function getStoredHeaders(filePath, serverId) {
+  return getDatabase(filePath).prepare("SELECT headers FROM mcp_servers WHERE id = ?").get(serverId)
+    .headers;
+}
 
 test("getAutoConnectServers returns only enabled auto-connect servers", async () => {
   await withServerStore((filePath) => {

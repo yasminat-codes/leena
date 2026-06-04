@@ -21,7 +21,7 @@
       "selector": null
     },
     {
-      "colorBuckets": 152,
+      "colorBuckets": 149,
       "height": 712,
       "luminanceRange": 222.88,
       "visibleRatio": 1,
@@ -32,7 +32,29 @@
       "selector": null
     },
     {
-      "colorBuckets": 172,
+      "colorBuckets": 151,
+      "height": 712,
+      "luminanceRange": 223.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-general.png",
+      "id": "settings-general",
+      "selector": null
+    },
+    {
+      "colorBuckets": 149,
+      "height": 712,
+      "luminanceRange": 222.88,
+      "visibleRatio": 1,
+      "width": 1060,
+      "capture": "viewport",
+      "file": "settings-theme.png",
+      "id": "settings-theme",
+      "selector": null
+    },
+    {
+      "colorBuckets": 171,
       "height": 712,
       "luminanceRange": 222.88,
       "visibleRatio": 1,

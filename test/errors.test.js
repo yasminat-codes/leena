@@ -213,4 +213,8 @@ test("redactSensitiveText covers diagnostic-safe embedded URLs and tokens", () =
     redactSensitiveText("plain token sk-secret1234567890 and https://example.test/no-query"),
     "plain token [redacted] and https://example.test/no-query",
   );
+  assert.equal(
+    redactSensitiveText("probe refused X-API-Key: abcdefghijklmnopqrstuvwxyz"),
+    "probe refused X-API-Key: [redacted]",
+  );
 });

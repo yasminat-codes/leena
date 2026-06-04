@@ -68,7 +68,15 @@ test("registerMCPHandlers wires every MCP channel", () => {
 test("list/add handlers validate input before storage and auto-connect when requested", async () => {
   const store = createMockStore();
   const manager = createMockClientManager({ tools: TOOLS });
-  const handlers = createMCPHandlers({ serverStore: store, mcpClientManager: manager });
+  const sentEvents = [];
+  const handlers = createMCPHandlers({
+    serverStore: store,
+    mcpClientManager: manager,
+    webContents: {
+      isDestroyed: () => false,
+      send: (channel, payload) => sentEvents.push({ channel, payload }),
+    },
+  });
 
   await assert.rejects(
     handlers.addServer(null, {
@@ -91,27 +99,68 @@ test("list/add handlers validate input before storage and auto-connect when requ
     }),
     /transport must be streamable HTTP or stdio/,
   );
+  await assert.rejects(
+    handlers.addServer(null, {
+      name: "Bad Header",
+      transport: "http",
+      url: "https://mcp.example.test/mcp",
+      headers: { "Bad Header": "value" },
+    }),
+    /HTTP header names/,
+  );
+  await assert.rejects(
+    handlers.addServer(null, {
+      name: "Empty Header",
+      transport: "http",
+      url: "https://mcp.example.test/mcp",
+      headers: { Authorization: " " },
+    }),
+    /HTTP header values/,
+  );
   assert.deepEqual(store.calls.addServer, []);
 
   const server = await handlers.addServer(null, {
     name: "Remote MCP",
     transport: "http",
     url: "https://mcp.example.test/mcp",
+    headers: { Authorization: "Bearer test-token" },
     auto_connect: true,
     permission_level: "surprise",
   });
 
   assert.equal(server.id, "server-1");
   assert.equal(server.url, "https://mcp.example.test/mcp");
+  assert.deepEqual(server.headers, { Authorization: "[REDACTED]" });
+  assert.equal(server.headers_configured, true);
   assert.equal(server.permission_level, "confirm");
   assert.deepEqual(await handlers.listServers(), [server]);
+  assert.deepEqual(store.calls.addServer[0].headers, { Authorization: "Bearer test-token" });
   assert.deepEqual(manager.calls.connect, [
     {
-      ...server,
+      id: server.id,
+      name: "Remote MCP",
+      transport: "http",
+      url: "https://mcp.example.test/mcp",
+      headers: { Authorization: "Bearer test-token" },
+      command: null,
+      args: [],
+      enabled: true,
+      auto_connect: true,
+      permission_level: "confirm",
       serverId: server.id,
     },
   ]);
   assert.deepEqual(manager.calls.listTools, [server.id]);
+  assert.deepEqual(sentEvents, [
+    {
+      channel: "mcp:status-changed",
+      payload: {
+        type: "mcp",
+        action: "add",
+        serverId: server.id,
+      },
+    },
+  ]);
 });
 
 test("add handler accepts Streamable HTTP transport aliases", async () => {
@@ -137,6 +186,7 @@ test("add handler accepts Streamable HTTP transport aliases", async () => {
       permission_level: "confirm",
       transport: "http",
       url: "https://streamable.example.test/mcp",
+      headers: {},
     },
   ]);
 });
@@ -198,6 +248,7 @@ test("update validates merged server configs before persisting", async () => {
       command: "node",
       args: ["server.js"],
       enabled: false,
+      headers: { "X-MCP-Team": "Wave19" },
     },
   });
 
@@ -206,7 +257,26 @@ test("update validates merged server configs before persisting", async () => {
   assert.equal(updated.transport, "stdio");
   assert.equal(updated.command, "node");
   assert.deepEqual(updated.args, ["server.js"]);
+  assert.deepEqual(updated.headers, {});
   assert.equal(updated.enabled, false);
+});
+
+test("update redacts existing headers when no fields change", async () => {
+  const store = createMockStore([
+    {
+      ...HTTP_SERVER,
+      headers: { Authorization: "Bearer persisted-token" },
+    },
+  ]);
+  const handlers = createMCPHandlers({
+    serverStore: store,
+    mcpClientManager: createMockClientManager(),
+  });
+
+  const unchanged = await handlers.updateServer(null, { id: "remote", updates: {} });
+
+  assert.deepEqual(unchanged.headers, { Authorization: "[REDACTED]" });
+  assert.equal(unchanged.headers_configured, true);
 });
 
 test("connect/list-tools/get-status use configured servers and propagate client errors", async () => {
@@ -262,6 +332,30 @@ test("connect/list-tools/get-status use configured servers and propagate client 
     mcpClientManager: createMockClientManager({ connectError }),
   });
   await assert.rejects(failingHandlers.connect(null, "remote"), connectError);
+
+  const secretError = new MCPError("connect failed Authorization: Bearer connect-secret-token", {
+    serverName: "remote",
+    transport: "http",
+  });
+  const secretHandlers = createMCPHandlers({
+    serverStore: createMockStore([HTTP_SERVER]),
+    mcpClientManager: createMockClientManager({ connectError: secretError }),
+  });
+  await assert.rejects(secretHandlers.connect(null, "remote"), {
+    message: "connect failed Authorization: [redacted]",
+  });
+
+  const directListError = new MCPError("list failed Authorization: Bearer direct-list-token", {
+    serverName: "remote",
+    transport: "http",
+  });
+  const directListHandlers = createMCPHandlers({
+    serverStore: createMockStore([HTTP_SERVER]),
+    mcpClientManager: createMockClientManager({ listToolsError: directListError }),
+  });
+  await assert.rejects(directListHandlers.listTools(null, "remote"), {
+    message: "list failed Authorization: [redacted]",
+  });
 });
 
 test("connect disconnects again if post-connect tool listing fails", async () => {
@@ -305,6 +399,7 @@ test("test-connection uses a temporary client manager and returns success/failur
   const result = await handlers.testConnection(null, {
     transport: "http",
     url: "https://mcp.example.test/mcp",
+    headers: { Authorization: "Bearer temporary-token" },
   });
 
   assert.deepEqual(result, {
@@ -319,6 +414,7 @@ test("test-connection uses a temporary client manager and returns success/failur
       name: "Temporary MCP server",
       transport: "http",
       url: "https://mcp.example.test/mcp",
+      headers: { Authorization: "Bearer temporary-token" },
       args: [],
       enabled: true,
       auto_connect: false,
@@ -327,7 +423,9 @@ test("test-connection uses a temporary client manager and returns success/failur
   ]);
   assert.deepEqual(tempManager.calls.disconnect, ["mcp-test-connection", "mcp-test-connection"]);
 
-  const failure = new MCPError("probe refused", { serverName: "mcp-test-connection" });
+  const failure = new MCPError("probe refused Authorization: Bearer temporary-token", {
+    serverName: "mcp-test-connection",
+  });
   const failureHandlers = createMCPHandlers({
     serverStore: createMockStore(),
     mcpClientManager: createMockClientManager(),
@@ -343,7 +441,7 @@ test("test-connection uses a temporary client manager and returns success/failur
     }),
     {
       reachable: false,
-      error: "probe refused",
+      error: "probe refused Authorization: [redacted]",
       latencyMs: 11,
     },
   );
@@ -426,6 +524,7 @@ function createMockStore(initialServers = [], options = {}) {
         name: config.name,
         transport: config.transport,
         url: config.url ?? null,
+        headers: clone(config.headers ?? {}),
         command: config.command ?? null,
         args: [...(config.args ?? [])],
         enabled: config.enabled !== false,

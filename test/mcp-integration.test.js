@@ -4,16 +4,25 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { MCPClientManager } from "../src/mcp/client-manager.js";
+import { createComposioIntegrationService } from "../src/mcp/composio-integration.js";
 import { namespaceMCPTool } from "../src/mcp/schema-converter.js";
 import { ServerStore } from "../src/mcp/server-store.js";
 import { closeDatabase } from "../src/realtime/tools/database.js";
 import { executeRealtimeTool, getRealtimeToolDefinitions } from "../src/realtime/tools/index.js";
 
 const TOOL_NAME = "create_event";
+const TEST_SECRET_CODEC = Object.freeze({
+  protect(value) {
+    return Buffer.from(String(value), "utf8").toString("base64");
+  },
+  reveal(value) {
+    return Buffer.from(String(value), "base64").toString("utf8");
+  },
+});
 
 test("MCP end-to-end flow stores, connects, merges, gates, executes, and disconnects", async () => {
   await withIntegrationStore(async (storePath) => {
-    const store = new ServerStore({ storePath });
+    const store = new ServerStore({ storePath, secretCodec: TEST_SECRET_CODEC });
     const storedServer = store.addServer({
       name: "Calendar MCP",
       transport: "http",
@@ -100,7 +109,7 @@ test("MCP integration keeps built-in tools ahead of MCP fallback", async () => {
 
 test("MCP integration tolerates malformed tool content without throwing", async () => {
   await withIntegrationStore(async (storePath) => {
-    const store = new ServerStore({ storePath });
+    const store = new ServerStore({ storePath, secretCodec: TEST_SECRET_CODEC });
     const storedServer = store.addServer({
       name: "Calendar MCP",
       transport: "http",
@@ -132,6 +141,77 @@ test("MCP integration tolerates malformed tool content without throwing", async 
       status: "ok",
       result: "",
     });
+  });
+});
+
+test("Composio refresh feeds the standard MCP merge permission and execution path", async () => {
+  await withIntegrationStore(async (storePath) => {
+    const store = new ServerStore({ storePath, secretCodec: TEST_SECRET_CODEC });
+    const { manager, state } = createIntegrationManager({
+      tools: [createCalendarTool()],
+      callToolResult: {
+        content: [{ type: "text", text: "Created by Composio MCP" }],
+      },
+    });
+    const service = createComposioIntegrationService({
+      storePath,
+      serverStore: store,
+      mcpClientManager: manager,
+      loadCredential: () => "composio-test-secret",
+      createComposioClient: () => ({
+        async createSession({ userId, toolkits }) {
+          return {
+            sessionId: "trs_integration",
+            userId,
+            mcp: {
+              url: "https://composio.example.test/tool-router/mcp",
+              headers: {
+                "X-Composio-Session": `session:${toolkits.join(",")}`,
+              },
+            },
+          };
+        },
+      }),
+      now: () => Date.parse("2026-06-04T00:20:00.000Z"),
+    });
+
+    const refreshed = await service.refreshTools({ toolkits: ["gmail"] });
+    const namespacedToolName = namespaceMCPTool(refreshed.serverId, TOOL_NAME);
+
+    assert.deepEqual(state.httpTransports[0].options, {
+      requestInit: { headers: { "X-Composio-Session": "session:gmail" } },
+    });
+    const mergedTools = await getRealtimeToolDefinitions(manager);
+    assert.ok(mergedTools.some((tool) => tool.name === namespacedToolName));
+
+    const permissionRequests = [];
+    const result = await executeRealtimeTool(
+      namespacedToolName,
+      { title: "Planning" },
+      {
+        mcp: {
+          clientManager: manager,
+          getServerConfig: (serverId) => service.getPermissionServerConfig(serverId),
+        },
+        requestPermission: async (request) => {
+          permissionRequests.push(request);
+          return { approved: true };
+        },
+      },
+    );
+
+    assert.deepEqual(result, {
+      status: "ok",
+      result: "Created by Composio MCP",
+    });
+    assert.equal(permissionRequests.length, 1);
+    assert.equal(permissionRequests[0].toolName, namespacedToolName);
+    assert.deepEqual(state.callToolCalls, [
+      {
+        name: TOOL_NAME,
+        arguments: { title: "Planning" },
+      },
+    ]);
   });
 });
 

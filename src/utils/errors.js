@@ -11,6 +11,8 @@ const ERROR_CLASSES = new Map();
 const REDACTED = "[redacted]";
 const SECRET_KEY =
   /(token|secret|authorization|bearer|password|passwd|api[-_]?key|apikey|client_secret|refresh|access_token|cookie|credential|private[-_]?key)/i;
+const SECRET_HEADER_VALUE =
+  /\b((?:authorization|proxy-authorization|x[-_]?api[-_]?key|api[-_]?key|apikey|token|secret|cookie|set-cookie|password|passwd|credential|client[-_]?secret|refresh[-_]?token|access[-_]?token)\s*:\s*)[^,;\n\r]+/gi;
 const SECRET_VALUE =
   /\b(sk-[A-Za-z0-9_-]{16,}|ek_[A-Za-z0-9]+|eyJ[A-Za-z0-9._-]{20,}|Bearer\s+[A-Za-z0-9._-]+)\b/g;
 const EMBEDDED_URL = /\bhttps?:\/\/[^\s<>"'`]+/g;
@@ -240,7 +242,11 @@ function serializeString(value, options) {
 }
 
 export function redactSensitiveText(str) {
-  return str.replace(SECRET_VALUE, REDACTED).replace(EMBEDDED_URL, scrubUrlMatch).slice(0, 500);
+  return str
+    .replace(SECRET_HEADER_VALUE, (_match, prefix) => `${prefix}${REDACTED}`)
+    .replace(SECRET_VALUE, REDACTED)
+    .replace(EMBEDDED_URL, scrubUrlMatch)
+    .slice(0, 500);
 }
 
 function scrubUrlMatch(match) {

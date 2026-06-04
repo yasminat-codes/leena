@@ -710,3 +710,42 @@ _(wave execution entries appended below as the build runs)_
 - Advisor gate passed with no blockers after reviewing product fit, safety posture, privacy, architecture, and integration contracts. Non-blocking warnings recorded: screenshot regression is not pixel-golden, renderer permission display must stay in sync with central permission concepts, and permission-prompt-specific screenshot artifacts remain outside this suite.
 - Opened PR #25 from `wave-21` to `main`, requested CodeRabbit advisory review, and received CodeRabbit acknowledgement/processing status. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/in-progress and non-blocking.
 - Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.
+
+## 2026-06-04 — Wave 22 started
+
+- Created clean branch/worktree `wave-22` from `origin/main` commit `d6155a3` because the primary checkout is dirty and behind remote truth.
+- Read Wave 22, task `145`, dependency handoffs for `122`, `132`, `134`, `136`, `137`, `138`, and `139`, and the full `tasks/LEARNINGS.md`.
+- Moved task `145` to `in-progress` with `attempts=1`, updated overview counts to `pending=1`, `in-progress=1`, `completed=91`, `blocked=6`, wrote the WAL `pre_run` entry, and opened active file claims for the new matrix artifact, focused test, task file, and required bookkeeping.
+- Dispatched task `145` for the integration test matrix. The worker must run task-local kencode-search before code, avoid real Composio credentials and real Apple Calendar mutations, keep unknown statuses fail-closed, and run `npm run check`, full `node --test`, and `git diff --check`.
+
+## 2026-06-04 — Wave 22 task 145 worker handoff
+
+- Added the post-MVP integration matrix artifact with rows for Composio, Custom MCP, Mac access, Full Disk Access, Apple Calendar, file access, and central permission confirmations.
+- Added the focused cross-contract matrix test covering mocked Composio refresh, MCP lifecycle, fake Full Disk Access and Apple Calendar status/denial, sandboxed file reads/writes, Mac-control confirmation, and blocked unknown/stale metadata.
+- Fixed two worker-gate issues before handoff: the Mac-control confirmation assertion now passes raw runtime args, and the new test file has been normalized by Biome.
+- Worker gates passed: changed-file syntax check, focused matrix suite (6/6), `npm run check`, full `node --test` (637/637), and `git diff --check`.
+- Task `145` remains in `in-progress`; parent keeps active claims and performs terminal movement after independent verification.
+
+## 2026-06-04 — Wave 22 parent matrix coverage fix
+
+- Parent review tightened the Composio matrix test so the fake Composio MCP tool actually carries write-risk schema metadata, asserts a `write` permission request, and proves denied confirmation prevents the integration call.
+- Focused parent gate passed after the fix: `node --check test/post-mvp-integration-matrix.test.js` and `node --test test/post-mvp-integration-matrix.test.js` (6/6).
+
+## 2026-06-04 — Wave 22 task 145 completed
+
+- Completed task `145`; moved the task file to `tasks/completed/`, released active claims, and updated overview counts to `pending=1`, `in-progress=0`, `completed=92`, `blocked=6`.
+- Parent independent gates passed: `node --check test/post-mvp-integration-matrix.test.js`, focused matrix suite (6/6), `npm run check`, full `node --test` (637/637), and `git diff --check`.
+- Cleaned generated screenshot-regression artifact churn from the verification run before terminal diff review so Wave 22 stays scoped to the matrix task.
+- Next gates pending: reviewer, advisor, CodeRabbit advisory PR request, and merge to `main`.
+
+## 2026-06-04 — Wave 22 reviewer and advisor gates passed
+
+- Reviewer gate passed with no blockers after checking matrix coverage, fake-only test resources, fail-closed behavior, task counts, released claims, and local privacy hygiene. Reviewer warning addressed: artifact status copy now says completed release-gate artifact instead of worker handoff artifact.
+- Advisor gate passed with no product, architecture, or safety blockers. Non-blocking warnings recorded: this matrix is not owner GUI smoke, task `146` still owns handoff/manual live smoke, and the matrix is contract-alignment coverage rather than live SDK/macOS drift proof.
+- Reviewer/advisor focused checks passed: `node --check test/post-mvp-integration-matrix.test.js`, focused matrix suite (6/6), and `git diff --check`.
+
+## 2026-06-04 — Wave 22 PR and CodeRabbit advisory recorded
+
+- Opened PR #26 from `wave-22` to `main` after reviewer and advisor gates passed.
+- Requested CodeRabbit review on PR #26. CodeRabbit selected all 8 changed files, returned a successful advisory status, but could not start a substantive review because the repository hit review rate/usage limits. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/rate-limited and non-blocking.
+- Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.

@@ -36,6 +36,7 @@
 - **Sub-agent completion reports are NOT evidence — verify on disk.** A dispatched agent returning "done" (even with high token/tool-use counts) may have written nothing, done adjacent work, or hallucinated a summary. After ANY dispatched agent: independently confirm the named output files exist, `git status --porcelain`/`git diff` is non-empty, and re-run `npm run check` + `node --test` yourself before trusting the result. *(Evidence: on 2026-06-01, three sub-agents reported success — `wave-writer`/`wave-writer2`/`ollama-model-download` — and two had written nothing; the wave files were claimed-written and were absent. Caught only by an on-disk `ls` count.)*
 - **Verify the exact worktree path, not just filenames.** A worker can produce correct-looking output in the wrong checkout. Completion verification must test the requested worktree path explicitly before marking a task complete.
 - **Verify content, not just structure.** File counts, section-header presence, and dependency-graph parity all pass even when section bodies are placeholder/hollow. Body-level verification (non-trivial content per section, numbered Steps, named test paths, atomicity cap) is mandatory for any generated artifact — a `wc -l` + `grep` pass is not enough.
+- **Release-gate matrix tests must match the claimed risk.** If a matrix row claims write, destructive, stale, denied, or confirmation coverage, the fake schema/arguments must exercise the same live helper classification path the app uses at runtime.
 - **Approval-gate visuals must pass owner taste, not just automated audits.** For Leena's desktop shell, avoid presentation-scale type and saturated AI-gradient wallpaper: default to desktop-app density, 11-14px operational text, restrained 16-22px headings, tight rows, smaller HUDs, and subdued work-surface backgrounds.
 - **Refine composition before ornament.** For Leena approval screens, the assistant identity must live in one intentional command surface. Avoid scattering the greeting, orb, chat affordance, and command center across generic cards; use whitespace, quiet dividers, and nested hardware-like surfaces before adding decoration.
 - **Keep orb and prompt in separate visual lanes.** On approval surfaces, the orb may be adjacent or ambient, but it must not sit directly above or over the command input. Use a dedicated orb well or integrated control composition so the prompt remains the primary action.
@@ -1109,4 +1110,31 @@
 - Advisor gate passed with no blockers. Non-blocking warning: dedicated permission-prompt screenshot artifacts are still outside this suite; current proof is unit/session rendering plus broad UI regression screenshots.
 - PR #25 opened and CodeRabbit advisory review requested/acknowledged as processing. No actionable findings were available before merge decision; `codex` and `codex-automation` labels are not configured in this repo.
 - **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 22 — task 145 — Mac-control confirmation helper args
+- **Symptom:** The focused integration matrix test initially failed because the Mac-control confirmation assertion passed a completed permission request object as the realtime tool args.
+- **Root cause:** `shouldRequireToolConfirmation()` expects raw tool arguments so it can classify `computer_use_task` with `target: "computer"` as destructive; passing the request object dropped the target signal.
+- **Fix:** Assert with the original raw tool args and keep the built request only for confirmation-state blocking checks.
+- **Rule added?:** yes — when a test covers live permission helper behavior, pass the same raw runtime args the dispatcher will pass, not a derived permission request.
+
+### Fix — Wave 22 — task 145 — Biome formatting gate
+- **Symptom:** `npm run check` failed on the new integration matrix test because imports and several assertion blocks were not in Biome's expected order/shape.
+- **Root cause:** The initial handwritten file passed syntax and focused behavior but had not been normalized through the repo formatter.
+- **Fix:** Ran Biome's safe write on `test/post-mvp-integration-matrix.test.js`; `npm run check` and the focused matrix suite then passed.
+- **Rule added?:** yes — after adding a large focused test file, run the repo formatter before the full gate so formatting-only failures do not obscure behavior failures.
+
+### Fix — Wave 22 — parent review — Composio write-risk matrix coverage
+- **Symptom:** Parent review found the Composio matrix row said it covered write-tool confirmation, but the fake MCP tool schema only used a `title` field, so MCP risk inference classified it as low-risk.
+- **Root cause:** The first matrix test proved the server-level confirmation path but not a write-risk Composio tool shape.
+- **Fix:** Added a write-risk `filePath` property to the fake Composio MCP tool, asserted the permission request level is `write`, and proved a denied confirmation does not call the integration.
+- **Rule added?:** yes — matrix tests must align the fake schema/arguments with the risk level claimed by the artifact row.
+
+## Wave 22 — summary
+- Completed task `145`: `tasks/artifacts/post-mvp-integration-test-matrix.md` now maps Composio, Custom MCP, Mac access, Full Disk Access, Apple Calendar, file access, and central permission confirmations across happy path, missing credential, denied permission, unknown/stale status, write confirmation, and automated anchors.
+- Added `test/post-mvp-integration-matrix.test.js`, a focused cross-contract suite using fake Composio credentials/session data, fake MCP transports, fake TCC and Full Disk Access probes, and temporary filesystem sandboxes.
+- Parent review tightened the Composio path so the fake tool schema actually infers `write` risk and denied confirmation prevents the integration call.
+- Independent gates passed: `node --check test/post-mvp-integration-matrix.test.js`, focused matrix suite (6/6), `npm run check`, full `node --test` (637/637), `git diff --check`, output existence checks, active-claims release, and generated screenshot-noise cleanup.
+- Reviewer and advisor gates passed with no blockers. Carry forward the non-blocking advisor warning: this matrix is not owner GUI smoke; task `146` still owns final handoff/manual live smoke.
+- CodeRabbit was requested on PR #26 and selected all 8 changed files, but a substantive review could not start due to rate/usage limits. Treat this as advisory-only with no actionable findings available.
 - **WAL ref:** tasks/.wal/wal.jsonl

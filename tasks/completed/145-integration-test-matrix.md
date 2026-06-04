@@ -2,7 +2,7 @@
 id: "145"
 title: "Integration test matrix"
 type: test
-status: pending
+status: completed
 wave: 22
 priority: critical
 complexity: M
@@ -16,7 +16,9 @@ context_files:
   - test/tool-permissions.test.js
 skills: []
 tags: [testing, composio, mcp, mac-access]
-attempts: 0
+attempts: 1
+claim_started: "2026-06-04T05:04:44Z"
+completed_at: "2026-06-04T05:17:44Z"
 created_at: "2026-06-03"
 ---
 
@@ -35,10 +37,10 @@ The user specifically called out rigorous testing, especially for Apple products
 6. Ensure full `node --test` passes.
 
 ## Acceptance Criteria
-- [ ] Matrix exists in `tasks/artifacts/post-mvp-integration-test-matrix.md`.
-- [ ] Automated tests cover every day-one integration.
-- [ ] No tests require real user credentials or real Apple Calendar mutation.
-- [ ] Unknown statuses fail closed.
+- [x] Matrix exists in `tasks/artifacts/post-mvp-integration-test-matrix.md`.
+- [x] Automated tests cover every day-one integration.
+- [x] No tests require real user credentials or real Apple Calendar mutation.
+- [x] Unknown statuses fail closed.
 
 ## Tests Required
 - `node --test`
@@ -53,10 +55,16 @@ The user specifically called out rigorous testing, especially for Apple products
 Tests must use mocks/fakes for credentials and Apple resources; owner-granted GUI smoke remains manual unless explicitly changed.
 
 ## Handoff Notes
-To be filled by executor.
+- Added `test/post-mvp-integration-matrix.test.js` as the focused cross-contract suite for Composio refresh, Custom MCP lifecycle, Mac access, Full Disk Access, Apple Calendar, file access, and central permission confirmations.
+- Added `tasks/artifacts/post-mvp-integration-test-matrix.md` with row-by-row happy path, missing credential, denied permission, unknown/stale, write-confirmation, and automated-anchor coverage.
+- Tests use fake Composio credentials/session responses, fake MCP transports/clients, fake TCC rows, fake Full Disk Access probes, and temporary filesystem sandboxes only. No real owner credentials, Apple Calendar data, or broad owner-file access are touched.
+- Parent review tightened the Composio matrix case so the fake tool schema carries write-risk metadata, asserts a `write` permission request, and proves denied confirmation prevents the integration call.
+- Parent independent verification passed: `node --check test/post-mvp-integration-matrix.test.js`, `node --test test/post-mvp-integration-matrix.test.js` (6/6), `npm run check`, full `node --test` (637/637), and `git diff --check`.
 
 ## Errors Encountered
-To be filled if errors occur.
+- Worker fixed a focused Mac-control helper assertion by passing raw runtime args into `shouldRequireToolConfirmation()`.
+- Worker normalized the new focused test with Biome after `npm run check` reported formatting/import-order issues.
+- Parent review found the first Composio fake schema did not actually infer write risk; fixed by adding `filePath` schema/args and denied-confirmation call prevention coverage.
 
 ## Self-Annealing Contract
 | Signal | Metric | Threshold | Action |

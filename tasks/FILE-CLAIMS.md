@@ -21,6 +21,8 @@
 
 ## Claim History
 
+- 2026-06-04T05:17:44Z — Released Wave 22 claim for task `145` after the integration matrix artifact, focused matrix suite, parent Composio write-risk coverage fix, `npm run check`, full `node --test` (637/637), `git diff --check`, output checks, and generated screenshot-noise cleanup passed.
+- 2026-06-04T05:04:44Z — Opened Wave 22 claim for task `145` integration test matrix. Task `145` owns the new integration-matrix artifact and focused test file; existing MCP, Composio, OS permission, filesystem, Apple Calendar, and permission files are read-only context unless separately claimed before editing.
 - 2026-06-04T04:24:15Z — Released Wave 21 claims for tasks `139` and `144` after independent output checks, parent Apple Calendar trust-source regression fix, visual spot-checks of regression screenshots, focused gates, `npm run check`, full `node --test` (631/631), changed-file syntax checks, and `git diff --check` passed.
 - 2026-06-04T04:04:04Z — Opened Wave 21 claims for task `139` permission UX and task `144` screenshot regression proof. Task `144` owns the screenshot harness/artifacts and must coordinate with task `139` for permission prompt states instead of editing claimed permission runtime files.
 - 2026-06-04T04:03:30Z — Released pre-wave baseline repair claims for `src/renderer/screens/activity.js` and `test/conversation-history.test.js` after fixing date-sensitive Activity grouping injection and passing `npm run check`, focused conversation-history tests, and full `node --test` (623/623).

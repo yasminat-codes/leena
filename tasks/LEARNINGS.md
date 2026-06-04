@@ -1138,3 +1138,31 @@
 - Reviewer and advisor gates passed with no blockers. Carry forward the non-blocking advisor warning: this matrix is not owner GUI smoke; task `146` still owns final handoff/manual live smoke.
 - CodeRabbit was requested on PR #26 and selected all 8 changed files, but a substantive review could not start due to rate/usage limits. Treat this as advisory-only with no actionable findings available.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 23 — task 146 — clean worktree dependency install
+- **Symptom:** `npm run check` failed in the fresh Wave 23 worktree with `biome: command not found`.
+- **Root cause:** The clean wave worktree had no local `node_modules`, so npm could not resolve project-local binaries from the checked-in lockfile.
+- **Fix:** Ran `npm ci` from `package-lock.json`; `npm run check` then passed with Biome checking 187 files and no fixes applied.
+- **Rule added?:** yes — for build-smoke waves from fresh worktrees, install dependencies from the lockfile before treating local binary lookup failures as source failures.
+
+### Fix — Wave 23 — task 146 — packaged structure count
+- **Symptom:** The first DMG/ZIP structure script failed with zero loose font files and an unpacked native-binary count of five instead of the older Wave 16 count of four.
+- **Root cause:** The current build packages renderer fonts inside `app.asar`, while the unpacked native set now also includes `fsevents` alongside the `@nut-tree-fork` binaries.
+- **Fix:** Reran the structure gate against the current packaged layout: counted 21 fonts from `app.asar`, verified five unpacked native binaries, and confirmed DMG layout plus ZIP extraction.
+- **Rule added?:** yes — build handoff checks should verify the actual current ASAR and unpacked-binary layout instead of hard-coding only the older loose-file/native counts.
+
+### Fix — Wave 23 — task 146 — task-artifact worktree-name privacy cleanup
+- **Symptom:** Parent task-artifact privacy scan found machine-specific worktree naming in Wave 23 handoff prose.
+- **Root cause:** Worker handoff text described the local checkout by its machine-specific worktree name instead of generic wave wording.
+- **Fix:** Replaced the local worktree name with generic Wave 23 worktree wording in task artifacts, then reran the privacy scan.
+- **Rule added?:** no — this reinforces the existing task-artifact privacy rule.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 23 — summary
+- Completed task `146`: regenerated the unsigned/ad-hoc post-MVP macOS DMG and ZIP, updated `tasks/DELIVERABLE.md` with current local artifact hashes/sizes, and kept owner GUI smoke as an unchecked manual checklist.
+- Current local artifacts: `dist/Leena-0.1.2-arm64.dmg` SHA-256 `2cbc7ed5f696941a9e4c63bded6daf7c0c5d5855b7a9cab28c7a645ef009d906`; `dist/Leena-0.1.2-arm64-mac.zip` SHA-256 `5b7fbd7f908d4a4f4b63d08b13220a4ebfbe40eb21b2c6f43654e45c9c29972b`.
+- Parent independent gates passed: `npm run check`, full `node --test` (637/637), `git diff --check`, `hdiutil verify`, `hdiutil imageinfo`, DMG read-only mount checks, ZIP extraction checks, ASAR font/native-binary checks, codesign verification, WAL parse, count audit, active-claims audit, and task-artifact privacy scan.
+- The Wave 23 build is unsigned/ad-hoc, not notarized, and was not GUI-launched by automation. Owner voice, Chat, Composio, Custom MCP, Full Disk Access, Apple Calendar, and visual review remain manual checklist items.
+- Fresh build worktrees need `npm ci` before local binary gates, and package structure checks should count the current ASAR font set plus unpacked native `.node` files rather than stale loose-file assumptions.
+- Initial reviewer/advisor gates caught two release-process issues: generated screenshot-regression churn must not ride along with a build-handoff wave unless explicitly owned, and a partially staged task-file move can preserve stale pending frontmatter even when the working tree is terminal. Reconcile the diff scope and restage from the verified working tree before PR.
+- **WAL ref:** tasks/.wal/wal.jsonl

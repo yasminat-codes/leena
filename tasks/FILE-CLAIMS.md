@@ -21,6 +21,7 @@
 
 ## Claim History
 
+- 2026-06-04T05:58:51Z — Released Wave 23 claim for task `146` after post-MVP unsigned DMG/ZIP build, deliverable manifest update, owner manual GUI smoke checklist preservation, `npm run check`, full `node --test` (637/637), `git diff --check`, hdiutil verification, read-only DMG mount checks, ZIP extraction checks, ASAR font/native-binary checks, codesign verification, WAL parse, count audit, active-claim cleanup, and task-artifact privacy scan passed.
 - 2026-06-04T05:17:44Z — Released Wave 22 claim for task `145` after the integration matrix artifact, focused matrix suite, parent Composio write-risk coverage fix, `npm run check`, full `node --test` (637/637), `git diff --check`, output checks, and generated screenshot-noise cleanup passed.
 - 2026-06-04T05:04:44Z — Opened Wave 22 claim for task `145` integration test matrix. Task `145` owns the new integration-matrix artifact and focused test file; existing MCP, Composio, OS permission, filesystem, Apple Calendar, and permission files are read-only context unless separately claimed before editing.
 - 2026-06-04T04:24:15Z — Released Wave 21 claims for tasks `139` and `144` after independent output checks, parent Apple Calendar trust-source regression fix, visual spot-checks of regression screenshots, focused gates, `npm run check`, full `node --test` (631/631), changed-file syntax checks, and `git diff --check` passed.

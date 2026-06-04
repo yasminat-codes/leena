@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 1 |
+| Pending | 0 |
 | In-Progress | 0 |
-| Completed | 92 |
+| Completed | 93 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -126,8 +126,11 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 - Wave 16 — MVP DMG guaranteed deliverable (`046`) completed 2026-06-03; final gates passed with 529/529 tests and `dist/Leena-MVP.dmg` recorded in `tasks/DELIVERABLE.md`.
 - Wave 17 — Post-MVP research, UI baseline proof, Mac access trust contract, and Settings IA contract (`120`, `121`, `122`, `123`) completed 2026-06-03; final gates passed with 542/542 tests and baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
 - Wave 18 — Shell, visual system, integration foundations, Mac access cards, and voice preflight (`124`, `125`, `126`, `131`, `133`, `135`, `142`) completed 2026-06-03; reviewer/advisor gates passed with 565/565 tests and refreshed baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
+- Wave 19 — Settings router, Custom MCP polish, Composio refresh, Full Disk Access, Apple Calendar, Chat shell, and voice-orb polish (`127`, `132`, `134`, `136`, `137`, `140`, `143`) completed 2026-06-04; final gates passed with 607/607 tests after protected MCP header, Composio metadata, and Apple Calendar runtime hardening.
 - Wave 20 — Focused settings details, file policy, and live chat wiring (`128`, `129`, `130`, `138`, `141`) completed 2026-06-04; parent gates passed with `npm run check`, full `node --test` (623/623), `git diff --check`, and refreshed post-MVP baseline screenshots including Chat plus narrow-width overlap coverage.
 - Wave 21 — Permission confirmation UX and UI screenshot regression proof (`139`, `144`) completed 2026-06-04; parent gates passed with `npm run check`, focused permission/UI gates, full `node --test` (631/631), `git diff --check`, and 16 post-MVP regression screenshots recorded in `tasks/artifacts/post-mvp-ui-regression/`.
+- Wave 22 — Integration test matrix (`145`) completed 2026-06-04; parent gates passed with `npm run check`, focused matrix suite (6/6), full `node --test` (637/637), `git diff --check`, and fake-only coverage for Composio, Custom MCP, Mac access, Full Disk Access, Apple Calendar, file access, and central permission confirmations.
+- Wave 23 — Post-MVP build smoke handoff (`146`) completed 2026-06-04; parent gates passed with `npm run check`, full `node --test` (637/637), `git diff --check`, hdiutil verification, DMG/ZIP structural checks, codesign verification, and unchecked owner manual GUI smoke checklist recorded in `tasks/DELIVERABLE.md`.
 
 ## Post-MVP Refinement Tasks
 
@@ -161,7 +164,7 @@ Created 2026-06-03 from owner review of the shipped app screenshots and approved
 | 143 | 19 | Theme-aware voice orb | completed |
 | 144 | 21 | UI screenshot regression suite | completed |
 | 145 | 22 | Integration test matrix | completed |
-| 146 | 23 | Post-MVP build smoke handoff | pending |
+| 146 | 23 | Post-MVP build smoke handoff | completed |
 
 ## Discovered Tasks
 

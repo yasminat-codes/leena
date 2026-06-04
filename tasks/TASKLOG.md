@@ -778,3 +778,9 @@ _(wave execution entries appended below as the build runs)_
 - Reviewer re-check passed with no blockers after confirming the final diff excludes generated screenshot-regression artifact churn, preserves deliverable lane separation, keeps owner GUI smoke unchecked, and has consistent counts plus empty active claims.
 - Advisor re-check passed with no product, architecture, or safety blockers. Non-blocking warnings remain: commit/push/PR-head parity still need to happen before merge, manual owner GUI smoke remains real release risk, and unsigned/ad-hoc non-notarized artifacts must not be presented as notarized or owner-smoked.
 - Final pre-PR gates remain green: `npm run check`, full `node --test` (637/637), `git diff --check`, hdiutil verification, DMG/ZIP structure checks, count audit, active-claims audit, WAL parse, and task-artifact privacy scan.
+
+## 2026-06-04 — Wave 23 PR and CodeRabbit advisory recorded
+
+- Opened PR #27 from `wave-23` to `main` after reviewer and advisor gates passed.
+- Requested CodeRabbit review on PR #27 with `@coderabbitai review`; CodeRabbit status was pending at merge-decision time and no actionable findings were available yet. This is advisory-only and does not block Wave 23 merge.
+- Checked for `codex` and `codex-automation` labels before PR creation; neither label exists in this repo, so no PR labels were applied.

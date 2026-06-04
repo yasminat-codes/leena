@@ -3,11 +3,13 @@ import { parseMCPToolName } from "../mcp/schema-converter.js";
 const AUTO_APPROVED_MCP_LEVELS = new Set(["read", "low"]);
 const MCP_PERMISSION_LEVELS = new Set(["auto", "confirm", "trust"]);
 const TRUSTED_WRITE_LEVELS = new Set(["write", "destructive", "control"]);
+const CONFIRMATION_LEVELS = new Set(["network", "screen", "sensitive", ...TRUSTED_WRITE_LEVELS]);
 const FILE_ACCESS_SCOPES = new Set(["workspace", "explicit", "full-disk"]);
 const TRUSTED_WRITE_GRANT_BY_TOOL = Object.freeze({
   write_file: "file",
   edit_file: "file",
 });
+const INTEGRATION_TRUST_SOURCES = new Set(["apple-calendar", "composio", "mcp"]);
 const MCP_RISK_PROPERTY_LEVELS = Object.freeze([
   ["command", "destructive"],
   ["delete", "destructive"],
@@ -25,6 +27,17 @@ const MCP_LEVEL_RANK = Object.freeze({
   destructive: 3,
   unknown: 4,
 });
+const KNOWN_PERMISSION_LEVELS = new Set([
+  "low",
+  "read",
+  "write",
+  "network",
+  "screen",
+  "sensitive",
+  "destructive",
+  "control",
+  "unknown",
+]);
 
 const toolPermissionMetadata = Object.freeze({
   add_task: {
@@ -108,6 +121,11 @@ const toolPermissionMetadata = Object.freeze({
     description:
       "Let OpenAI operate a browser harness or, in OS mode, control the real machine's mouse and keyboard from screenshots.",
   },
+  cancel_computer_use: {
+    level: "low",
+    label: "Stop computer use",
+    description: "Stop the current computer-use task if one is running.",
+  },
   end_call: {
     level: "low",
     label: "End call",
@@ -121,12 +139,14 @@ export function getToolPermissionRequest(name, args = {}) {
     label: name,
     description: "Run a realtime tool.",
   };
+  const source = resolveToolSource(name, args);
   return {
     toolName: name,
     label: metadata.label,
     level: resolveToolLevel(name, metadata.level, args),
     description: metadata.description,
     summary: summarizeToolRequest(name, args),
+    ...(source ? { source } : {}),
   };
 }
 
@@ -173,6 +193,15 @@ export function shouldAutoApproveMCPTool(namespacedName, args = {}, serverConfig
 }
 
 export function createPermissionDeniedResult(request) {
+  if (request?.level === "unknown") {
+    return {
+      status: "permission_denied",
+      message: `Leena blocked ${request.label} because its permission metadata is unknown or stale.`,
+      tool: request.toolName,
+      permission: request,
+    };
+  }
+
   return {
     status: "permission_denied",
     message: `Ken did not approve ${request.label}. Ask before trying this tool again.`,
@@ -197,6 +226,52 @@ export function formatPermissionPrompt(request) {
     `Risk: ${request.level}`,
   ].filter(Boolean);
   return parts.join("\n\n");
+}
+
+export function createPermissionConfirmationState(request, options = {}) {
+  const normalized = normalizePermissionRequest(request);
+  const source = normalizePermissionSource(
+    options.source ?? normalized.source,
+    normalized.toolName,
+  );
+  const blocked =
+    normalized.level === "unknown" ||
+    ["unknown", "stale"].includes(normalizeString(options.status));
+  const confirmationRequired = blocked ? false : CONFIRMATION_LEVELS.has(normalized.level);
+  const trustIntegrationAllowed =
+    confirmationRequired &&
+    options.trustIntegrationAvailable === true &&
+    INTEGRATION_TRUST_SOURCES.has(source);
+  const trustedWriteAllowed =
+    confirmationRequired &&
+    options.trustedWriteAvailable === true &&
+    TRUSTED_WRITE_LEVELS.has(normalized.level);
+
+  return Object.freeze({
+    state: blocked ? "blocked" : confirmationRequired ? "confirmation_required" : "allowed",
+    toolName: normalized.toolName,
+    label: normalized.label,
+    level: normalized.level,
+    source,
+    title: blocked ? `Blocked ${normalized.label}` : `Confirm ${normalized.label}`,
+    message: blocked
+      ? "Leena could not verify current, central permission metadata for this tool."
+      : confirmationRequired
+        ? "Review this action before Leena runs it."
+        : "This read or low-risk action can run without another confirmation after its grant is current.",
+    description: normalized.description,
+    summary: normalized.summary,
+    actions: createPermissionActions({
+      blocked,
+      confirmationRequired,
+      trustIntegrationAllowed,
+      trustedWriteAllowed,
+    }),
+    affordances: Object.freeze({
+      trustIntegration: trustIntegrationAllowed,
+      trustedWriteMode: trustedWriteAllowed,
+    }),
+  });
 }
 
 export function shouldRequireToolConfirmation(name, args = {}, context = {}) {
@@ -228,6 +303,17 @@ function resolveToolLevel(name, level, args) {
   return level;
 }
 
+function resolveToolSource(name, args) {
+  if (
+    ["add_calendar_item", "list_calendar_items", "delete_calendar_item"].includes(name) &&
+    isRecord(args) &&
+    normalizeString(args.source).toLowerCase() === "apple"
+  ) {
+    return "apple-calendar";
+  }
+  return "";
+}
+
 function summarizeToolRequest(name, args) {
   switch (name) {
     case "add_task":
@@ -256,6 +342,8 @@ function summarizeToolRequest(name, args) {
       return summarizeFields(args, ["target", "source_id", "reason", "question"]);
     case "computer_use_task":
       return summarizeFields(args, ["task", "target", "url", "autonomy", "maxSteps"]);
+    case "cancel_computer_use":
+      return summarizeFields(args, ["reason"]);
     case "end_call":
       return summarizeFields(args, ["reason"]);
     default:
@@ -418,6 +506,102 @@ function normalizeString(value) {
 
 function isKnownRealtimeTool(name) {
   return Object.hasOwn(toolPermissionMetadata, name);
+}
+
+function normalizePermissionRequest(request) {
+  if (!isRecord(request)) {
+    return {
+      toolName: "unknown",
+      label: "Unknown tool",
+      level: "unknown",
+      description: "Tool metadata is unavailable.",
+      summary: "",
+      source: "",
+    };
+  }
+
+  const toolName = normalizeString(request.toolName ?? request.name) || "unknown";
+  const level = normalizeString(request.level).toLowerCase();
+
+  return {
+    toolName,
+    label: normalizeString(request.label) || toolName,
+    level: KNOWN_PERMISSION_LEVELS.has(level) ? level : "unknown",
+    description: normalizeString(request.description),
+    summary: normalizeString(request.summary),
+    source: normalizeString(request.source ?? request.integration),
+  };
+}
+
+function normalizePermissionSource(source, toolName) {
+  const normalized = normalizeString(source).toLowerCase();
+  if (normalized === "apple") {
+    return "apple-calendar";
+  }
+  if (normalized) {
+    return normalized;
+  }
+  if (toolName.startsWith("mcp__")) {
+    return "mcp";
+  }
+  if (["read_file", "write_file", "edit_file"].includes(toolName)) {
+    return "file";
+  }
+  if (["add_calendar_item", "list_calendar_items", "delete_calendar_item"].includes(toolName)) {
+    return "calendar";
+  }
+  if (toolName === "computer_use_task") {
+    return "computer";
+  }
+  return "leena";
+}
+
+function createPermissionActions({
+  blocked,
+  confirmationRequired,
+  trustIntegrationAllowed,
+  trustedWriteAllowed,
+}) {
+  if (blocked) {
+    return Object.freeze([
+      Object.freeze({
+        id: "refresh_permissions",
+        label: "Refresh permissions",
+        kind: "secondary",
+      }),
+    ]);
+  }
+
+  if (!confirmationRequired) {
+    return Object.freeze([]);
+  }
+
+  const actions = [
+    Object.freeze({ id: "allow_once", label: "Allow once", kind: "primary" }),
+    Object.freeze({ id: "deny", label: "Deny", kind: "secondary" }),
+  ];
+
+  if (trustIntegrationAllowed) {
+    actions.push(
+      Object.freeze({
+        id: "trust_integration",
+        label: "Trust this integration",
+        kind: "secondary",
+      }),
+    );
+  }
+
+  if (trustedWriteAllowed) {
+    actions.push(
+      Object.freeze({
+        id: "allow_trusted_write_actions",
+        label: "Allow trusted write actions",
+        kind: "secondary",
+      }),
+    );
+  }
+
+  return Object.freeze(actions);
 }
 
 function hasRequiredFileGrant(context) {

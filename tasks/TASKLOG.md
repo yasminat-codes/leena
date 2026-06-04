@@ -689,3 +689,22 @@ _(wave execution entries appended below as the build runs)_
 - Opened PR #24 from `wave-20` to `main`, requested CodeRabbit review, and received CodeRabbit acknowledgement/processing status. No actionable CodeRabbit findings were available at merge-decision time, so the advisory gate is recorded as requested/in-progress and non-blocking.
 - Checked for `codex` and `codex-automation` labels; neither label exists in this repo, so no PR labels were applied.
 - Next gate pending: merge to `main`.
+
+## 2026-06-04 — Wave 21 baseline repaired and started
+
+- Created clean branch/worktree `wave-21` from `origin/main` commit `6433e9d` because the primary checkout is dirty and behind remote truth.
+- Installed dependencies in the fresh worktree.
+- Baseline `npm run check` passed, but baseline `node --test` initially failed one date-sensitive Activity render assertion after midnight/date drift. Fixed by threading the existing fixed clock through `renderActivityData` test data to `groupConversationsByDate`.
+- Required pre-code kencode-search was run before the baseline repair; no exact public snippet matched the local Activity selector.
+- Post-repair gates passed: `node --test test/conversation-history.test.js`, `npm run check`, and full `node --test` (623/623).
+- Moved Wave 21 tasks `139` and `144` to `in-progress` with `attempts=1`, updated overview counts to `pending=2`, `in-progress=2`, `completed=89`, `blocked=6`, wrote WAL `pre_run` entries, and opened active file claims.
+- Dispatched task `139` for central permission confirmation UX and task `144` for screenshot regression proof. Task `144` must coordinate with task `139` for permission-prompt screenshot states and must not edit claimed permission runtime files.
+
+## 2026-06-04 — Wave 21 tasks verified complete
+
+- Completed task `139`: central permission confirmation UX now models allowed/confirm/blocked states, blocks unknown/stale metadata visibly, preserves Apple Calendar trust-source metadata, and renders confirmation/blocked copy in chat and voice surfaces.
+- Completed task `144`: post-MVP UI regression harness now captures 16 screenshot artifacts plus manifest metadata for Home, Chat, Settings details, Integrations details, and voice starting/listening/error states.
+- Parent visual spot-checks covered Home, Settings Providers, Chat, and voice Listening. Parent gates passed: `npm run check`, focused permission suite (37/37), focused UI screenshot suite (2/2), design/shell/UI focused suite (10/10), changed-file syntax checks, `git diff --check`, and full `node --test` (631/631).
+- Released Wave 21 file claims, moved tasks `139` and `144` to completed, and updated overview counts to `pending=2`, `in-progress=0`, `completed=91`, `blocked=6`.
+- Reviewer gate passed with no blockers after reviewing permission UX, renderer boundaries, Apple Calendar trust-source preservation, MCP fail-closed behavior, screenshot artifacts, and bookkeeping. Non-blocking risks recorded: screenshot proof is selector/nonblank/overflow-based rather than pixel-golden, and renderer permission display duplicates central permission concepts to avoid Node-only imports.
+- Advisor gate passed with no blockers after reviewing product fit, safety posture, privacy, architecture, and integration contracts. Non-blocking warnings recorded: screenshot regression is not pixel-golden, renderer permission display must stay in sync with central permission concepts, and permission-prompt-specific screenshot artifacts remain outside this suite.

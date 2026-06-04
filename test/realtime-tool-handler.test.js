@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   createRealtimeToolHandler,
   formatToolStatus,
+  getRealtimePermissionState,
   getRealtimeToolCall,
   parseToolArguments,
 } from "../src/renderer/realtime-tool-handler.js";
@@ -137,6 +138,71 @@ test("tool handler signals activity start/end around execution", async () => {
   });
 
   assert.deepEqual(activity, ["start:computer_use_task", "exec", "end:computer_use_task"]);
+});
+
+test("tool handler surfaces write confirmation results without replaying execution", async () => {
+  const sentEvents = [];
+  const statuses = [];
+  const permissionStates = [];
+  const handler = createRealtimeToolHandler({
+    executeTool: async () => ({
+      status: "permission_pending",
+      message: "Write file requires Ken's approval before it can run.",
+      permission: {
+        toolName: "write_file",
+        label: "Write file",
+        level: "write",
+        summary: "path: notes.txt",
+      },
+    }),
+    sendEvent: (event) => sentEvents.push(event),
+    setMode: () => {},
+    setStatus: (status) => statuses.push(status),
+    onPermissionState: (state) => permissionStates.push(state),
+  });
+
+  await handler.handleEvent({
+    type: "response.output_item.done",
+    item: {
+      type: "function_call",
+      status: "completed",
+      call_id: "call-write",
+      name: "write_file",
+      arguments: '{"path":"notes.txt","content":"unsafe"}',
+    },
+  });
+
+  assert.deepEqual(statuses, ["Using tool…", "Approval needed…"]);
+  assert.equal(permissionStates.length, 1);
+  assert.equal(permissionStates[0].kind, "confirmation_required");
+  assert.equal(permissionStates[0].level, "write");
+  assert.deepEqual(permissionStates[0].actions, [
+    "Allow once",
+    "Deny",
+    "Allow trusted write actions",
+  ]);
+  assert.equal(JSON.parse(sentEvents[0].item.output).status, "permission_pending");
+});
+
+test("permission state treats unknown metadata as blocked", () => {
+  const state = getRealtimePermissionState(
+    "mcp__calendar__stale_event",
+    {},
+    {
+      status: "permission_denied",
+      message: "Leena blocked MCP tool because its permission metadata is unknown or stale.",
+      permission: {
+        toolName: "mcp__calendar__stale_event",
+        label: "MCP tool",
+        level: "unknown",
+      },
+    },
+  );
+
+  assert.equal(state.kind, "blocked");
+  assert.equal(state.statusText, "Permission blocked…");
+  assert.equal(state.source, "mcp");
+  assert.deepEqual(state.actions, ["Refresh permissions"]);
 });
 
 test("tool handler sends screenshot image as explicit response input", async () => {

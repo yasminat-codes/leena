@@ -1068,3 +1068,44 @@
 - PR #24 opened and CodeRabbit review requested/acknowledged as advisory-only. No actionable findings were available before merge decision.
 - **Rule added?:** no.
 - **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 21 — pre-wave baseline — Activity date grouping test determinism
+- **Symptom:** Fresh Wave 21 baseline `node --test` failed because `renderActivityData` grouped a hardcoded `2026-06-03` episode as `Yesterday` on 2026-06-04 while the test expected `Today`.
+- **Root cause:** Lower-level Activity date grouping accepted an injected `now`, but the rendered Activity list always used wall-clock time, making the render test date-sensitive.
+- **Fix:** Threaded optional `data.now` into `groupConversationsByDate()` from `renderActivityList()` and passed the existing fixed clock from `test/conversation-history.test.js`; focused and full gates now pass.
+- **Rule added?:** yes — date-sensitive renderer tests should inject the same fixed clock as lower-level date helpers instead of relying on wall-clock time.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+## Wave 21 — started
+- Created clean branch/worktree `wave-21` from `origin/main` commit `6433e9d` because the primary checkout is dirty and behind remote truth.
+- Installed dependencies in the fresh worktree and verified the baseline after the date determinism repair: `npm run check` passed, focused conversation-history passed, and full `node --test` passed 623/623.
+- Moved Wave 21 tasks `139` and `144` to `in-progress` with `attempts=1`, updated overview counts to `pending=2`, `in-progress=2`, `completed=89`, `blocked=6`, and wrote WAL `pre_run` entries.
+- Opened active file claims for the permission UX slice and screenshot regression slice. Task `144` owns the screenshot harness/artifacts and must coordinate with task `139` for permission prompt states rather than editing claimed permission runtime files.
+- **WAL ref:** tasks/.wal/wal.jsonl
+
+### Fix — Wave 21 — task 144 — screenshot regression selector scope
+- **Symptom:** The expanded screenshot harness first failed on a Home list/dock overlap assertion, a hidden Settings status match, and full MCP/Mac Access containers that extended below the approved viewport.
+- **Root cause:** Regression checks used broad container selectors where the UI intentionally has scrollable or fixed-overlay regions; Playwright's first-match behavior also selected hidden detail status nodes before active ones.
+- **Fix:** Scoped required selectors to active detail sections and visible key controls, checked Home Suggested/Recent overlap directly, and used a per-state minimal scroll hook only for the Full Disk Access action proof.
+- **Rule added?:** yes — screenshot release gates should assert final computed layout on user-visible key controls, not on full scrollable containers that are allowed to exceed the approved viewport.
+
+### Fix — Wave 21 — task 139 — stale MCP denial copy
+- **Symptom:** Full `node --test` first failed because stale MCP metadata still expected a generic owner-denied result after task 139 made unknown metadata visibly blocked.
+- **Root cause:** The permission gate already failed closed, but the older execution test asserted the legacy "Ken did not approve" copy instead of the safer unknown/stale metadata block state.
+- **Fix:** Updated the stale MCP execution expectation to require the blocked message plus the unknown permission request payload, then reran the affected MCP test and full suite successfully.
+- **Rule added?:** yes — unknown or stale tool metadata should surface as a blocked metadata state, not as a user denial, so UI and model-visible results do not imply Ken rejected a prompt he never saw.
+
+### Fix — Wave 21 — task 139 — Apple Calendar trust-source preservation
+- **Symptom:** Parent audit found Apple Calendar write/delete confirmation state lacked the Apple Calendar source, so the `Trust this integration` affordance could not name the integration correctly.
+- **Root cause:** Permission request construction resolved type/action metadata but did not carry the adapter source from Apple Calendar tool args into the central confirmation state.
+- **Fix:** Added source normalization for Apple Calendar writes, exposed `source: "apple-calendar"` on permission requests, and added regression coverage for Apple Calendar confirmation state. Focused permission suite passed 37/37 and full `node --test` passed 631/631.
+- **Rule added?:** yes — integration-specific trust affordances must carry source metadata from adapter args into the central permission request before rendering confirmation state.
+
+## Wave 21 — completed
+- Task `139` completed the central permission confirmation UX for write/destructive/control actions, unknown/stale metadata blocking, Apple Calendar trust-source preservation, and chat/voice confirmation rendering.
+- Task `144` completed the post-MVP screenshot regression suite with 16 artifacts under `tasks/artifacts/post-mvp-ui-regression/` plus manifest coverage for Home, Chat, Settings details, Integrations details, and voice starting/listening/error states.
+- Final parent gates passed: `npm run check`, focused permission/UI gates, changed-file syntax checks, `git diff --check`, and full `node --test` (631/631). Active Wave 21 file claims were released and tasks `139`/`144` moved to completed.
+- Reviewer gate passed with no blockers. Non-blocking risk: screenshot regression proof is not pixel-golden comparison, and renderer permission display logic intentionally mirrors central permission concepts to keep Node-only permission code out of renderer bundles.
+- Advisor gate passed with no blockers. Non-blocking warning: dedicated permission-prompt screenshot artifacts are still outside this suite; current proof is unit/session rendering plus broad UI regression screenshots.
+- **Rule added?:** no.
+- **WAL ref:** tasks/.wal/wal.jsonl

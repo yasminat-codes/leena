@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, isAbsolute, join, normalize, relative } from "node:path";
 import test from "node:test";
@@ -12,7 +12,7 @@ const { PNG } = pngjs;
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const srcRoot = join(repoRoot, "src");
-const artifactDir = join(repoRoot, "tasks", "artifacts", "post-mvp-ui-baseline");
+const artifactDir = join(repoRoot, "tasks", "artifacts", "post-mvp-ui-regression");
 const rendererUrl = "/renderer/index.html";
 const fixedNow = "2026-06-03T21:08:47.000Z";
 const viewport = Object.freeze({ width: 1060, height: 712 });
@@ -29,12 +29,47 @@ const mimeTypes = Object.freeze({
   ".woff2": "font/woff2",
 });
 
-const baselineStates = Object.freeze([
+const voiceStateMap = Object.freeze({
+  error: Object.freeze({
+    commandCenterState: "error",
+    hint: "Use Retry, Open Settings, or Configure Provider from the voice failure action.",
+    notice: "Voice startup failed before listening. Retry to start a new session.",
+    orbState: "error",
+    preview: "Voice startup needs attention",
+    status: "VOICE ERROR",
+    transcript: "Voice startup failed before listening.",
+    voiceStartup: "session",
+  }),
+  listening: Object.freeze({
+    commandCenterState: "listening",
+    hint: "Keep speaking naturally.",
+    notice: "Listening",
+    orbState: "listening",
+    preview: "Listening for your request",
+    status: "LISTENING",
+    transcript: "Listening...",
+    voiceStartup: "listening",
+  }),
+  starting: Object.freeze({
+    commandCenterState: "thinking",
+    hint: "Creating voice session and keeping the dock visible.",
+    notice: "Starting...",
+    orbState: "starting",
+    preview: "Voice startup preflight",
+    status: "STARTING",
+    transcript: "Starting voice...",
+    voiceStartup: "starting",
+  }),
+});
+
+const regressionStates = Object.freeze([
   Object.freeze({
     id: "home",
     filename: "home.png",
     nav: "Home",
     readySelector: ".home-screen [data-home-recent-list]:not([aria-busy])",
+    nonOverlapBoundary: "[data-home-suggested-slot]",
+    nonOverlapSelectors: Object.freeze(["[data-home-recent-list]"]),
     requiredSelectors: Object.freeze([
       "#leena-shell",
       ".home-screen",
@@ -44,8 +79,8 @@ const baselineStates = Object.freeze([
     ]),
   }),
   Object.freeze({
-    id: "settings",
-    filename: "settings.png",
+    id: "settings-overview",
+    filename: "settings-overview.png",
     nav: "Settings",
     readySelector: ".settings-screen[data-settings-active-detail='overview']",
     requiredSelectors: Object.freeze([
@@ -55,6 +90,8 @@ const baselineStates = Object.freeze([
       "[data-settings-detail-target='general']",
       "[data-settings-detail-target='theme']",
       "[data-settings-detail-target='providers']",
+      "[data-settings-detail-target='updates']",
+      "[data-settings-detail-target='mac-access']",
       "[data-settings-detail-target='integrations-health']",
       ".cc[data-state='idle']",
     ]),
@@ -92,6 +129,24 @@ const baselineStates = Object.freeze([
     ]),
   }),
   Object.freeze({
+    detailTarget: "updates",
+    id: "settings-updates",
+    filename: "settings-updates.png",
+    nav: "Settings",
+    readySelector: ".settings-screen[data-settings-active-detail='updates']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      "[data-settings-detail='updates']",
+      "[data-update-state]",
+      "[data-update-version]",
+      "[data-update-check]",
+      "[data-update-download]",
+      "[data-update-install]",
+      "[data-settings-detail-back='updates']",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
     detailTarget: "providers",
     id: "settings-providers",
     filename: "settings-providers.png",
@@ -118,6 +173,36 @@ const baselineStates = Object.freeze([
     ]),
   }),
   Object.freeze({
+    detailTarget: "mac-access",
+    id: "settings-mac-access",
+    filename: "settings-mac-access.png",
+    nav: "Settings",
+    readySelector: ".settings-screen[data-settings-active-detail='mac-access']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      "[data-settings-detail='mac-access']",
+      "[data-wake-enabled]",
+      "[data-wake-muted]",
+      "[data-wake-status]",
+      "[data-settings-detail-back='mac-access']",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    detailTarget: "integrations-health",
+    id: "settings-integrations-health",
+    filename: "settings-integrations-health.png",
+    nav: "Settings",
+    readySelector: ".settings-screen[data-settings-active-detail='integrations-health']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      "[data-settings-detail='integrations-health']",
+      "[data-settings-detail-back='integrations-health']",
+      "[data-settings-detail='integrations-health'] [data-settings-primitive='status-callout']",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
     id: "integrations",
     filename: "integrations.png",
     nav: "Integrations",
@@ -127,6 +212,56 @@ const baselineStates = Object.freeze([
       ".integrations-screen",
       ".integrations-header",
       "[data-integrations-list]",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    id: "integrations-composio",
+    filename: "integrations-composio.png",
+    integrationDetail: "composio",
+    nav: "Integrations",
+    readySelector: "[data-integrations-detail-panel][data-integrations-detail-active='composio']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      ".integrations-screen[data-integrations-detail='composio']",
+      "[data-integrations-detail-card][data-integrations-detail='composio'][aria-pressed='true']",
+      "[data-integrations-detail-panel][data-integrations-detail-active='composio']",
+      "[data-integrations-list]",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    id: "integrations-mcp",
+    filename: "integrations-mcp.png",
+    integrationDetail: "custom-mcp",
+    nav: "Integrations",
+    nonOverlapBoundary: ".command-center-mount",
+    nonOverlapSelectors: Object.freeze(["[data-integrations-list]"]),
+    readySelector: "[data-integrations-detail-panel][data-integrations-detail-active='custom-mcp']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      ".integrations-screen[data-integrations-detail='custom-mcp']",
+      "[data-integrations-detail-card][data-integrations-detail='custom-mcp'][aria-pressed='true']",
+      "[data-integrations-field='name']",
+      "[data-integrations-field='transport']",
+      "[data-integrations-list]",
+      ".cc[data-state='idle']",
+    ]),
+  }),
+  Object.freeze({
+    id: "integrations-mac-access",
+    filename: "integrations-mac-access.png",
+    integrationDetail: "full-disk-access",
+    nav: "Integrations",
+    readySelector:
+      "[data-integrations-detail-panel][data-integrations-detail-active='full-disk-access']",
+    scrollSelector: "[data-integrations-permission-actions='full-disk-access']",
+    requiredSelectors: Object.freeze([
+      "#leena-shell",
+      ".integrations-screen[data-integrations-detail='full-disk-access']",
+      "[data-integrations-detail-card][data-integrations-detail='full-disk-access'][aria-pressed='true']",
+      "[data-integrations-permission-actions='full-disk-access']",
+      "[data-integrations-action='open-permission-settings'][data-permission-id='full-disk-access']",
       ".cc[data-state='idle']",
     ]),
   }),
@@ -146,21 +281,57 @@ const baselineStates = Object.freeze([
     ]),
   }),
   Object.freeze({
-    id: "voice-dock-start",
-    filename: "voice-dock-start.png",
+    id: "voice-starting",
+    filename: "voice-starting.png",
     clipSelector: ".command-center-mount",
     nav: "Home",
-    readySelector: ".cc.cc--compact[data-state='idle']",
+    readySelector: ".cc.cc--compact[data-state='thinking']",
     requiredSelectors: Object.freeze([
       ".command-center-mount",
-      ".cc.cc--compact[data-state='idle']",
+      "#app-shell.leena[data-orb-state='starting']",
+      "#app-shell.leena[data-voice-startup='starting']",
+      ".cc.cc--compact[data-state='thinking']",
       ".cc__orb",
       ".cc__transcript",
     ]),
+    voiceState: voiceStateMap.starting,
+  }),
+  Object.freeze({
+    id: "voice-listening",
+    filename: "voice-listening.png",
+    clipSelector: ".command-center-mount",
+    nav: "Home",
+    readySelector: ".cc.cc--compact[data-state='listening']",
+    requiredSelectors: Object.freeze([
+      ".command-center-mount",
+      "#app-shell.leena[data-orb-state='listening']",
+      "#app-shell.leena[data-voice-startup='listening']",
+      ".cc.cc--compact[data-state='listening']",
+      ".cc__orb",
+      ".cc__transcript",
+    ]),
+    voiceState: voiceStateMap.listening,
+  }),
+  Object.freeze({
+    id: "voice-error",
+    filename: "voice-error.png",
+    clipSelector: ".command-center-mount",
+    nav: "Home",
+    readySelector: ".cc.cc--compact[data-state='error']",
+    requiredSelectors: Object.freeze([
+      ".command-center-mount",
+      "#app-shell.leena[data-orb-state='error']",
+      "#app-shell.leena[data-voice-startup='session']",
+      ".cc.cc--compact[data-state='error']",
+      ".cc__orb",
+      ".cc__transcript",
+    ]),
+    voiceState: voiceStateMap.error,
   }),
 ]);
 
-test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_000 }, async () => {
+test("captures deterministic post-MVP UI regression screenshots", { timeout: 90_000 }, async () => {
+  await rm(artifactDir, { force: true, recursive: true });
   await mkdir(artifactDir, { recursive: true });
   const server = await startStaticServer(srcRoot);
   const browser = await chromium.launch({ headless: true });
@@ -181,13 +352,11 @@ test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_00
     await page.waitForSelector("#app-shell[data-onboarding='complete']", { timeout: 10_000 });
     await page.waitForSelector(".cc.cc--compact[data-state='idle']", { timeout: 10_000 });
 
-    for (const state of baselineStates) {
-      await selectScreen(page, state.nav);
-      if (state.detailTarget) {
-        await page.locator(`[data-settings-detail-target="${state.detailTarget}"]`).first().click();
-      }
+    for (const state of regressionStates) {
+      await prepareRegressionState(page, state);
       await page.waitForSelector(state.readySelector, { state: "visible", timeout: 10_000 });
       await assertSelectorsInsideViewport(page, state.requiredSelectors, state.id);
+      await assertNoHorizontalOverflow(page, state.id);
       if (state.nonOverlapBoundary && state.nonOverlapSelectors) {
         await assertSelectorsDoNotOverlap(
           page,
@@ -206,7 +375,15 @@ test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_00
         capture: state.clipSelector ? "clip" : "viewport",
         file: state.filename,
         id: state.id,
+        nav: state.nav,
+        orbState: state.voiceState?.orbState ?? null,
         selector: state.clipSelector ?? null,
+        voiceState: state.voiceState
+          ? {
+              commandCenterState: state.voiceState.commandCenterState,
+              requestedState: state.id.replace("voice-", ""),
+            }
+          : null,
       });
     }
 
@@ -216,7 +393,7 @@ test("captures deterministic post-MVP UI baseline screenshots", { timeout: 60_00
     await server.close();
   }
 
-  await writeBaselineManifest(screenshots);
+  await writeRegressionManifest(screenshots);
 });
 
 test("keeps Chat rail and composer separated at narrow panel widths", {
@@ -241,6 +418,7 @@ test("keeps Chat rail and composer separated at narrow panel widths", {
     await page.waitForSelector(".cc.cc--compact[data-state='idle']", { timeout: 10_000 });
     await selectScreen(page, "Chat");
     await page.waitForSelector("[data-chat-workspace]", { state: "visible", timeout: 10_000 });
+    await assertNoHorizontalOverflow(page, "chat-narrow", narrowViewport);
 
     await assertSelectorsInsideViewport(
       page,
@@ -275,8 +453,121 @@ test("keeps Chat rail and composer separated at narrow panel widths", {
   }
 });
 
+async function prepareRegressionState(page, state) {
+  await selectScreen(page, state.nav);
+
+  if (state.detailTarget) {
+    await selectSettingsDetail(page, state.detailTarget);
+  }
+
+  if (state.integrationDetail) {
+    await selectIntegrationDetail(page, state.integrationDetail);
+  }
+
+  if (state.scrollSelector) {
+    await page.locator(state.scrollSelector).first().scrollIntoViewIfNeeded();
+  }
+
+  if (state.voiceState) {
+    await applyVoiceState(page, state.voiceState);
+  } else {
+    await resetVoiceState(page);
+  }
+}
+
 async function selectScreen(page, screen) {
   await page.locator(`[data-screen="${screen}"]`).click();
+}
+
+async function selectSettingsDetail(page, detailTarget) {
+  await page.locator(`[data-settings-detail-target="${detailTarget}"]`).first().click();
+}
+
+async function selectIntegrationDetail(page, detailId) {
+  await page
+    .locator(`[data-integrations-detail-card][data-integrations-detail="${detailId}"]`)
+    .first()
+    .click();
+}
+
+async function applyVoiceState(page, voiceState) {
+  await page.evaluate((state) => {
+    const appShell = document.querySelector("#app-shell.leena");
+    if (appShell) {
+      appShell.dataset.mode = state.orbState === "error" ? "failed" : state.orbState;
+      appShell.dataset.orbState = state.orbState;
+      appShell.dataset.voiceStartup = state.voiceStartup;
+    }
+
+    const commandCenter = document.querySelector(".command-center-mount .cc");
+    if (commandCenter) {
+      commandCenter.dataset.state = state.commandCenterState;
+      commandCenter.dataset.hasTool = "false";
+      commandCenter.querySelector(".cc__status").textContent = state.status;
+      commandCenter.querySelector(".cc__transcript").textContent = state.transcript;
+      commandCenter.querySelector(".cc__hint").textContent = state.hint;
+      commandCenter.querySelector(".cc__preview-text").textContent = state.preview;
+    }
+
+    const toolActivity = document.querySelector("#tool-activity");
+    const toolActivityLabel = document.querySelector("#tool-activity-label");
+    if (toolActivity && toolActivityLabel) {
+      toolActivity.hidden = false;
+      toolActivityLabel.textContent = state.notice;
+    }
+
+    const callEnd = document.querySelector("#call-end");
+    if (callEnd) {
+      callEnd.disabled = state.orbState !== "error";
+      callEnd.tabIndex = state.orbState === "error" ? 0 : -1;
+      callEnd.setAttribute(
+        "aria-label",
+        state.orbState === "error" ? "Retry: Voice startup failed" : "End call",
+      );
+      const label = callEnd.querySelector("span:last-child");
+      if (label) {
+        label.textContent = state.orbState === "error" ? "Retry" : "End";
+      }
+    }
+  }, voiceState);
+}
+
+async function resetVoiceState(page) {
+  await page.evaluate(() => {
+    const appShell = document.querySelector("#app-shell.leena");
+    if (appShell) {
+      appShell.dataset.mode = "idle";
+      appShell.dataset.orbState = "idle";
+      delete appShell.dataset.voiceStartup;
+    }
+
+    const commandCenter = document.querySelector(".command-center-mount .cc");
+    if (commandCenter) {
+      commandCenter.dataset.state = "idle";
+      commandCenter.dataset.hasTool = "false";
+      commandCenter.querySelector(".cc__status").textContent = "READY";
+      commandCenter.querySelector(".cc__transcript").textContent = "Ready when you are.";
+      commandCenter.querySelector(".cc__hint").textContent =
+        "Ask Leena to search, plan, or control your computer.";
+      commandCenter.querySelector(".cc__preview-text").textContent = "Computer control preview";
+    }
+
+    const toolActivity = document.querySelector("#tool-activity");
+    if (toolActivity) {
+      toolActivity.hidden = true;
+    }
+
+    const callEnd = document.querySelector("#call-end");
+    if (callEnd) {
+      callEnd.disabled = true;
+      callEnd.tabIndex = -1;
+      callEnd.setAttribute("aria-label", "End call");
+      const label = callEnd.querySelector("span:last-child");
+      if (label) {
+        label.textContent = "End";
+      }
+    }
+  });
 }
 
 async function assertSelectorsInsideViewport(page, selectors, stateId, activeViewport = viewport) {
@@ -298,6 +589,52 @@ async function assertSelectorsInsideViewport(page, selectors, stateId, activeVie
       `${stateId}: ${selector} fits viewport height (${JSON.stringify(box)})`,
     );
   }
+}
+
+async function assertNoHorizontalOverflow(page, stateId, activeViewport = viewport) {
+  const result = await page.evaluate(() => {
+    const candidates = [
+      ["document", document.documentElement],
+      ["body", document.body],
+      ["#app-shell", document.querySelector("#app-shell")],
+      ["#leena-shell", document.querySelector("#leena-shell")],
+      ["#shell-content", document.querySelector("#shell-content")],
+    ].filter(([, element]) => Boolean(element));
+
+    const viewportWidth = window.innerWidth;
+    const overflows = candidates
+      .map(([selector, element]) => {
+        const rect = element.getBoundingClientRect();
+        const clientWidth =
+          element === document.documentElement
+            ? document.documentElement.clientWidth
+            : element.clientWidth;
+        return {
+          clientWidth,
+          rectLeft: Number(rect.left.toFixed(2)),
+          rectRight: Number(rect.right.toFixed(2)),
+          rectWidth: Number(rect.width.toFixed(2)),
+          scrollWidth: element.scrollWidth,
+          selector,
+        };
+      })
+      .filter(
+        (item) =>
+          item.scrollWidth > item.clientWidth + 2 ||
+          item.scrollWidth > item.rectWidth + 2 ||
+          item.rectLeft < -2 ||
+          item.rectRight > viewportWidth + 2,
+      );
+
+    return { overflows, viewportWidth };
+  });
+
+  assert.equal(
+    result.viewportWidth,
+    activeViewport.width,
+    `${stateId}: viewport width matches expected capture width`,
+  );
+  assert.deepEqual(result.overflows, [], `${stateId}: no horizontal overflow`);
 }
 
 async function assertSelectorsDoNotOverlap(page, selectors, boundarySelector, stateId) {
@@ -369,19 +706,30 @@ function assertNonblankPng(buffer, stateId) {
   };
 }
 
-async function writeBaselineManifest(screenshots) {
+async function writeRegressionManifest(screenshots) {
   const manifest = {
-    baseline: "post-mvp-ui-baseline",
     commands: {
-      focused: "node --test test/ui-baseline-smoke.test.js",
       full: "node --test",
+      regression: "node --test test/ui-baseline-smoke.test.js",
       staticCheck: "npm run check",
     },
+    coverage: regressionStates.map((state) => ({
+      file: state.filename,
+      id: state.id,
+      nav: state.nav,
+      selectors: [...state.requiredSelectors],
+    })),
     deviceScaleFactor,
     fixedNow,
+    narrowViewport,
     rendererUrl,
     screenshots,
+    suite: "post-mvp-ui-regression",
     viewport,
+    voiceStateNotes: {
+      starting:
+        "Renderer orb state uses data-orb-state='starting'; command-center visual state maps to thinking.",
+    },
   };
 
   await writeFile(join(artifactDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);

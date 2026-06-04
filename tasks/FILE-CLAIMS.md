@@ -21,6 +21,9 @@
 
 ## Claim History
 
+- 2026-06-04T04:24:15Z — Released Wave 21 claims for tasks `139` and `144` after independent output checks, parent Apple Calendar trust-source regression fix, visual spot-checks of regression screenshots, focused gates, `npm run check`, full `node --test` (631/631), changed-file syntax checks, and `git diff --check` passed.
+- 2026-06-04T04:04:04Z — Opened Wave 21 claims for task `139` permission UX and task `144` screenshot regression proof. Task `144` owns the screenshot harness/artifacts and must coordinate with task `139` for permission prompt states instead of editing claimed permission runtime files.
+- 2026-06-04T04:03:30Z — Released pre-wave baseline repair claims for `src/renderer/screens/activity.js` and `test/conversation-history.test.js` after fixing date-sensitive Activity grouping injection and passing `npm run check`, focused conversation-history tests, and full `node --test` (623/623).
 - 2026-06-04T02:36:08Z — Released Wave 20 claims for tasks `128`, `129`, `130`, `138`, `141`, and serialized parent integration/bookkeeping after independent output checks, `npm run check`, UI baseline harness, full `node --test` (622/622), changed-file syntax checks, and `git diff --check` passed.
 - 2026-06-04T02:05:17Z — Opened Wave 20 claims for tasks `128`, `129`, `130`, `138`, and `141`; shared `src/renderer/screens/settings.js`, `src/renderer/leena.css`, and `test/settings-screen.test.js` are reserved for serialized Settings integration across tasks `128`-`130`.
 - 2026-06-04T00:37:29Z — Released Wave 19 claims for tasks `127`, `132`, `134`, `136`, `137`, `140`, `143`, and serialized parent integration/bookkeeping after independent output checks, `npm run check`, focused gates, UI baseline harness, full `node --test` (596/596), and task moves to completed.

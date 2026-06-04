@@ -8,9 +8,9 @@
 
 | State | Count |
 |-------|-------|
-| Pending | 4 |
+| Pending | 2 |
 | In-Progress | 0 |
-| Completed | 89 |
+| Completed | 91 |
 | Blocked | 6 |
 
 ## Wave Map
@@ -127,6 +127,7 @@ Both recorded with path + SHA-256 in `tasks/DELIVERABLE.md` on completion.
 - Wave 17 — Post-MVP research, UI baseline proof, Mac access trust contract, and Settings IA contract (`120`, `121`, `122`, `123`) completed 2026-06-03; final gates passed with 542/542 tests and baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
 - Wave 18 — Shell, visual system, integration foundations, Mac access cards, and voice preflight (`124`, `125`, `126`, `131`, `133`, `135`, `142`) completed 2026-06-03; reviewer/advisor gates passed with 565/565 tests and refreshed baseline screenshots recorded in `tasks/artifacts/post-mvp-ui-baseline/`.
 - Wave 20 — Focused settings details, file policy, and live chat wiring (`128`, `129`, `130`, `138`, `141`) completed 2026-06-04; parent gates passed with `npm run check`, full `node --test` (623/623), `git diff --check`, and refreshed post-MVP baseline screenshots including Chat plus narrow-width overlap coverage.
+- Wave 21 — Permission confirmation UX and UI screenshot regression proof (`139`, `144`) completed 2026-06-04; parent gates passed with `npm run check`, focused permission/UI gates, full `node --test` (631/631), `git diff --check`, and 16 post-MVP regression screenshots recorded in `tasks/artifacts/post-mvp-ui-regression/`.
 
 ## Post-MVP Refinement Tasks
 
@@ -153,12 +154,12 @@ Created 2026-06-03 from owner review of the shipped app screenshots and approved
 | 136 | 19 | Full Disk Access status | completed |
 | 137 | 19 | Apple Calendar adapter | completed |
 | 138 | 20 | File access scope policy | completed |
-| 139 | 21 | Permission confirmation UX | pending |
+| 139 | 21 | Permission confirmation UX | completed |
 | 140 | 19 | Chat workspace shell | completed |
 | 141 | 20 | Chat history and detail wiring | completed |
 | 142 | 18 | Voice startup preflight | completed |
 | 143 | 19 | Theme-aware voice orb | completed |
-| 144 | 21 | UI screenshot regression suite | pending |
+| 144 | 21 | UI screenshot regression suite | completed |
 | 145 | 22 | Integration test matrix | pending |
 | 146 | 23 | Post-MVP build smoke handoff | pending |
 
